@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tu Tienda Online en Minutos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e0e5ec;
+        }
+        .neomorphic-card {
+            background-color: #e0e5ec;
+            border-radius: 1rem;
+            box-shadow: 8px 8px 16px #c8cdd4, -8px -8px 16px #f8fdff;
+            transition: all 0.3s ease-in-out;
+        }
+        .neomorphic-btn {
+            background-color: #e0e5ec;
+            color: #25D366;
+            padding: 1rem 2rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: inset 5px 5px 10px #c8cdd4, inset -5px -5px 10px #f8fdff;
+            transition: all 0.3s ease-in-out;
+        }
+        .neomorphic-btn:hover {
+            box-shadow: inset 2px 2px 5px #c8cdd4, inset -2px -2px 5px #f8fdff;
+        }
+        .whatsapp-btn {
+            background-color: #25D366;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: 8px 8px 16px #c8cdd4, -8px -8px 16px #f8fdff;
+            transition: all 0.3s ease-in-out;
+        }
+        .whatsapp-btn:hover {
+            box-shadow: 4px 4px 8px #c8cdd4, -4px -4px 8px #f8fdff;
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+<body class="bg-[#e0e5ec] text-gray-800">
+
+    <!-- Hero Section -->
+    <header class="py-12 md:py-24 px-4 sm:px-6 lg:px-8 text-center neomorphic-card rounded-b-3xl">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-4">Tu tienda en línea en minutos, sin complicaciones</h1>
+            <p class="text-lg md:text-xl text-gray-600 mb-8">Para emprendedores en Nicaragua que quieren compartir su catálogo y vender directamente por WhatsApp</p>
+            <a href="https://wa.me/50588378547" class="whatsapp-btn">
+                <span>Crea tu tienda ahora</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-right">
+                    <path d="M5 12h14"/>
+                    <path d="m12 5 7 7-7 7"/>
+                </svg>
+            </a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+        <!-- How it works section -->
+        <section class="mb-16 md:mb-24">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Cómo funciona</h2>
+            <div class="grid md:grid-cols-3 gap-8 text-center">
+                <div class="p-6 neomorphic-card">
+                    <div class="flex items-center justify-center w-12 h-12 text-white rounded-full mx-auto mb-4 font-bold text-lg bg-[#e0e5ec] text-gray-700 neomorphic-btn">1</div>
+                    <h3 class="text-xl font-semibold mb-2">Crea tu cuenta</h3>
+                    <p class="text-gray-600">Recibe tu usuario y contraseña, cambia tu clave y personaliza tu tienda.</p>
+                </div>
+                <div class="p-6 neomorphic-card">
+                    <div class="flex items-center justify-center w-12 h-12 text-white rounded-full mx-auto mb-4 font-bold text-lg bg-[#e0e5ec] text-gray-700 neomorphic-btn">2</div>
+                    <h3 class="text-xl font-semibold mb-2">Sube tus productos</h3>
+                    <p class="text-gray-600">Agrega imágenes, precios y descripciones fácilmente.</p>
+                </div>
+                <div class="p-6 neomorphic-card">
+                    <div class="flex items-center justify-center w-12 h-12 text-white rounded-full mx-auto mb-4 font-bold text-lg bg-[#e0e5ec] text-gray-700 neomorphic-btn">3</div>
+                    <h3 class="text-xl font-semibold mb-2">Comparte el enlace</h3>
+                    <p class="text-gray-600">Tus clientes entran, seleccionan lo que quieren y te escriben directo a WhatsApp.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing section -->
+        <section class="text-center mb-16 md:mb-24">
+            <div class="max-w-3xl mx-auto p-8 neomorphic-card">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">¡Por solo C$500!</h2>
+                <p class="text-xl text-gray-700 mb-6">Obtén tu tienda web por <strong>5 meses</strong>.</p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                    <div class="flex items-center gap-2 p-4 neomorphic-card">
+                        <img src="https://placehold.co/40x40/25D366/ffffff?text=BM" alt="Billetera Móvil" class="rounded-full">
+                        <span class="text-lg font-semibold text-gray-700">Billetera Móvil</span>
+                    </div>
+                    <div class="flex items-center gap-2 p-4 neomorphic-card">
+                        <img src="https://placehold.co/40x40/003366/ffffff?text=B" alt="Banpro" class="rounded-full">
+                        <span class="text-lg font-semibold text-gray-700">LAFISE</span>
+                    </div>
+                </div>
+                <p class="text-md text-gray-600 mt-4">Paga a través de estas opciones para recibir tu usuario y contraseña.</p>
+                <p class="text-md text-gray-600 mt-2">Así podremos estar en contacto directo para cualquier asistencia que necesites.</p>
+            </div>
+        </section>
+
+
+        <!-- Key Benefits section -->
+        <section class="neomorphic-card p-8 md:p-12 mb-16 md:mb-24">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-8">Beneficios clave</h2>
+            <ul class="grid md:grid-cols-2 gap-6 text-lg text-gray-700 max-w-2xl mx-auto">
+                <li class="flex items-start gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle text-green-500 flex-shrink-0 mt-1">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-8.66"/>
+                        <path d="m3 12.08 2 2 4-4"/>
+                    </svg>
+                    <span>Fácil de usar, no necesitas saber de tecnología.</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle text-green-500 flex-shrink-0 mt-1">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-8.66"/>
+                        <path d="m3 12.08 2 2 4-4"/>
+                    </svg>
+                    <span>Todo se comparte en un enlace limpio y profesional.</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle text-green-500 flex-shrink-0 mt-1">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-8.66"/>
+                        <path d="m3 12.08 2 2 4-4"/>
+                    </svg>
+                    <span>Los pedidos llegan directo a tu WhatsApp, sin perder contacto con tus clientes.</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle text-green-500 flex-shrink-0 mt-1">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-8.66"/>
+                        <path d="m3 12.08 2 2 4-4"/>
+                    </svg>
+                    <span>Acepta pagos como siempre: Billetera Móvil, Banpro, transferencias.</span>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Target Audience section -->
+        <section class="text-center mb-16 md:mb-24">
+            <div class="max-w-3xl mx-auto p-8 neomorphic-card">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">¿A quién está dirigido?</h2>
+                <p class="text-lg text-gray-700">Perfecto para emprendedores de productos electrónicos, celulares, ropa, accesorios, servicios o cualquier persona que quiera mostrar su catálogo sin complicarse.</p>
+                <p class="text-lg font-semibold mt-4 text-gray-700">Una herramienta hecha para negocios pequeños y emprendedores independientes en Nicaragua.</p>
+            </div>
+        </section>
+
+        <!-- Store Explanation section -->
+        <section class="mb-16 md:mb-24">
+            <div class="max-w-4xl mx-auto p-8 neomorphic-card">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">Tu tienda, lista para usar</h2>
+                <p class="text-lg text-gray-700 leading-relaxed text-center">No necesitas diseñar nada: tu tienda ya viene lista. Solo editas el nombre, subes tus fotos, pones precios y ¡listo! Cada pedido que tus clientes hagan se envía directo a tu WhatsApp para que termines la venta como siempre lo haces.</p>
+            </div>
+        </section>
+        
+        <!-- Contact Section -->
+        <section id="contacto" class="text-center mb-16 md:mb-24">
+            <div class="max-w-2xl mx-auto p-8 neomorphic-card">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">¡Listo para empezar?</h2>
+                <p class="text-lg text-gray-700 mb-6">Para activar tu cuenta, escríbenos a WhatsApp para realizar el pago de C$500 y recibir tus datos de acceso.</p>
+                <a href="https://wa.me/50588378547" class="whatsapp-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-text">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        <path d="M13 8H7"/>
+                        <path d="M17 12H7"/>
+                    </svg>
+                    <span>Hablar por WhatsApp</span>
+                </a>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8 text-center neomorphic-card rounded-t-3xl">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-center items-center md:justify-center gap-6 mb-6">
+                <a href="#" class="text-gray-400 hover:text-white transition-colors duration-200">Preguntas frecuentes</a>
+                <a href="https://wa.me/50588378547" class="text-gray-400 hover:text-white transition-colors duration-200">Contáctanos</a>
+                <a href="https://wa.me/50588378547" class="text-gray-400 hover:text-white transition-colors duration-200">WhatsApp</a>
+            </div>
+            <p class="text-gray-500 text-sm">Hecho en Nicaragua para emprendedores de Nicaragua 💙</p>
+        </div>
+    </footer>
+
+</body>
+</html>
+
