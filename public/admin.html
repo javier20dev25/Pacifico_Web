@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administrador - Pacífico Web</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div id="admin-container">
+        <h1>Panel de Administrador</h1>
+
+        <!-- Sección para Crear Usuario Temporal -->
+        <div class="card">
+            <h2>Crear Usuario Temporal</h2>
+            <form id="create-user-form">
+                <div class="input-group">
+                    <label for="user-nombre">Nombre del Cliente</label>
+                    <input type="text" id="user-nombre" required>
+                </div>
+                <div class="input-group">
+                    <label for="user-email">Correo Electrónico del Cliente</label>
+                    <input type="email" id="user-email" required>
+                </div>
+                <div class="input-group">
+                    <label for="user-plan">Plan Contratado</label>
+                    <select id="user-plan" required>
+                        <option value="" disabled selected>Selecciona un plan...</option>
+                        <option value="plan emprendedor clasico">Plan Emprendedor Clásico</option>
+                        <option value="oro bisness">Oro Business</option>
+                        <option value="oro ejevutivo">Oro Ejecutivo</option>
+                    </select>
+                </div>
+                <button type="submit" class="submit-btn">Generar Usuario Temporal</button>
+            </form>
+            <div id="form-feedback" class="feedback-message"></div>
+            
+            <!-- Área para mostrar las credenciales generadas -->
+            <div id="credentials-display" class="hidden credentials-box">
+                <h3>✅ Usuario Creado - Comparte estas credenciales:</h3>
+                <p><strong>Email:</strong> <span id="generated-email"></span></p>
+                <p><strong>Contraseña Temporal:</strong> <span id="generated-password"></span></p>
+                <p><small>Esta contraseña expirará en 48 horas y solo puede usarse una vez.</small></p>
+            </div>
+        </div>
+
+        <!-- Sección para Listar Usuarios -->
+        <div class="card">
+            <h2>Gestión de Usuarios</h2>
+            <button id="refresh-users" class="action-btn">Refrescar Lista</button>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Correo Electrónico</th>
+                            <th>Plan</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <!-- Las filas de usuarios se insertarán aquí dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html>

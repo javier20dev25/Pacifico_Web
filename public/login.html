@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Pacífico Web</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="form-container">
+        <!-- Formulario de Login Principal -->
+        <div id="login-form-container">
+            <h2>Iniciar Sesión</h2>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="login-email">Correo Electrónico</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="input-group">
+                    <label for="login-password">Contraseña</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="login-password" required>
+                        <button type="button" class="toggle-password">👁️</button>
+                    </div>
+                </div>
+                <div id="login-error" class="error-message"></div>
+                <button type="submit" class="submit-btn">Ingresar</button>
+            </form>
+        </div>
+
+        <!-- Formulario para Completar Registro (oculto por defecto) -->
+        <div id="complete-registration-container" class="hidden">
+            <h2>Crea tu Contraseña Permanente</h2>
+            <p>Por seguridad, debes establecer una nueva contraseña para activar tu cuenta.</p>
+            <form id="complete-registration-form">
+                <div class="input-group">
+                    <label for="new-password">Nueva Contraseña</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="new-password" required>
+                        <button type="button" class="toggle-password">👁️</button>
+                    </div>
+                    <div id="password-strength"></div>
+                </div>
+                 <div class="input-group">
+                    <label for="confirm-password">Confirmar Contraseña</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="confirm-password" required>
+                        <button type="button" class="toggle-password">👁️</button>
+                    </div>
+                </div>
+                <div id="registration-error" class="error-message"></div>
+                <button type="submit" class="submit-btn">Guardar y Continuar</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/login.js"></script>
+</body>
+</html>
