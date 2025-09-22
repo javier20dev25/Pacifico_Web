@@ -1,7 +1,7 @@
-const { supabase } = require('../services/supabase');
+const jwt = require('jsonwebtoken');
 
 /**
- * Middleware para proteger rutas. Verifica el token JWT de Supabase.
+ * Middleware para proteger rutas. Verifica el token JWT personalizado.
  */
 const protect = async (req, res, next) => {
     const token = req.headers.authorization ? req.headers.authorization.split(' ')[1] : null;
@@ -11,17 +11,19 @@ const protect = async (req, res, next) => {
     }
 
     try {
-        const { data: { user }, error } = await supabase.auth.getUser(token);
-
-        if (error || !user) {
-            return res.status(401).json({ error: 'No autorizado. Token inválido.' });
-        }
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         // Adjuntar el usuario al objeto de la petición para uso posterior
-        req.user = user;
+        req.user = decoded;
         next();
 
     } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ error: 'No autorizado. Token expirado.' });
+        }
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ error: 'No autorizado. Token inválido.' });
+        }
         res.status(401).json({ error: 'No autorizado. Token inválido.' });
     }
 };

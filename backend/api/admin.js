@@ -18,7 +18,15 @@ function generateTemporaryPassword(length = 10) {
 // 1. CREAR USUARIO TEMPORAL
 // ==========================================================
 router.post('/create-temporary-user', async (req, res) => {
-    const { nombre, correo, plan_nombre } = req.body;
+    const { nombre, correo, plan_nombre: raw_plan_nombre } = req.body;
+
+    // Mapeo de alias para nombres de planes
+    const planMap = {
+        "plan emprendedor clasico": "emprendedor",
+        "oro bisness": "oro_business", // Asumiendo que este es el nombre en la DB
+        "oro ejevutivo": "oro_ejecutivo" // Asumiendo que este es el nombre en la DB
+    };
+    const plan_nombre = planMap[raw_plan_nombre.toLowerCase()] || raw_plan_nombre.toLowerCase(); // Convertir a minúsculas para coincidencia
 
     if (!nombre || !correo || !plan_nombre) {
         return res.status(400).json({ error: 'Nombre, correo y plan son obligatorios.' });
@@ -44,21 +52,8 @@ router.post('/create-temporary-user', async (req, res) => {
         const adminEmail = process.env.ADMIN_EMAIL;
         if (adminEmail) {
             const subject = `🎉 Nuevo Usuario Temporal Creado: ${nombre} (${correo})`;
-            const text = `Se ha creado un nuevo usuario temporal:
-Nombre: ${nombre}
-Correo: ${correo}
-Plan: ${plan_nombre}
-Contraseña Temporal: ${temporaryPassword}
-
-Recuerda compartirle las credenciales y el enlace de login.`;
-            const html = `<p>Se ha creado un nuevo usuario temporal:</p>
-                          <ul>
-                              <li><strong>Nombre:</strong> ${nombre}</li>
-                              <li><strong>Correo:</strong> ${correo}</li>
-                              <li><strong>Plan:</strong> ${plan_nombre}</li>
-                              <li><strong>Contraseña Temporal:</strong> <code>${temporaryPassword}</code></li>
-                          </ul>
-                          <p>Recuerda compartirle las credenciales y el enlace de login.</p>`;
+            const text = `Se ha creado un nuevo usuario temporal:\nNombre: ${nombre}\nCorreo: ${correo}\nPlan: ${plan_nombre}\nContraseña Temporal: ${temporaryPassword}\n\nRecuerda compartirle las credenciales y el enlace de login.`;
+            const html = `<p>Se ha creado un nuevo usuario temporal:</p>\n                          <ul>\n                              <li><strong>Nombre:</strong> ${nombre}</li>\n                              <li><strong>Correo:</strong> ${correo}</li>\n                              <li><strong>Plan:</strong> ${plan_nombre}</li>\n                              <li><strong>Contraseña Temporal:</strong> <code>${temporaryPassword}</code></li>\n                          </ul>\n                          <p>Recuerda compartirle las credenciales y el enlace de login.</p>`;
             sendEmail(adminEmail, subject, text, html);
         }
 

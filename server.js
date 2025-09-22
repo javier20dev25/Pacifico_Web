@@ -11,6 +11,18 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json()); // Para parsear body de requests a JSON
 app.use(express.static('public')); // Para servir archivos estáticos (HTML, CSS, JS del cliente)
 
+// --- DEBUG TEMPORAL: log de todas las peticiones HTTP ---
+app.use((req, res, next) => {
+  console.log(`[HTTP] ${new Date().toISOString()} ${req.method} ${req.url}`);
+  next();
+});
+
+// Ruta pública de prueba para depuración desde el navegador
+app.get('/__debug/ping', (req, res) => {
+  console.log('[DEBUG] /__debug/ping recibido desde el cliente');
+  res.json({ ok: true, serverTime: new Date().toISOString() });
+});
+
 // Rutas de la API
 const authRoutes = require('./backend/api/auth');
 const adminRoutes = require('./backend/api/admin');
@@ -59,7 +71,7 @@ app.get('/tienda/:slug', async (req, res) => {
 
 // Ruta principal (login)
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 app.listen(PORT, () => {

@@ -28,7 +28,7 @@ router.post('/login', async (req, res) => {
                 `
                 uuid, 
                 password_hash, 
-                status, nombre
+                status, nombre, correo
             `)
             .eq('correo', correo)
             .single();
@@ -42,6 +42,15 @@ router.post('/login', async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({ error: 'Credenciales inválidas.' });
         }
+
+        // Determinar email de forma robusta
+        const possibleEmail =
+            (user && user.correo) ||
+            (user && user.email) ||
+            (user && user.mail) ||
+            (user && user.username) ||
+            (user && user.dataValues && (user.dataValues.correo || user.dataValues.email)) ||
+            null;
 
         // Flujo para usuario temporal
         if (user.status === 'temporary') {
@@ -60,14 +69,15 @@ router.post('/login', async (req, res) => {
         // Flujo para usuario activo o suspendido
         if (user.status === 'active' || user.status === 'suspended') {
              const sessionToken = jwt.sign(
-                { uuid: user.uuid, status: user.status },
+                { uuid: user.uuid, status: user.status, role: user.role }, // Añadir rol si existe
                 process.env.JWT_SECRET,
                 { expiresIn: '7d' } // Sesión de 7 días
             );
             return res.json({
                 status: 'login_success',
                 message: user.status === 'suspended' ? 'Tu cuenta está suspendida.' : 'Login exitoso.',
-                token: sessionToken
+                token: sessionToken,
+                userEmail: possibleEmail // Usar el email resuelto de forma robusta
             });
         }
 

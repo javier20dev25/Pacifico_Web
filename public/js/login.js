@@ -66,7 +66,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 registrationFormContainer.classList.remove('hidden');
             } else if (data.status === 'login_success') {
                 localStorage.setItem('jwt_token', data.token);
-                window.location.href = '/dashboard.html';
+                if (data.userEmail === 'admin@pacificoweb.com') {
+                    window.location.href = '/admin.html';
+                } else {
+                    window.location.href = '/dashboard.html';
+                }
             }
 
         } catch (error) {
