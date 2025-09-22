@@ -3,6 +3,7 @@ const router = express.Router();
 const { supabaseAdmin } = require('../services/supabase');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { sendEmail } = require('../services/email'); // Importar el servicio de correo
 
 // --- Helper: Validador de Contraseña ---
 function isPasswordStrong(password) {
@@ -27,7 +28,7 @@ router.post('/login', async (req, res) => {
                 `
                 uuid, 
                 password_hash, 
-                status
+                status, nombre
             `)
             .eq('correo', correo)
             .single();
@@ -103,7 +104,7 @@ router.post('/complete-registration', async (req, res) => {
         const new_password_hash = await bcrypt.hash(password, 10);
 
         // Actualizar el usuario en la base de datos
-        const { data, error } = await supabaseAdmin
+        const { data: updatedUser, error: updateError } = await supabaseAdmin
             .from('usuarios')
             .update({
                 password_hash: new_password_hash,
@@ -111,14 +112,23 @@ router.post('/complete-registration', async (req, res) => {
                 actualizado_at: new Date()
             })
             .eq('uuid', user_uuid)
-            .select('uuid, status')
+            .select('uuid, status, nombre, correo') // Seleccionar nombre y correo para el correo de notificación
             .single();
 
-        if (error) throw error;
+        if (updateError) throw updateError;
+
+        // Notificar al administrador
+        const adminEmail = process.env.ADMIN_EMAIL;
+        if (adminEmail) {
+            const subject = `✅ Usuario Activado: ${updatedUser.nombre} (${updatedUser.correo})`;
+            const text = `El usuario ${updatedUser.nombre} (${updatedUser.correo}) ha completado su registro y activado su cuenta.`;
+            const html = `<p>El usuario <strong>${updatedUser.nombre}</strong> (<code>${updatedUser.correo}</code>) ha completado su registro y activado su cuenta.</p>`;
+            sendEmail(adminEmail, subject, text, html);
+        }
 
         // Generar un token de sesión normal y duradero
         const sessionToken = jwt.sign(
-            { uuid: data.uuid, status: data.status },
+            { uuid: updatedUser.uuid, status: updatedUser.status },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );

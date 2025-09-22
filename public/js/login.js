@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const registrationForm = document.getElementById('complete-registration-form');
 
+    const loginEmailInput = document.getElementById('login-email');
+    const rememberMeCheckbox = document.getElementById('remember-me');
+
     const loginError = document.getElementById('login-error');
     const registrationError = document.getElementById('registration-error');
     
@@ -14,12 +17,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let tempToken = null;
 
-    // --- LÓGICA DE SESIÓN ---
-    // Al cargar la página, verificar si ya hay una sesión activa
-    const token = localStorage.getItem('jwt_token');
-    if (token) {
-        // Opcional: verificar validez del token antes de redirigir
+    // --- LÓGICA DE SESIÓN Y "RECORDARME" ---
+    const jwtToken = localStorage.getItem('jwt_token');
+    const rememberedEmail = localStorage.getItem('remembered_email');
+
+    if (jwtToken) {
+        // Si hay sesión, redirigir al dashboard
         window.location.href = '/dashboard.html';
+    } else if (rememberedEmail) {
+        // Si hay un email recordado, pre-llenar el campo y marcar el checkbox
+        loginEmailInput.value = rememberedEmail;
+        rememberMeCheckbox.checked = true;
     }
 
     // --- MANEJADORES DE EVENTOS ---
@@ -29,14 +37,21 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         loginError.textContent = '';
         
-        const email = document.getElementById('login-email').value;
+        const email = loginEmailInput.value;
         const password = document.getElementById('login-password').value;
+
+        // Guardar/eliminar email si "Recordarme" está marcado/desmarcado
+        if (rememberMeCheckbox.checked) {
+            localStorage.setItem('remembered_email', email);
+        } else {
+            localStorage.removeItem('remembered_email');
+        }
 
         try {
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ correo: email, password })
             });
 
             const data = await response.json();
@@ -50,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginFormContainer.classList.add('hidden');
                 registrationFormContainer.classList.remove('hidden');
             } else if (data.status === 'login_success') {
-                // Guardar nuestro token JWT personalizado
                 localStorage.setItem('jwt_token', data.token);
                 window.location.href = '/dashboard.html';
             }

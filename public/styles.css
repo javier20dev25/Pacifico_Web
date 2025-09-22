@@ -44,6 +44,22 @@ h2 {
     box-sizing: border-box; /* Asegura que el padding no afecte el ancho total */
 }
 
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    margin-top: -10px; /* Ajuste para que no haya tanto espacio */
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+}
+
+.checkbox-group label {
+    margin-bottom: 0;
+    font-weight: normal;
+}
+
 .password-wrapper {
     position: relative;
     display: flex;
@@ -175,4 +191,21 @@ th {
 
 .table-container {
     overflow-x: auto;
+}
+
+.full-width-textarea {
+    width: calc(100% - 20px);
+    padding: 10px;
+    margin-top: 10px;
+    border: 1px solid #dddfe2;
+    border-radius: 6px;
+    resize: vertical;
+}
+
+.chart-container {
+    position: relative;
+    height: 40vh;
+    width: 80vw;
+    max-width: 800px;
+    margin: 20px auto;
 }

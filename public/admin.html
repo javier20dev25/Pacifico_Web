@@ -12,6 +12,12 @@
 
         <!-- Sección para Crear Usuario Temporal -->
         <div class="card">
+            <h2>Estadísticas Rápidas</h2>
+            <p>Usuarios Temporales sin Activar: <span id="temp-users-count">0</span></p>
+            <p>Usuarios Oficiales Activos: <span id="active-users-count">0</span></p>
+        </div>
+
+        <div class="card">
             <h2>Crear Usuario Temporal</h2>
             <form id="create-user-form">
                 <div class="input-group">
@@ -41,6 +47,10 @@
                 <p><strong>Email:</strong> <span id="generated-email"></span></p>
                 <p><strong>Contraseña Temporal:</strong> <span id="generated-password"></span></p>
                 <p><small>Esta contraseña expirará en 48 horas y solo puede usarse una vez.</small></p>
+                <hr>
+                <h4>Mensaje para el Cliente:</h4>
+                <textarea id="client-message-template" rows="10" readonly class="full-width-textarea"></textarea>
+                <button class="action-btn" onclick="copyToClipboard('client-message-template')">Copiar Mensaje</button>
             </div>
         </div>
 
@@ -53,8 +63,11 @@
                     <thead>
                         <tr>
                             <th>Correo Electrónico</th>
+                            <th>Nombre</th>
                             <th>Plan</th>
                             <th>Estado</th>
+                            <th>Creado</th>
+                            <th>Expira Contrato</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -64,8 +77,17 @@
                 </table>
             </div>
         </div>
+
+        <!-- Sección para Gráfica de Registros -->
+        <div class="card">
+            <h2>Histórico de Registros</h2>
+            <div class="chart-container">
+                <canvas id="registrationChart"></canvas>
+            </div>
+        </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/js/admin.js"></script>
 </body>
 </html>
