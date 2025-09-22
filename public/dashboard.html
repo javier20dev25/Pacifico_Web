@@ -4,14 +4,424 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Pacífico Web</title>
-    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+        .neomorphic-card { background-color: #f0f2f5; border-radius: 1rem; box-shadow: 8px 8px 16px #d1d9e6, -8px -8px 16px #ffffff; }
+        .neomorphic-btn { background-color: #f0f2f5; border-radius: 0.5rem; font-weight: 600; box-shadow: 5px 5px 10px #d1d9e6, -5px -5px 10px #ffffff; transition: all 0.3s ease-in-out; padding: 10px 20px; }
+        .neomorphic-btn:hover { box-shadow: inset 2px 2px 5px #d1d9e6, inset -2px -2px 5px #ffffff; color: #3b82f6; }
+
+        /* Chat UI Styles */
+        .chat-message { display: flex; align-items: flex-end; margin-bottom: 1rem; }
+        .chat-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; flex-shrink: 0; }
+        .chat-bubble { max-width: 75%; padding: 0.75rem 1rem; border-radius: 1rem; }
+        .user-message { flex-direction: row-reverse; }
+        .user-message .chat-bubble { background-color: #3b82f6; color: white; border-bottom-right-radius: 0.25rem; }
+        .user-message .chat-avatar { background-color: #60a5fa; margin-left: 0.5rem; }
+        .ai-message .chat-bubble { background-color: #e5e7eb; color: #1f2937; border-bottom-left-radius: 0.25rem; }
+        .ai-message .chat-avatar { background-color: #6b7280; margin-right: 0.5rem; }
+        .typing-indicator .chat-bubble { display: flex; align-items: center; padding: 0.75rem; }
+        .typing-dot { width: 8px; height: 8px; background-color: #9ca3af; border-radius: 50%; margin: 0 3px; animation: typing-bounce 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing-bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+    </style>
 </head>
-<body>
-    <div id="dashboard-container">
-        <h1>Bienvenido a Pacífico Web</h1>
-        <p>Cargando información del usuario...</p>
-        <button id="logout-button">Cerrar Sesión</button>
+<body class="text-gray-800">
+
+    <div class="w-full bg-white shadow-md p-4 flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-700">Pacífico Web</h1>
+        <div class="flex items-center">
+            <span id="user-email" class="text-gray-600 mr-4"></span>
+            <button id="logout-button" class="neomorphic-btn">Cerrar Sesión</button>
+        </div>
     </div>
-    <script src="/js/dashboard.js"></script>
+
+    <div class="container mx-auto p-4 md:p-8">
+        <div class="neomorphic-card p-6 mb-8">
+            <h2 class="text-xl font-bold mb-2">Bienvenido, <span id="user-name"></span></h2>
+            <p>Plan: <span id="user-plan" class="font-semibold text-blue-600"></span> | Estado: <span id="user-status" class="font-semibold text-green-600"></span></p>
+        </div>
+
+        
+        <div id="stores-container">
+            <h2 class="text-2xl font-bold mb-6">Mis Tiendas</h2>
+            <div id="stores-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <p class="text-gray-500">Cargando tiendas...</p>
+            </div>
+        </div>
+
+        <div id="order-manager-container" class="mt-12">
+            <h2 class="text-2xl font-bold mb-6">Gestor de Pedidos</h2>
+            <div class="neomorphic-card p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="font-semibold mb-2">Pega aquí tu pedido de WhatsApp:</h3>
+                        <textarea id="whatsapp-order-input" class="neomorphic-input w-full h-64 text-sm" placeholder="Pega el texto completo del mensaje de WhatsApp aquí..."></textarea>
+                        <button id="process-order-btn" class="neomorphic-btn mt-4">Procesar Pedido</button>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold mb-2">Pedido Procesado:</h3>
+                        <div id="processed-order-output"></div>
+                        <p class="text-xs text-gray-500 mt-4"><b>Nota:</b> Guarda estos datos en tus libros contables (físicos o virtuales) para futuras referencias.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="ai-chat-container" class="mt-12">
+            <h2 class="text-2xl font-bold mb-6">Asistente de IA</h2>
+            <div class="neomorphic-card p-6"><div id="chat-messages" class="h-64 overflow-y-auto mb-4 p-4 neomorphic-input">
+                    <div class="text-gray-500 text-center">Inicia la conversación con tu asistente.</div>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="chat-input" class="neomorphic-input w-full" placeholder="Escribe tu mensaje...">
+                    <button id="chat-send-btn" class="neomorphic-btn">Enviar</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const jwtToken = localStorage.getItem('jwt_token');
+            if (!jwtToken) {
+                redirectToLogin('No estás autenticado.');
+                return;
+            }
+
+            const authHeader = { 'Authorization': `Bearer ${jwtToken}` };
+            let userPlan = 'N/A'; // Initialize userPlan
+
+            try {
+                const userProfile = await fetchUserProfile(authHeader); // Fetch profile first
+                userPlan = userProfile.plan || 'N/A'; // Get plan from profile
+
+                await fetchUserStores(authHeader, userPlan); // Pass userPlan to fetchUserStores
+            } catch (error) {
+                redirectToLogin(error.message);
+                return;
+            }
+            
+            setupEventListeners();
+        });
+
+        async function fetchUserProfile(headers) {
+            const response = await fetch('/api/user/profile', { headers });
+            if (!response.ok) throw new Error('Sesión expirada o inválida.');
+            const userProfile = await response.json();
+            
+            document.getElementById('user-name').textContent = userProfile.nombre || 'Usuario';
+            document.getElementById('user-email').textContent = userProfile.correo;
+            document.getElementById('user-plan').textContent = userProfile.plan || 'N/A';
+            document.getElementById('user-status').textContent = userProfile.status;
+        }
+
+        async function fetchUserStores(headers, userPlan) { // Added userPlan parameter
+            const response = await fetch('/api/user/stores', { headers });
+            if (!response.ok) throw new Error('No se pudieron cargar las tiendas.');
+            const stores = await response.json();
+            renderStores(stores, userPlan); // Pass userPlan to renderStores
+        }
+
+            function renderStores(stores, userPlan) { // Added userPlan parameter
+                const storesContainer = document.getElementById('stores-list'); // Changed to stores-list
+                storesContainer.innerHTML = '';
+                if (stores.length === 0) {
+                    storesContainer.innerHTML = '<p class="text-gray-500">No tienes tiendas creadas. ¡Crea una ahora!</p>';
+                    return;
+                }
+                stores.forEach(store => {
+                    const storeCard = document.createElement('div');
+                    storeCard.className = 'neomorphic-card p-4 flex flex-col justify-between'; // Updated class
+                    storeCard.innerHTML = `
+                        <div>
+                            <h3 class="font-bold text-lg mb-2">${store.name}</h3>
+                            <p class="text-sm text-gray-600">ID: ${store.id}</p>
+                            <p class="text-sm text-gray-600">Slug: ${store.slug}</p>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-2 mt-4">
+                            <a href="/store/${store.slug}" target="_blank" class="neomorphic-btn text-blue-600 hover:text-white hover:bg-blue-600 flex-grow text-center">Ver Tienda</a>
+                            <button class="neomorphic-btn text-green-600 hover:text-white hover:bg-green-600 flex-grow edit-btn" data-id="${store.id}" data-name="${store.name}" data-slug="${store.slug}" data-plan="${userPlan}">Editar</button>
+                            <button class="neomorphic-btn text-red-600 hover:text-white hover:bg-red-600 flex-grow delete-btn" data-id="${store.id}">Eliminar</button>
+                        </div>
+                    `;
+                    storesContainer.appendChild(storeCard);
+                });
+
+                // Añadir event listeners para editar y eliminar
+                document.querySelectorAll('.edit-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const { id, name, slug, plan } = event.target.dataset;
+                        // Assuming there's a modal or form for editing, populate it here
+                        console.log('Edit Store:', { id, name, slug, plan });
+                        // Example: populate a modal form
+                        // document.getElementById('editStoreId').value = id;
+                        // document.getElementById('editStoreName').value = name;
+                        // document.getElementById('editStoreSlug').value = slug;
+                        // document.getElementById('editStorePlan').value = plan; // If you have a plan input
+                        // openEditModal();
+                        alert(`Editar tienda: ${name} (ID: ${id}, Slug: ${slug}, Plan: ${plan})`);
+                    });
+                });
+
+                document.querySelectorAll('.delete-btn').forEach(button => {
+                    button.addEventListener('click', async (event) => {
+                        const storeId = event.target.dataset.id;
+                        if (confirm('¿Estás seguro de que quieres eliminar esta tienda?')) {
+                            await deleteStore(storeId);
+                        }
+                    });
+                });
+            }
+
+                function setupEventListeners() {
+            document.getElementById('logout-button').addEventListener('click', () => {
+                localStorage.removeItem('jwt_token');
+                window.location.href = '/login.html';
+            });
+
+            document.getElementById('stores-list').addEventListener('click', (e) => {
+                if (e.target.classList.contains('share-btn')) {
+                    const url = window.location.origin + e.target.dataset.url;
+                    navigator.clipboard.writeText(url).then(() => {
+                        alert(`¡Enlace copiado al portapapeles!\n${url}`);
+                    }, () => {
+                        alert('Error al copiar el enlace.');
+                    });
+                }
+            });
+
+            document.getElementById('process-order-btn').addEventListener('click', handleProcessOrder);
+
+            // AI Chat listeners
+            document.getElementById('chat-send-btn').addEventListener('click', handleSendMessage);
+            document.getElementById('chat-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleSendMessage();
+                }
+            });
+        }
+
+        // --- ORDER MANAGER FUNCTIONS ---
+        async function handleProcessOrder() {
+            const text = document.getElementById('whatsapp-order-input').value;
+            if (!text) {
+                alert('Por favor, pega el texto del pedido de WhatsApp.');
+                return;
+            }
+
+            try {
+                const parsedOrder = parseOrderText(text);
+                renderProcessedOrder(parsedOrder);
+                
+                // Automatically save the order
+                await saveOrder(parsedOrder);
+                alert('¡Pedido procesado y guardado con éxito!');
+
+            } catch (error) {
+                console.error('Error procesando el pedido:', error);
+                alert(`Error al procesar el pedido: ${error.message}`);
+            }
+        }
+
+        function parseOrderText(text) {
+            const order = {
+                products: [],
+                raw_message: text
+            };
+
+            // Regex para datos del cliente y fecha (formato WhatsApp)
+            const headerRegex = /^ \[(\d{1,2}\/\d{1,2}\/\d{2,4}), (\d{1,2}:\d{2}:\d{2})\] ([^:]+):/m;
+            const headerMatch = text.match(headerRegex);
+            if (headerMatch) {
+                order.order_date = new Date(`${headerMatch[1].split('/').reverse().join('-')}T${headerMatch[2]}`);
+                order.customer_name = headerMatch[3];
+            } else {
+                order.customer_name = 'Desconocido';
+                order.order_date = new Date(); // Fallback a la fecha actual
+            }
+
+            // Regex para productos
+            const productRegex = /- (.+?) \(x(\d+)\)\s+Precio: ([C$])\$(\d+\.\d{2})\s+Peso: ([\d.]+) kg/g;
+            let productMatch;
+            while ((productMatch = productRegex.exec(text)) !== null) {
+                order.products.push({
+                    name: productMatch[1].trim(),
+                    quantity: parseInt(productMatch[2], 10),
+                    currency: productMatch[3],
+                    price: parseFloat(productMatch[4]),
+                    weight: parseFloat(productMatch[5])
+                });
+            }
+
+            // Regex para totales
+            const subtotalRegex = /\*Subtotal del Pedido: C\$([\d.]+)\*/;
+            const totalWeightRegex = /\*Peso Total Estimado: ([\d.]+) kg\*/;
+            
+            const subtotalMatch = text.match(subtotalRegex);
+            const totalWeightMatch = text.match(totalWeightRegex);
+
+            order.total_price = subtotalMatch ? parseFloat(subtotalMatch[1]) : 0;
+            order.total_weight = totalWeightMatch ? parseFloat(totalWeightMatch[1]) : 0;
+
+            if (order.products.length === 0) {
+                throw new Error('No se encontraron productos con el formato esperado en el mensaje.');
+            }
+
+            return order;
+        }
+
+        function renderProcessedOrder(order) {
+            const outputDiv = document.getElementById('processed-order-output');
+            let tableHTML = `
+                <p><b>Cliente:</b> ${order.customer_name}</p>
+                <p><b>Fecha:</b> ${new Date(order.order_date).toLocaleString()}</p>
+                <table class=\"w-full mt-4 text-sm text-left\">
+                    <thead class=\"bg-gray-200\">
+                        <tr>
+                            <th class=\"p-2\">Producto</th>
+                            <th class=\"p-2\">Cant.</th>
+                            <th class=\"p-2\">Precio</th>
+                            <th class=\"p-2\">Peso (kg)</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            
+            order.products.forEach(p => {
+                tableHTML += `
+                    <tr class=\"border-b\">
+                        <td class=\"p-2\">${p.name}</td>
+                        <td class=\"p-2\">${p.quantity}</td>
+                        <td class=\"p-2\">C${p.price.toFixed(2)}</td>
+                        <td class=\"p-2\">${p.weight.toFixed(2)}</td>
+                    </tr>`;
+            });
+
+            tableHTML += `
+                    </tbody>
+                    <tfoot class=\"font-bold\">
+                        <tr class=\"border-t-2\">
+                            <td class=\"p-2\" colspan=\"2\">Totales</td>
+                            <td class=\"p-2\">C${order.total_price.toFixed(2)}</td>
+                            <td class=\"p-2\">${order.total_weight.toFixed(2)}</td>
+                        </tr>
+                    </tfoot>
+                </table>`;
+            
+            outputDiv.innerHTML = tableHTML;
+        }
+
+        async function saveOrder(order) {
+            const jwtToken = localStorage.getItem('jwt_token');
+            const response = await fetch('/api/user/orders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${jwtToken}`
+                },
+                body: JSON.stringify(order)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'No se pudo guardar el pedido en la base de datos.');
+            }
+
+            return response.json();
+        }
+
+        // --- AI CHAT FUNCTIONS ---
+        async function handleSendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessageToChatUI(message, 'user');
+            input.value = '';
+            
+            addMessageToChatUI('...', 'ai', true);
+
+            try {
+                const jwtToken = localStorage.getItem('jwt_token');
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({ message })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'El asistente no pudo responder.');
+                }
+
+                const data = await response.json();
+                document.getElementById('typing-indicator').remove();
+                addMessageToChatUI(data.response, 'ai');
+
+            } catch (error) {
+                document.getElementById('typing-indicator').remove();
+                addMessageToChatUI(`Error: ${error.message}`, 'ai', false, true);
+            }
+        }
+
+                function addMessageToChatUI(message, sender, isTyping = false, isError = false) {
+            const messagesDiv = document.getElementById('chat-messages');
+            const messageContainer = document.createElement('div');
+            messageContainer.className = `chat-message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
+
+            if (isTyping) {
+                messageContainer.id = 'typing-indicator';
+            }
+
+            // Avatar
+            const avatar = document.createElement('div');
+            avatar.className = 'chat-avatar';
+            avatar.textContent = sender === 'user' ? 'TÚ' : 'IA';
+
+            // Bubble
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble';
+
+            if (isTyping) {
+                bubble.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+            } else {
+                bubble.textContent = message;
+            }
+            
+            if (isError) {
+                bubble.style.backgroundColor = '#fecaca'; // Red-200
+                bubble.style.color = '#991b1b'; // Red-800
+            }
+
+            if (sender === 'user') {
+                messageContainer.appendChild(bubble);
+                messageContainer.appendChild(avatar);
+            } else {
+                messageContainer.appendChild(avatar);
+                messageContainer.appendChild(bubble);
+            }
+
+            const initialMessage = messagesDiv.querySelector('.text-gray-500');
+            if (initialMessage) {
+                initialMessage.remove();
+            }
+
+            messagesDiv.appendChild(messageContainer);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function redirectToLogin(message) {
+            alert(message);
+            localStorage.removeItem('jwt_token');
+            window.location.href = '/login.html';
+        }
+    </script>
+
 </body>
 </html>
