@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     const renderRegistrationChart = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/registration-stats`, {
+            const response = await fetch(`${API_BASE_URL}/registration-stats', {
                 headers: {
                     'Authorization': `Bearer ${jwtToken}`
                 }

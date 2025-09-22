@@ -14,11 +14,18 @@ function generateTemporaryPassword(length = 10) {
     return password;
 }
 
+// --- Helper: Generador de Correo a partir del nombre de la tienda ---
+function nombreAToken(nombre) {
+  return nombre.toLowerCase()
+               .replace(/\s+/g, '')   // quitar espacios
+               .replace(/[^a-z0-9]/g,''); // quitar caracteres especiales
+}
+
 // ==========================================================
 // 1. CREAR USUARIO TEMPORAL
 // ==========================================================
 router.post('/create-temporary-user', async (req, res) => {
-    const { nombre, correo, plan_nombre: raw_plan_nombre } = req.body;
+    const { nombre, plan_nombre: raw_plan_nombre } = req.body; // Correo ya no viene del frontend
 
     // Mapeo de alias para nombres de planes
     const planMap = {
@@ -28,8 +35,32 @@ router.post('/create-temporary-user', async (req, res) => {
     };
     const plan_nombre = planMap[raw_plan_nombre.toLowerCase()] || raw_plan_nombre.toLowerCase(); // Convertir a minúsculas para coincidencia
 
-    if (!nombre || !correo || !plan_nombre) {
-        return res.status(400).json({ error: 'Nombre, correo y plan son obligatorios.' });
+    if (!nombre || !plan_nombre) {
+        return res.status(400).json({ error: 'Nombre de tienda y plan son obligatorios.' });
+    }
+
+    let correoBase = nombreAToken(nombre) + '@pacificoweb.com';
+    let correo = correoBase;
+    let suffix = 0;
+
+    // Verificar si el correo ya existe y añadir sufijo si es necesario
+    while (true) {
+        const { data: existingUser, error: existingError } = await supabaseAdmin
+            .from('usuarios')
+            .select('correo')
+            .eq('correo', correo)
+            .single();
+
+        if (existingError && existingError.code !== 'PGRST116') { // PGRST116 = no rows found
+            throw existingError; // Otro tipo de error
+        }
+
+        if (existingUser) {
+            suffix++;
+            correo = nombreAToken(nombre) + suffix + '@pacificoweb.com';
+        } else {
+            break; // Correo no existe, podemos usarlo
+        }
     }
 
     const temporaryPassword = generateTemporaryPassword();
