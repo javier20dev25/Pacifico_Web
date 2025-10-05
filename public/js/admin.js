@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/revoke-user', {
+            const response = await fetch(`${API_BASE_URL}/revoke-user`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/suspend-user', {
+            const response = await fetch(`${API_BASE_URL}/suspend-user`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/renew-contract', {
+            const response = await fetch(`${API_BASE_URL}/renew-contract`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/reset-password', {
+            const response = await fetch(`${API_BASE_URL}/reset-password`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     const renderRegistrationChart = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/registration-stats', {
+            const response = await fetch(`${API_BASE_URL}/registration-stats`, {
                 headers: {
                     'Authorization': `Bearer ${jwtToken}`
                 }
@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const plan_nombre = document.getElementById('user-plan').value;
 
         try {
-            const response = await fetch(`${API_BASE_URL}/create-temporary-user', {
+            const response = await fetch(`${API_BASE_URL}/create-temporary-user`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -378,10 +378,6 @@ Si tienes alguna pregunta o necesitas ayuda, no dudes en contactarnos.
             handleRevokeUser(target.dataset.userUuid);
         } else if (target.classList.contains('suspend-btn')) {
             handleSuspendUser(target.dataset.userUuid);
-        } else if (target.classList.contains('renew-btn')) {
-            handleRenewContract(target.dataset.userUuid);
-        } else if (target.classList.contains('reset-pass-btn')) {
-            handleResetPassword(target.dataset.userUuid);
         }
     });
 });

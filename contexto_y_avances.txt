@@ -46,6 +46,11 @@ AVANCES REALIZADOS
     *   Creación de usuario administrador 'Astaroth' en la base de datos para pruebas.
     *   Todo el código comprometido y subido a GitHub.
 
+5.  **Mejoras de Estructura y Limpieza (Oct 2025):**
+    *   Se eliminaron archivos y carpetas duplicadas/redundantes (`/templates` en la raíz, archivos `_backup`).
+    *   Se creó la carpeta `/scripts` para centralizar los scripts de mantenimiento y configuración.
+    *   Se reorganizaron los archivos de la raíz a la nueva carpeta `scripts`, limpiando la estructura del proyecto.
+
 ==========================================================
 TAREAS PENDIENTES
 ==========================================================

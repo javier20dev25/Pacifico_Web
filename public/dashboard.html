@@ -97,7 +97,7 @@
 
             try {
                 const userProfile = await fetchUserProfile(authHeader); // Fetch profile first
-                userPlan = userProfile.plan || 'N/A'; // Get plan from profile
+                userPlan = userProfile?.plan || 'N/A'; // Get plan from profile
 
                 await fetchUserStores(authHeader, userPlan); // Pass userPlan to fetchUserStores
             } catch (error) {
@@ -113,42 +113,116 @@
             if (!response.ok) throw new Error('Sesión expirada o inválida.');
             const userProfile = await response.json();
             
-            document.getElementById('user-name').textContent = userProfile.nombre || 'Usuario';
-            document.getElementById('user-email').textContent = userProfile.correo;
-            document.getElementById('user-plan').textContent = userProfile.plan || 'N/A';
-            document.getElementById('user-status').textContent = userProfile.status;
+            document.getElementById('user-name').textContent = userProfile?.nombre || 'Usuario';
+            document.getElementById('user-email').textContent = userProfile?.correo || '—';
+            document.getElementById('user-plan').textContent = userProfile?.plan || 'Sin plan';
+            document.getElementById('user-status').textContent = userProfile?.status || '—';
+            return userProfile;
         }
 
         async function fetchUserStores(headers, userPlan) { // Added userPlan parameter
-            const response = await fetch('/api/user/stores', { headers });
-            if (!response.ok) throw new Error('No se pudieron cargar las tiendas.');
-            const stores = await response.json();
-            renderStores(stores, userPlan); // Pass userPlan to renderStores
+            try {
+                const response = await fetch('/api/user/stores', { headers });
+                if (!response.ok) {
+                    // This is the case where the table doesn't exist or another API error happens.
+                    console.warn('No se pudieron cargar las tiendas del usuario.', await response.text());
+                    renderStores([], userPlan); // Render an empty list of stores
+                    return;
+                }
+                const stores = await response.json();
+                renderStores(stores, userPlan); // Pass userPlan to renderStores
+            } catch (error) {
+                console.error('Error de red al obtener las tiendas:', error);
+                renderStores([], userPlan); // Render an empty list on network error too
+            }
         }
 
             function renderStores(stores, userPlan) { // Added userPlan parameter
                 const storesContainer = document.getElementById('stores-list'); // Changed to stores-list
                 storesContainer.innerHTML = '';
                 if (stores.length === 0) {
-                    storesContainer.innerHTML = '<p class="text-gray-500">No tienes tiendas creadas. ¡Crea una ahora!</p>';
+                    storesContainer.innerHTML = `
+                        <div class="text-center col-span-full">
+                            <p class="text-gray-500 mb-4">No tienes tiendas creadas.</p>
+                            <button onclick="crearTienda()" class="neomorphic-btn">➕ Crear Tienda</button>
+                        </div>
+                    `;
                     return;
                 }
                 stores.forEach(store => {
-                    const storeCard = document.createElement('div');
-                    storeCard.className = 'neomorphic-card p-4 flex flex-col justify-between'; // Updated class
-                    storeCard.innerHTML = `
-                        <div>
-                            <h3 class="font-bold text-lg mb-2">${store.name}</h3>
-                            <p class="text-sm text-gray-600">ID: ${store.id}</p>
-                            <p class="text-sm text-gray-600">Slug: ${store.slug}</p>
-                        </div>
-                        <div class="flex flex-col sm:flex-row gap-2 mt-4">
-                            <a href="/store/${store.slug}" target="_blank" class="neomorphic-btn text-blue-600 hover:text-white hover:bg-blue-600 flex-grow text-center">Ver Tienda</a>
-                            <button class="neomorphic-btn text-green-600 hover:text-white hover:bg-green-600 flex-grow edit-btn" data-id="${store.id}" data-name="${store.name}" data-slug="${store.slug}" data-plan="${userPlan}">Editar</button>
-                            <button class="neomorphic-btn text-red-600 hover:text-white hover:bg-red-600 flex-grow delete-btn" data-id="${store.id}">Eliminar</button>
-                        </div>
-                    `;
-                    storesContainer.appendChild(storeCard);
+                  try {
+                    console.log('[DEBUG] renderStores - store:', store);
+                  } catch(e){ console.warn('No se pudo loguear store:', e); }
+
+                  // normaliza distintos nombres posibles de id
+                  const id = store.id || store.store_id || store.storeId || store.usuario_id || store.usuarioId || null;
+
+                  // intenta obtener slug amigable si existe
+                  const slug = store.slug || store.nombre && store.nombre.toString().toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,'') || null;
+
+                  // Construye URLs robustas:
+                  // - Preferir ruta por slug si existe y tu server la soporta (/store/:slug)
+                  // - Si no, usar template con query ?store_id=ID o /store/id
+                  const viewUrl = slug ? `/store/${encodeURIComponent(slug)}` : `/templates/baseplantillaediciontiendas.html?store_id=${encodeURIComponent(id)}`;
+                  const editUrl = `/templates/baseplantillaediciontiendas.html?store_id=${encodeURIComponent(id)}`;
+                  const deleteAction = () => {
+                    // llamada al endpoint de borrado (ajusta si tu API es diferente)
+                    if (!confirm('¿Eliminar esta tienda? Esta acción no se puede deshacer.')) return;
+                    (async () => {
+                      try {
+                        const token = localStorage.getItem('jwt_token') || localStorage.getItem('token') || '';
+                        const res = await fetch(`/api/user/stores/${id}`, {
+                          method: 'DELETE',
+                          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+                        });
+                        if (!res.ok) {
+                          const txt = await res.text().catch(()=>null);
+                          showErrorBanner('No se pudo eliminar la tienda: ' + (txt || res.status));
+                          return;
+                        }
+                        // refresca la lista
+                        loadProfileAndStores(); // Asume que existe función para recargar la UI
+                      } catch(err) {
+                        console.error('Error borrando tienda:', err);
+                        showErrorBanner('Error al eliminar la tienda. Revisa la consola.');
+                      }
+                    })();
+                  };
+
+                  // Renderiza la tarjeta / fila de la tienda (adáptalo al HTML que uses)
+                  const card = document.createElement('div');
+                  card.className = 'store-card';
+                  const title = document.createElement('h3');
+                  title.textContent = store.nombre || `Tienda ${id || ''}`;
+                  card.appendChild(title);
+
+                  const meta = document.createElement('p');
+                  meta.textContent = `ID: ${id || 'N/A'} • Plan: ${store.plan || store.plan_nombre || 'N/A'}`;
+                  card.appendChild(meta);
+
+                  // botones
+                  const btnView = document.createElement('a');
+                  btnView.href = viewUrl;
+                  btnView.textContent = 'Ver tienda';
+                  btnView.className = 'btn btn-sm';
+                  btnView.target = '_self';
+                  card.appendChild(btnView);
+
+                  const btnEdit = document.createElement('a');
+                  btnEdit.href = editUrl;
+                  btnEdit.textContent = 'Editar';
+                  btnEdit.className = 'btn btn-sm ml-2';
+                  card.appendChild(btnEdit);
+
+                  const btnDelete = document.createElement('button');
+                  btnDelete.textContent = 'Eliminar';
+                  btnDelete.className = 'btn btn-sm ml-2 btn-danger';
+                  btnDelete.addEventListener('click', deleteAction);
+                  card.appendChild(btnDelete);
+
+                  // finalmente añade la tarjeta al contenedor
+                  const storesContainer = document.getElementById('stores-list') || document.getElementById('stores-container');
+                  if (storesContainer) storesContainer.appendChild(card);
                 });
 
                 // Añadir event listeners para editar y eliminar
@@ -204,6 +278,71 @@
                 }
             });
         }
+
+        function crearTienda() {
+    (async () => {
+      try {
+        const token = localStorage.getItem('jwt_token') || localStorage.getItem('token') || '';
+        const headers = token ? { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+                              : { 'Content-Type': 'application/json' };
+
+        // 1) Intentar obtener tiendas existentes del backend
+        console.log('crearTienda: comprobando tiendas existentes...');
+        let res = await fetch('/api/user/stores', { headers });
+        if (res.ok) {
+          const stores = await res.json().catch(()=>null);
+          if (Array.isArray(stores) && stores.length > 0) {
+            // detectar campo id comúnmente usado
+            const id = stores[0].id || stores[0].store_id || stores[0].storeId || stores[0].uuid;
+            if (id) {
+              console.log('crearTienda: tienda existente encontrada, redirigiendo a store_id=', id);
+              window.location.href = `/templates/baseplantillaediciontiendas.html?store_id=${id}`;
+              return;
+            }
+          }
+        } else {
+          console.warn('crearTienda: GET /api/user/stores respondió', res.status, await res.text().catch(()=>null));
+        }
+
+        // 2) Si no hay tienda, pedir crear una nueva vía POST
+        console.log('crearTienda: no hay tienda; solicitando creación al backend...');
+        res = await fetch('/api/user/stores', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            nombre: 'Mi Tienda',           // puedes cambiar valores por defecto
+            descripcion: 'Tienda creada desde dashboard'
+          })
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(()=>null);
+          console.error('crearTienda: POST fallo', res.status, txt);
+          showErrorBanner('No se pudo crear la tienda: ' + (txt || res.status));
+          return;
+        }
+
+        const created = await res.json().catch(()=>null);
+        // distintos formatos posibles de respuesta:
+        const newId = (created && (created.id || created.store_id))
+                    || (created && created.data && (created.data.id || created.data.store_id))
+                    || (Array.isArray(created) && created[0] && created[0].id);
+
+        if (newId) {
+          console.log('crearTienda: tienda creada, id=', newId);
+          window.location.href = `/templates/baseplantillaediciontiendas.html?store_id=${newId}`;
+          return;
+        }
+
+        // Fallback: si no recibimos id estructurado
+        console.warn('crearTienda: respuesta inesperada al crear tienda', created);
+        showErrorBanner('Tienda creada pero no se recibió su ID. Revisa consola del servidor.');
+      } catch (err) {
+        console.error('crearTienda: error inesperado', err);
+        showErrorBanner('Error al crear la tienda. Revisa la consola.');
+      }
+    })();
+  }
 
         // --- ORDER MANAGER FUNCTIONS ---
         async function handleProcessOrder() {

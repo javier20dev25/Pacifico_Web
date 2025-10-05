@@ -25,83 +25,99 @@ function nombreAToken(nombre) {
 // 1. CREAR USUARIO TEMPORAL
 // ==========================================================
 router.post('/create-temporary-user', async (req, res) => {
-    const { nombre, plan_nombre: raw_plan_nombre } = req.body; // Correo ya no viene del frontend
-
-    // Mapeo de alias para nombres de planes
-    const planMap = {
-        "plan emprendedor clasico": "emprendedor",
-        "oro bisness": "oro_business", // Asumiendo que este es el nombre en la DB
-        "oro ejevutivo": "oro_ejecutivo" // Asumiendo que este es el nombre en la DB
-    };
-    const plan_nombre = planMap[raw_plan_nombre.toLowerCase()] || raw_plan_nombre.toLowerCase(); // Convertir a minúsculas para coincidencia
-
-    if (!nombre || !plan_nombre) {
-        return res.status(400).json({ error: 'Nombre de tienda y plan son obligatorios.' });
-    }
-
-    let correoBase = nombreAToken(nombre) + '@pacificoweb.com';
-    let correo = correoBase;
-    let suffix = 0;
-
-    // Verificar si el correo ya existe y añadir sufijo si es necesario
-    while (true) {
-        const { data: existingUser, error: existingError } = await supabaseAdmin
-            .from('usuarios')
-            .select('correo')
-            .eq('correo', correo)
-            .single();
-
-        if (existingError && existingError.code !== 'PGRST116') { // PGRST116 = no rows found
-            throw existingError; // Otro tipo de error
-        }
-
-        if (existingUser) {
-            suffix++;
-            correo = nombreAToken(nombre) + suffix + '@pacificoweb.com';
-        } else {
-            break; // Correo no existe, podemos usarlo
-        }
-    }
-
-    const temporaryPassword = generateTemporaryPassword();
-
+    console.log('[DEBUG] create-temporary-user body ->', req.body);
     try {
-        // Hashear la contraseña temporal
+        const { nombre, correo: correoEnviado, plan_nombre: raw_plan_nombre } = req.body;
+
+        if (!nombre || !raw_plan_nombre) {
+            return res.status(400).json({ error: 'Nombre de tienda y plan son obligatorios.' });
+        }
+
+        const planMap = {
+            "plan emprendedor clasico": "emprendedor",
+            "oro bisness": "oro_business",
+            "oro ejevutivo": "oro_ejecutivo"
+        };
+        const plan_nombre = planMap[raw_plan_nombre.toLowerCase()] || raw_plan_nombre.toLowerCase();
+
+        let correoFinal;
+        if (correoEnviado && correoEnviado.trim()) {
+            correoFinal = correoEnviado.trim();
+            const { data: existingUser, error: existingError } = await supabaseAdmin
+                .from('usuarios')
+                .select('correo')
+                .eq('correo', correoFinal)
+                .single();
+
+            if (existingUser) {
+                return res.status(409).json({ error: 'El correo electrónico proporcionado ya está en uso.' });
+            }
+            if (existingError && existingError.code !== 'PGRST116') {
+                console.error('Supabase error checking correo (admin provided):', existingError);
+                return res.status(500).json({ error: 'Ocurrió un error al verificar el correo.' });
+            }
+        } else {
+            let correoBase = nombreAToken(nombre) + '@pacificoweb.com';
+            correoFinal = correoBase;
+            let suffix = 0;
+            while (true) {
+                const { data: existingUser, error: existingError } = await supabaseAdmin
+                    .from('usuarios')
+                    .select('correo')
+                    .eq('correo', correoFinal)
+                    .single();
+
+                if (existingError && existingError.code !== 'PGRST116') {
+                    console.error('Supabase error checking correo (generated):', existingError);
+                    return res.status(500).json({ error: 'Ocurrió un error al verificar el correo.' });
+                }
+
+                if (existingUser) {
+                    suffix++;
+                    correoFinal = nombreAToken(nombre) + suffix + '@pacificoweb.com';
+                } else {
+                    break;
+                }
+            }
+        }
+
+        const temporaryPassword = generateTemporaryPassword();
         const password_hash = await bcrypt.hash(temporaryPassword, 10);
 
-        // Iniciar una transacción para asegurar la atomicidad
-        const { data, error } = await supabaseAdmin.rpc('create_user_and_contract', {
+        const { error } = await supabaseAdmin.rpc('create_user_and_contract', {
             p_nombre: nombre,
-            p_correo: correo,
+            p_correo: correoFinal,
             p_password_hash: password_hash,
             p_plan_nombre: plan_nombre
         });
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase RPC error (create_user_and_contract):', error);
+            if (error.code === '23505') {
+                return res.status(409).json({ error: 'El correo electrónico ya está en uso (violación de unicidad).' });
+            }
+            return res.status(500).json({ error: 'Ocurrió un error al crear el usuario y el contrato.' });
+        }
 
-        // Notificar al administrador
         const adminEmail = process.env.ADMIN_EMAIL;
         if (adminEmail) {
-            const subject = `🎉 Nuevo Usuario Temporal Creado: ${nombre} (${correo})`;
-            const text = `Se ha creado un nuevo usuario temporal:\nNombre: ${nombre}\nCorreo: ${correo}\nPlan: ${plan_nombre}\nContraseña Temporal: ${temporaryPassword}\n\nRecuerda compartirle las credenciales y el enlace de login.`;
-            const html = `<p>Se ha creado un nuevo usuario temporal:</p>\n                          <ul>\n                              <li><strong>Nombre:</strong> ${nombre}</li>\n                              <li><strong>Correo:</strong> ${correo}</li>\n                              <li><strong>Plan:</strong> ${plan_nombre}</li>\n                              <li><strong>Contraseña Temporal:</strong> <code>${temporaryPassword}</code></li>\n                          </ul>\n                          <p>Recuerda compartirle las credenciales y el enlace de login.</p>`;
+            const subject = `🎉 Nuevo Usuario Temporal Creado: ${nombre} (${correoFinal})`;
+            const text = `Se ha creado un nuevo usuario temporal:\nNombre: ${nombre}\nCorreo: ${correoFinal}\nPlan: ${plan_nombre}\nContraseña Temporal: ${temporaryPassword}\n\nRecuerda compartirle las credenciales y el enlace de login.`;
+            const html = `<p>Se ha creado un nuevo usuario temporal:</p><ul><li><strong>Nombre:</strong> ${nombre}</li><li><strong>Correo:</strong> ${correoFinal}</li><li><strong>Plan:</strong> ${plan_nombre}</li><li><strong>Contraseña Temporal:</strong> <code>${temporaryPassword}</code></li></ul><p>Recuerda compartirle las credenciales y el enlace de login.</p>`;
             sendEmail(adminEmail, subject, text, html);
         }
 
         res.status(201).json({
             message: 'Usuario temporal y contrato creados con éxito.',
             credentials: {
-                correo: correo,
+                correo: correoFinal,
                 password: temporaryPassword
             }
         });
 
     } catch (error) {
         console.error('Error en la transacción de creación de usuario:', error);
-        if (error.code === '23505') { // unique_violation en el correo
-            return res.status(409).json({ error: 'El correo electrónico ya está en uso.' });
-        }
-        res.status(500).json({ error: 'Error interno del servidor.', details: error.message });
+        res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
     }
 });
 
@@ -120,7 +136,7 @@ router.get('/users', async (req, res) => {
 
     } catch (error) {
         console.error('Error al obtener la vista de usuarios:', error);
-        res.status(500).json({ error: 'Error interno del servidor.', details: error.message });
+        res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
     }
 });
 
@@ -135,7 +151,6 @@ router.post('/revoke-user', async (req, res) => {
     }
 
     try {
-        // Eliminar el usuario de la tabla 'usuarios'
         const { error } = await supabaseAdmin
             .from('usuarios')
             .delete()
@@ -147,7 +162,7 @@ router.post('/revoke-user', async (req, res) => {
 
     } catch (error) {
         console.error('Error al revocar usuario:', error);
-        res.status(500).json({ error: 'Error interno del servidor.', details: error.message });
+        res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
     }
 });
 
@@ -173,7 +188,7 @@ router.post('/suspend-user', async (req, res) => {
 
     } catch (error) {
         console.error('Error al suspender usuario:', error);
-        res.status(500).json({ error: 'Error interno del servidor.', details: error.message });
+        res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
     }
 });
 
@@ -188,7 +203,6 @@ router.post('/renew-contract', async (req, res) => {
     }
 
     try {
-        // Obtener el contrato activo actual
         const { data: currentContract, error: contractError } = await supabaseAdmin
             .from('contratos')
             .select('id, fecha_expiracion')
@@ -200,11 +214,9 @@ router.post('/renew-contract', async (req, res) => {
             return res.status(404).json({ error: 'No se encontró un contrato activo para este usuario.' });
         }
 
-        // Calcular nueva fecha de expiración (añadir 3 meses)
         const newExpirationDate = new Date(currentContract.fecha_expiracion);
         newExpirationDate.setMonth(newExpirationDate.getMonth() + 3);
 
-        // Actualizar la fecha de expiración del contrato
         const { error: updateError } = await supabaseAdmin
             .from('contratos')
             .update({ fecha_expiracion: newExpirationDate.toISOString() })
@@ -216,7 +228,7 @@ router.post('/renew-contract', async (req, res) => {
 
     } catch (error) {
         console.error('Error al renovar contrato:', error);
-        res.status(500).json({ error: 'Error interno del servidor.', details: error.message });
+        res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
     }
 });
 
@@ -235,7 +247,6 @@ router.post('/reset-password', async (req, res) => {
     try {
         const newPasswordHash = await bcrypt.hash(newTemporaryPassword, 10);
 
-        // Actualizar la contraseña y el estado del usuario a temporal
         const { error } = await supabaseAdmin
             .from('usuarios')
             .update({ 
@@ -254,7 +265,7 @@ router.post('/reset-password', async (req, res) => {
 
     } catch (error) {
         console.error('Error al resetear contraseña:', error);
-        res.status(500).json({ error: 'Error interno del servidor.', details: error.message });
+        res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
     }
 });
 
@@ -271,7 +282,7 @@ router.get('/registration-stats', async (req, res) => {
 
     } catch (error) {
         console.error('Error al obtener estadísticas de registro:', error);
-        res.status(500).json({ error: 'Error interno del servidor.', details: error.message });
+        res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
     }
 });
 

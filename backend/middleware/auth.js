@@ -28,4 +28,19 @@ const protect = async (req, res, next) => {
     }
 };
 
-module.exports = { protect };
+const isAdmin = (req, res, next) => {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'No autenticado.' });
+    // Ajusta el campo según como lo firmes en el token (role, rol, is_admin, etc.)
+    const role = req.user.role || req.user.rol || req.user.is_admin;
+    if (role === 'admin' || role === 'ADMIN' || role === true) {
+      return next();
+    }
+    return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
+  } catch (e) {
+    console.error('isAdmin middleware error:', e);
+    return res.status(500).json({ error: 'Error en autenticación.' });
+  }
+};
+
+module.exports = { protect, isAdmin };

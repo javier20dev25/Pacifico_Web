@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Editor de Tienda — Pacífico Web</title>
+<!-- Simple neumorphism CSS -->
+<style>
+  :root{
+    --bg:#e9eef6; --card:#f6f8fb; --muted:#6b7280; --accent:#7ea1ff;
+    --success:#35c47a; --danger:#ef4444; --glass: rgba(255,255,255,0.6);
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#e9eef6,#dfe8f8);font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  .container{max-width:980px;margin:28px auto;padding:20px;}
+  h1{margin:0 0 8px;font-weight:700;color:#0f172a;}
+  p.lead{color:var(--muted);margin-top:0;margin-bottom:18px;}
+
+  /* neumorphic card */
+  .card{background:var(--card);border-radius:14px;padding:18px;box-shadow: 8px 8px 20px rgba(170,187,204,0.18), -8px -8px 20px rgba(255,255,255,0.9);margin-bottom:18px;}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;}
+  .col{flex:1;min-width:220px;}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;}
+  input[type="text"], input[type="number"], textarea, select {width:100%;padding:10px;border-radius:10px;border:none;background:linear-gradient(180deg,#f7f9fc,#eef4ff);box-shadow: inset 2px 2px 5px rgba(0,0,0,0.03);font-size:14px}
+  textarea{min-height:80px;resize:vertical}
+  .small{font-size:13px;color:var(--muted);margin-top:6px}
+  .btn{display:inline-block;padding:10px 14px;border-radius:10px;border:none;background:linear-gradient(180deg,var(--accent),#5b8bff);color:white;font-weight:600;cursor:pointer;box-shadow: 0 6px 18px rgba(79,115,255,0.18);transition:transform .12s}
+  .btn:active{transform:translateY(1px)}
+  .btn.secondary{background:linear-gradient(180deg,#fff,#f0f4ff);color:#123;box-shadow:none;border:1px solid rgba(0,0,0,0.04)}
+  .btn.danger{background:linear-gradient(180deg,#ff8a8a,#ff5252)}
+  .muted{color:var(--muted)}
+  .center{ text-align:center; }
+
+  /* logo preview */
+  .logo-drop{width:160px;height:160px;border-radius:12px;background:linear-gradient(180deg,#ffffff,#eef4ff);display:flex;align-items:center;justify-content:center;border:1px dashed rgba(15,23,42,0.06);cursor:pointer;overflow:hidden;position:relative}
+  .logo-drop img{width:100%;height:100%;object-fit:cover}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+
+  /* product list */
+  .product{border-radius:12px;padding:12px;margin-bottom:10px;background:linear-gradient(180deg,#fff,#f7fbff);display:flex;gap:10px;align-items:center}
+  .product img{width:80px;height:80px;border-radius:8px;object-fit:cover;border:1px solid rgba(0,0,0,0.04)}
+  .product .meta{flex:1}
+  .product .actions{display:flex;flex-direction:column;gap:6px}
+  .inline{display:flex;gap:8px;align-items:center}
+  .chip{padding:4px 8px;border-radius:999px;background:#f0f6ff;color:#234;border:1px solid rgba(0,0,0,0.03);font-size:13px}
+
+  /* small helpers */
+  .sep{height:1px;background:linear-gradient(90deg,transparent,#e6eefb,transparent);margin:14px 0;border-radius:4px;}
+  .notice{background:linear-gradient(180deg,#fff8e6,#fff2dc);padding:10px;border-radius:10px;border:1px solid rgba(235,181,56,0.12);color:#6b4a00}
+  .success-banner{background:linear-gradient(180deg,#ecfdf5,#d1fae5);padding:10px;border-radius:10px;color:#065f46;border:1px solid rgba(6,95,70,0.06);}
+
+  /* Modals */
+  .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center;
+      z-index: 1000;
+  }
+  .modal-content {
+      background: var(--card); padding: 20px; border-radius: 14px;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.1); max-width: 500px; width: 90%;
+      position: relative;
+  }
+  .modal-content h3 { margin-top: 0; }
+  .modal-actions {
+      display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;
+  }
+
+  /* responsive */
+  @media (max-width:720px){ .row{flex-direction:column} .logo-drop{width:120px;height:120px} .product img{width:64px;height:64px} }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Editor de Tienda — Pacífico Web</h1>
+  <p class="lead">Edita tu tienda rápidamente. Los cambios se guardarán automáticamente en tu base de datos.</p>
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-eye"></i> Vista Previa</h2>
+              <button id="fullScreenPreviewBtn" class="btn bg-gray-200 text-gray-700 px-4 py-2 rounded-full font-semibold hover:bg-gray-300 text-sm"><i class="fas fa-expand-arrows-alt mr-2"></i> Pantalla Completa</button>
+            </div>
+  <!-- STORE INFO -->
+  <div class="card" id="store-card">
+    <div class="row" style="align-items:center">
+      <div class="col" style="flex:0 0 180px">
+        <div id="logoDrop" class="logo-drop" title="Clic para subir logo" style="position: relative;">
+          <div id="logoPlaceholder" class="center muted">
+            <div style="font-size:28px">🏬</div>
+            <div class="hint">Subir logo</div>
+          </div>
+          <img id="logoPreview" style="display:none" alt="logo preview">
+          <input type="file" id="logoFile" accept="image/*" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+        </div>
+        <div class="hint">Formato PNG/JPG. Recomendado: 600×600</div>
+      </div>
+
+      <div class="col">
+        <label>Nombre de la tienda</label>
+        <input id="storeName" type="text" placeholder="Ej: Tienda La Esquina" />
+        <div class="small">Se mostrará públicamente como el nombre de tu tienda.</div>
+
+        <div style="height:10px"></div>
+
+        <label>Descripción (opcional)</label>
+        <textarea id="storeDesc" placeholder="Describe tu tienda, productos o horario..."></textarea>
+
+        <div style="height:10px"></div>
+
+        <label>Enlace de YouTube (opcional)</label>
+        <input id="storeVideo" type="text" placeholder="https://www.youtube.com/watch?v=XXXXXXXX" />
+        <div id="videoPreview" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- Delivery & Pricing -->
+    <div class="row">
+      <div class="col">
+        <label>Costo del proveedor por libra (para cálculo de envío)</label>
+        <div class="inline">
+          <input id="providerRate" type="number" placeholder="ej. 0.50" step="0.01" />
+          <div class="small muted">USD por libra (usa la moneda que fijes abajo)</div>
+        </div>
+      </div>
+
+      <div class="col">
+        <label>Opciones de envío</label>
+        <div class="inline">
+          <label><input id="shipAir" type="checkbox"> Aéreo</label>
+          <label style="margin-left:8px"><input id="shipSea" type="checkbox"> Marítimo</label>
+        </div>
+        <div class="small">Si no marcas ninguna, se asumirá pickup/consulta.</div>
+      </div>
+
+      <div class="col">
+        <label>WhatsApp de la tienda (cliente verá botón de contacto)</label>
+        <div class="inline">
+          <select id="countryCode" style="width:86px;padding:8px;border-radius:8px;border:none;background:linear-gradient(180deg,#fff,#f7fbff)">
+            <option value="+505">+505</option>
+            <option value="+1">+1</option>
+            <option value="+52">+52</option>
+            <option value="+506">+506</option>
+          </select>
+          <input id="whatsappNumber" type="text" placeholder="8888-8888" style="flex:1" />
+        </div>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+    <div class="row" style="align-items:center">
+      <div class="col">
+        <button id="saveStoreBtn" class="btn">💾 Guardar cambios</button>
+      </div>
+      <div class="col center">
+        <div id="saveMsg" class="muted small">Estado: sin cambios</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRODUCTS -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div>
+        <h3 style="margin:0">Productos</h3>
+        <div class="small muted">Añade productos — 1 imagen por producto.</div>
+      </div>
+      <div>
+        <button id="addProductBtn" class="btn">➕ Añadir producto</button>
+      </div>
+    </div>
+    <div id="productsList"></div>
+    <div class="sep"></div>
+    <div class="notice">
+      <strong>Notas:</strong> Los precios mostrados incluyen el precio base + ganancia. El cálculo de envío se basa en el peso y en el coste por libra que configuraste arriba.
+    </div>
+  </div>
+
+  <!-- bottom actions -->
+  <div style="height:12px"></div>
+  <div class="center">
+    <button id="finalSaveBtn" class="btn">💾 Guardar todo</button>
+    <div style="height:8px"></div>
+    <div id="opResult" class="muted small"></div>
+  </div>
+
+</div>
+
+<!-- Custom Modal -->
+<div id="customModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="modalTitle"></h3>
+        <p id="modalMessage"></p>
+        <div class="modal-actions">
+            <button id="modalBtnConfirm" class="btn danger" style="display:none;">Confirmar</button>
+            <button id="modalBtnCancel" class="btn secondary">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- JS -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, onSnapshot, collection, query, addDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Habilitar logs de depuración para Firestore
+setLogLevel('Debug');
+
+const __app_id = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const $ = id => document.getElementById(id);
+const q = (s, root=document) => root.querySelector(s);
+const escapeHTML = (s) => (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+const modalOverlay = $('customModal');
+const modalTitle = $('modalTitle');
+const modalMessage = $('modalMessage');
+const modalBtnConfirm = $('modalBtnConfirm');
+const modalBtnCancel = $('modalBtnCancel');
+
+function showModal({ title, message, onConfirm = null }) {
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    modalBtnConfirm.style.display = onConfirm ? 'inline-block' : 'none';
+    modalOverlay.style.display = 'flex';
+
+    const handleConfirm = () => {
+        if (onConfirm) onConfirm();
+        modalOverlay.style.display = 'none';
+        modalBtnConfirm.removeEventListener('click', handleConfirm);
+    };
+    modalBtnConfirm.addEventListener('click', handleConfirm);
+    modalBtnCancel.onclick = () => {
+        modalOverlay.style.display = 'none';
+        modalBtnConfirm.removeEventListener('click', handleConfirm);
+    };
+}
+
+class StoreEditor {
+    constructor() {
+        this.storeId = null;
+        this.userId = null;
+        this.db = db;
+        this.auth = auth;
+        this.storeRef = null;
+        this.productsRef = null;
+        this.products = [];
+
+        this.initUI();
+        this.initAuth();
+    }
+
+    initUI() {
+        // console.log('DEBUG: initUI() iniciado.'); // Este log no lo verás
+        this.logoDrop = $('logoDrop');
+        this.logoFile = $('logoFile');
+        this.logoPreview = $('logoPreview');
+        this.logoPlaceholder = $('logoPlaceholder');
+        this.storeName = $('storeName');
+        this.storeDesc = $('storeDesc');
+        this.storeVideo = $('storeVideo');
+        this.videoPreview = $('videoPreview');
+        this.providerRate = $('providerRate');
+        this.shipAir = $('shipAir');
+        this.shipSea = $('shipSea');
+        this.countryCode = $('countryCode');
+        this.whatsappNumber = $('whatsappNumber');
+        this.saveStoreBtn = $('saveStoreBtn');
+        this.addProductBtn = $('addProductBtn');
+        this.productsList = $('productsList');
+        this.finalSaveBtn = $('finalSaveBtn');
+        this.saveMsg = $('saveMsg');
+        this.opResult = $('opResult');
+        this.userIdDisplay = $('userIdDisplay');
+        const fullScreenPreviewBtn = $('fullScreenPreviewBtn');
+
+        // Añadir feedback visual para el estado de los elementos
+        this.saveMsg.textContent = `Estado inicial: logoDrop: ${this.logoDrop ? 'OK' : 'NULL'}, logoFile: ${this.logoFile ? 'OK' : 'NULL'}`;
+
+        // El input file ahora es directamente clickeable, no necesitamos el click programático en logoDrop
+        // if (this.logoDrop) {
+        //     this.logoDrop.addEventListener('click', () => {
+        //         this.saveMsg.textContent = 'DEBUG: logoDrop click detectado. Abriendo selector de archivo...';
+        //         this.logoFile.click();
+        //     });
+        // } else {
+        //     this.saveMsg.textContent = 'Error: logoDrop no encontrado en el DOM.';
+        // }
+
+        if (this.logoFile) {
+            this.logoFile.addEventListener('change', e => {
+                this.saveMsg.textContent = 'DEBUG: logoFile change detectado. Procesando archivo...';
+                this.handleLogoFile(e.target.files && e.target.files[0]);
+            });
+        } else {
+            this.saveMsg.textContent = 'Error: logoFile no encontrado en el DOM.';
+        }
+
+        // ... (resto de tus event listeners y drag & drop)
+        if (this.storeVideo) this.storeVideo.addEventListener('blur', () => { /* console.log('DEBUG: storeVideo blur'); */ this.renderVideoPreview(); });
+        if (this.saveStoreBtn) this.saveStoreBtn.addEventListener('click', () => { /* console.log('DEBUG: saveStoreBtn click'); */ this.saveStore(); });
+        if (this.addProductBtn) this.addProductBtn.addEventListener('click', () => { /* console.log('DEBUG: addProductBtn click'); */ this.addProduct(); });
+        if (this.finalSaveBtn) this.finalSaveBtn.addEventListener('click', () => { /* console.log('DEBUG: finalSaveBtn click'); */ this.saveStore(); });
+        if (fullScreenPreviewBtn) fullScreenPreviewBtn.addEventListener('click', () => {
+            /* console.log('DEBUG: fullScreenPreviewBtn click'); */
+            const livePreview = $('livePreview');
+            const storeName = $('storeName');
+            const storeNameVal = storeName.value || 'Vista Previa de la Tienda';
+
+            const newTab = window.open();
+            let htmlContent = '<!doctype html><html lang="es"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>' + escapeHTML(storeNameVal) + '</title>';
+            htmlContent += '<script src="https://cdn.tailwindcss.com/"><\/script>';
+            htmlContent += '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">';
+            htmlContent += '<style>:root {--bg: #e9eef6;--card: #f6f8fb;--muted: #6b7280;}body {background: linear-gradient(180deg, #e9eef6, #dfe8f8);font-family: \'Inter\', sans-serif;color: #1a202c;padding: 2rem;}.neumorphic-card {background: var(--card);border-radius: 14px;box-shadow: 8px 8px 20px rgba(170, 187, 204, 0.18), -8px -8px 20px rgba(255, 255, 255, 0.9);}.btn {transition: transform 0.12s ease-in-out, box-shadow 0.12s ease-in-out;}.btn:active {transform: translateY(1px);box-shadow: none;}</style>';
+            htmlContent += '</head><body><div class="container mx-auto">' + livePreview.innerHTML + '</div></body></html>';
+            newTab.document.write(htmlContent);
+            newTab.document.close();
+        });
+
+
+        // Manejar drag & drop para el logo
+        if (this.logoDrop) {
+            this.logoDrop.addEventListener('dragover', e => { e.preventDefault(); this.logoDrop.style.opacity = 0.8; /* console.log('DEBUG: logoDrop dragover'); */ });
+            this.logoDrop.addEventListener('dragleave', () => { this.logoDrop.style.opacity = 1; /* console.log('DEBUG: logoDrop dragleave'); */ });
+            this.logoDrop.addEventListener('drop', e => {
+                e.preventDefault();
+                this.logoDrop.style.opacity = 1;
+                const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                if (file) { /* console.log('DEBUG: logoDrop drop, file:', file); */ this.handleLogoFile(file); }
+            });
+        }
+
+        // Event listeners para autoguardado básico en campos de texto
+        if (this.storeName) this.storeName.addEventListener('change', () => { /* console.log('DEBUG: storeName change'); */ this.saveStore(false); });
+        if (this.storeDesc) this.storeDesc.addEventListener('change', () => { /* console.log('DEBUG: storeDesc change'); */ this.saveStore(false); });
+        if (this.storeVideo) this.storeVideo.addEventListener('change', () => { /* console.log('DEBUG: storeVideo change'); */ this.saveStore(false); });
+        if (this.providerRate) this.providerRate.addEventListener('change', () => { /* console.log('DEBUG: providerRate change'); */ this.saveStore(false); });
+        if (this.shipAir) this.shipAir.addEventListener('change', () => { /* console.log('DEBUG: shipAir change'); */ this.saveStore(false); });
+        if (this.shipSea) this.shipSea.addEventListener('change', () => { /* console.log('DEBUG: shipSea change'); */ this.saveStore(false); });
+        if (this.whatsappNumber) this.whatsappNumber.addEventListener('change', () => { /* console.log('DEBUG: whatsappNumber change'); */ this.saveStore(false); });
+    }
+
+    async initAuth() {
+        onAuthStateChanged(this.auth, async (user) => {
+            if (user) {
+                this.userId = user.uid;
+                this.userIdDisplay.textContent = `ID de usuario: ${this.userId}`;
+                const storeIdParam = new URLSearchParams(location.search).get('store_id');
+                this.storeId = storeIdParam;
+                this.storeRef = doc(this.db, 'artifacts', __app_id, 'users', this.userId, 'stores', this.storeId || 'main');
+                this.productsRef = collection(this.db, 'artifacts', __app_id, 'users', this.userId, 'products');
+                this.listenForData();
+            } else {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(this.auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(this.auth);
+                }
+            }
+        });
+    }
+
+    listenForData() {
+        if (!this.storeRef || !this.productsRef) return;
+
+        // Escuchar cambios en los detalles de la tienda
+        onSnapshot(this.storeRef, (doc) => {
+            if (doc.exists()) {
+                const data = doc.data();
+                this.storeName.value = data.nombre || '';
+                this.storeDesc.value = data.descripcion || '';
+                this.storeVideo.value = data.video || '';
+                this.providerRate.value = data.providerRate || 0;
+                this.shipAir.checked = !!data.shipAir;
+                this.shipSea.checked = !!data.shipSea;
+                const wa = data.whatsapp || '';
+                if (wa.startsWith('+')) {
+                    this.countryCode.value = wa.substring(0, wa.length - 8);
+                    this.whatsappNumber.value = wa.substring(wa.length - 8);
+                } else {
+                    this.whatsappNumber.value = wa;
+                }
+                this.renderVideoPreview();
+                if (data.logo_url) {
+                    this.logoPreview.src = data.logo_url;
+                    this.logoPreview.style.display = 'block';
+                    this.logoPlaceholder.style.display = 'none';
+                }
+            }
+        });
+
+        // Escuchar cambios en la lista de productos
+        onSnapshot(this.productsRef, (snapshot) => {
+            this.products = snapshot.docs.map(d => ({ ...d.data(), id: d.id, imagePreview: d.data().image_url || null }));
+            this.renderProducts();
+        });
+    }
+
+    async saveStore() {
+        this.saveMsg.textContent = 'Guardando...';
+        const payload = {
+            nombre: this.storeName.value.trim(),
+            descripcion: this.storeDesc.value.trim(),
+            video: this.storeVideo.value.trim(),
+            providerRate: parseFloat(this.providerRate.value) || 0,
+            shipAir: !!this.shipAir.checked,
+            shipSea: !!this.shipSea.checked,
+            whatsapp: this.countryCode.value + this.whatsappNumber.value,
+        };
+
+        try {
+            await setDoc(this.storeRef, payload, { merge: true });
+            this.saveMsg.textContent = 'Guardado correctamente!';
+        } catch (error) {
+            console.error('Error guardando la tienda:', error);
+            this.saveMsg.textContent = 'Error al guardar.';
+        }
+    }
+
+    async handleLogoFile(file) {
+        // console.log('DEBUG: handleLogoFile iniciado, file:', file); // Este log no lo verás, pero es lo que haría en un entorno de depuración
+        if (!file) {
+            this.saveMsg.textContent = 'Error: No se seleccionó ningún archivo.';
+            // console.log('DEBUG: handleLogoFile - No file selected.');
+            return;
+        }
+
+        this.saveMsg.textContent = 'Procesando logo...';
+        // console.log('DEBUG: handleLogoFile - Processing file.');
+
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            // console.log('DEBUG: FileReader onloadend.');
+            if (!this.storeRef) {
+                this.saveMsg.textContent = 'Error: Referencia de tienda no disponible para guardar logo.';
+                // console.log('DEBUG: handleLogoFile - storeRef is null.');
+                return;
+            }
+            try {
+                // Aquí es donde el código original intentaría guardar en Firestore.
+                // Como no usas Firestore, esta parte fallará o no hará nada útil.
+                // Necesitamos adaptar esto para tu backend de Supabase.
+                // Por ahora, solo actualizaremos la previsualización local.
+
+                // Simplemente previsualizamos el logo localmente
+                this.logoPreview.src = reader.result;
+                this.logoPreview.style.display = 'block';
+                this.logoPlaceholder.style.display = 'none';
+                this.saveMsg.textContent = 'Logo previsualizado localmente. (Guardado en DB pendiente)';
+                // console.log('DEBUG: Logo previsualizado localmente.');
+
+                // TODO: Aquí deberías añadir la lógica para subir el archivo a Supabase Storage
+                // y luego actualizar la URL del logo en tu tabla 'stores' de Supabase.
+                // Esto implicaría una llamada fetch a tu API de backend.
+
+            } catch (error) {
+                // console.error('DEBUG: Error al guardar logo en Firestore (o simulación):', error);
+                this.saveMsg.textContent = `Error al procesar logo: ${error.message || 'Desconocido'}`;
+            }
+        };
+        reader.onerror = (error) => {
+            // console.error('DEBUG: FileReader error:', error);
+            this.saveMsg.textContent = `Error al leer archivo: ${error.message || 'Desconocido'}`;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    renderVideoPreview() {
+        const v = this.storeVideo.value.trim();
+        this.videoPreview.innerHTML = '';
+        if (!v) return;
+        let id = null;
+        const m = v.match(/[?&]v=([^&]+)/) || v.match(/youtu\.be\/([^?&]+)/) || v.match(/embed\/([^?&]+)/);
+        if (m) id = m[1];
+        if (id) {
+            this.videoPreview.innerHTML = `<iframe width="320" height="180" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen style="border-radius:8px"></iframe>`;
+        } else {
+            this.videoPreview.innerHTML = `<div class="muted small">Enlace no reconocido como YouTube.</div>`;
+        }
+    }
+
+    renderProducts() {
+        this.productsList.innerHTML = '';
+        if (this.products.length === 0) {
+            this.productsList.innerHTML = `<div class="muted">No hay productos. Pulsa "Añadir producto".</div>`;
+            return;
+        }
+        this.products.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'product';
+            div.innerHTML = `
+              <img src="${p.imagePreview || 'https://placehold.co/80x80/e9eef6/6b7280?text=IMG'}" alt="product image">
+              <div class="meta">
+                <div style="font-weight:700">${escapeHTML(p.name || 'Producto sin nombre')}</div>
+                <div class="small muted" style="margin-top:6px">
+                  Precio: ${p.currency || 'C$'}${p.price != null ? p.price.toFixed(2) : '0.00'} • Peso: ${p.weight || 0} lb
+                </div>
+              </div>
+              <div class="actions">
+                <button class="btn secondary edit-btn" data-id="${p.id}">Editar</button>
+                <button class="btn danger remove-btn" data-id="${p.id}">Eliminar</button>
+              </div>
+            `;
+            this.productsList.appendChild(div);
+        });
+        document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', e => this.openProductEditor(e.target.dataset.id)));
+        document.querySelectorAll('.remove-btn').forEach(btn => btn.addEventListener('click', e => this.removeProduct(e.target.dataset.id)));
+    }
+
+    addProduct() {
+        showModal({
+            title: 'Añadir nuevo producto',
+            message: '¿Quieres añadir un nuevo producto? Los cambios se guardarán automáticamente.',
+            onConfirm: () => this.openProductEditor(null)
+        });
+    }
+
+    async removeProduct(id) {
+        showModal({
+            title: 'Confirmar eliminación',
+            message: '¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.',
+            onConfirm: async () => {
+                try {
+                    await deleteDoc(doc(this.productsRef, id));
+                    this.opResult.textContent = 'Producto eliminado.';
+                } catch (error) {
+                    console.error('Error al eliminar producto:', error);
+                    this.opResult.textContent = 'Error al eliminar.';
+                }
+            }
+        });
+    }
+
+    openProductEditor(id) {
+        const product = id ? this.products.find(p => p.id === id) : { id: null, name: '', price: 0, currency: 'C$', weight: 0, stockType: 'stock', days: 0, imageFile: null, deliveryIncluded: true };
+        const editor = document.createElement('div');
+        editor.className = 'modal-overlay';
+        editor.innerHTML = `
+          <div class="modal-content">
+            <h3 style="margin:0">${id ? 'Editar Producto' : 'Añadir Producto'}</h3>
+            <div style="height:10px"></div>
+            <label>Imagen (1 foto)</label>
+            <input type="file" id="prodImageInput" accept="image/*" />
+            <div style="height:8px"></div>
+            <label>Nombre</label><input id="prodNameInput" type="text" value="${escapeHTML(product.name)}" />
+            <label>Precio</label><input id="prodPriceInput" type="number" value="${product.price}" step="0.01" />
+            <label>Moneda</label>
+            <select id="prodCurrency">
+              <option value="C$"${product.currency === 'C$' ? ' selected' : ''}>Córdobas (C$)</option>
+              <option value="USD"${product.currency === 'USD' ? ' selected' : ''}>USD ($)</option>
+            </select>
+            <label>Peso (lb)</label><input id="prodWeight" type="number" value="${product.weight}" step="0.01" />
+            <label>Tipo</label>
+            <select id="prodType">
+              <option value="stock"${product.stockType === 'stock' ? ' selected' : ''}>Disponible (stock)</option>
+              <option value="made"${product.stockType === 'made' ? ' selected' : ''}>Por encargo</option>
+            </select>
+            <label>Días si es por encargo</label><input id="prodDays" type="number" value="${product.days}" />
+            <label>Delivery incluido?</label>
+            <select id="prodDelivery">
+              <option value="included"${product.deliveryIncluded ? ' selected' : ''}>Incluido</option>
+              <option value="extra"${!product.deliveryIncluded ? ' selected' : ''}>Costo extra</option>
+            </select>
+            <div class="modal-actions">
+              <button id="saveProduct" class="btn">Guardar</button>
+              <button id="cancelProduct" class="btn secondary">Cancelar</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(editor);
+        editor.style.display = 'flex';
+
+        editor.querySelector('#cancelProduct').addEventListener('click', () => editor.remove());
+
+        editor.querySelector('#saveProduct').addEventListener('click', async () => {
+            const prodImageInput = editor.querySelector('#prodImageInput');
+            const newProduct = {
+                name: editor.querySelector('#prodNameInput').value.trim(),
+                price: parseFloat(editor.querySelector('#prodPriceInput').value) || 0,
+                currency: editor.querySelector('#prodCurrency').value,
+                weight: parseFloat(editor.querySelector('#prodWeight').value) || 0,
+                stockType: editor.querySelector('#prodType').value,
+                days: parseInt(editor.querySelector('#prodDays').value) || 0,
+                deliveryIncluded: editor.querySelector('#prodDelivery').value === 'included',
+                image_url: product.imagePreview
+            };
+
+            if (prodImageInput.files && prodImageInput.files[0]) {
+                const reader = new FileReader();
+                reader.onloadend = async () => {
+                    newProduct.image_url = reader.result;
+                    this.saveProduct(id, newProduct);
+                };
+                reader.readAsDataURL(prodImageInput.files[0]);
+            } else {
+                this.saveProduct(id, newProduct);
+            }
+            editor.remove();
+        });
+    }
+
+    async saveProduct(id, data) {
+        try {
+            if (id) {
+                await setDoc(doc(this.productsRef, id), data, { merge: true });
+                this.opResult.textContent = 'Producto actualizado.';
+            } else {
+                await addDoc(this.productsRef, data);
+                this.opResult.textContent = 'Producto añadido.';
+            }
+        } catch (error) {
+            console.error('Error al guardar producto:', error);
+            this.opResult.textContent = 'Error al guardar.';
+        }
+    }
+}
+
+      // event bindings
+      saveStoreBtn.addEventListener('click', () => saveStoreToServer(false));
+      launchStoreBtn.addEventListener('click', () => saveStoreToServer(true));
+      
+      const fullScreenPreviewBtn = $('fullScreenPreviewBtn');
+      fullScreenPreviewBtn.addEventListener('click', () => {
+        const previewContent = livePreview.innerHTML;
+        const storeNameVal = storeName.value || 'Vista Previa de la Tienda';
+
+        const newTab = window.open();
+        let htmlContent = '<!doctype html><html lang="es"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>' + escapeHTML(storeNameVal) + '</title>';
+        htmlContent += '<script src="https://cdn.tailwindcss.com/"><\/script>';
+        htmlContent += '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">';
+        htmlContent += '<style>:root {--bg: #e9eef6;--card: #f6f8fb;--muted: #6b7280;}body {background: linear-gradient(180deg, #e9eef6, #dfe8f8);font-family: \'Inter\', sans-serif;color: #1a202c;padding: 2rem;}.neumorphic-card {background: var(--card);border-radius: 14px;box-shadow: 8px 8px 20px rgba(170, 187, 204, 0.18), -8px -8px 20px rgba(255, 255, 255, 0.9);}.btn {transition: transform 0.12s ease-in-out, box-shadow 0.12s ease-in-out;}.btn:active {transform: translateY(1px);box-shadow: none;}</style>';
+        htmlContent += '</head><body><div class="container mx-auto">' + previewContent + '</div></body></html>';
+        newTab.document.write(htmlContent);
+        newTab.document.close();
+      });
+
+      // For initial load: try fetch store data if storeIdParam exists
+      async function loadProfileAndStores() {
+
+
+</script>
+</body>
+</html>
+

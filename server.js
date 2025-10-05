@@ -28,17 +28,17 @@ const authRoutes = require('./backend/api/auth');
 const adminRoutes = require('./backend/api/admin');
 const userRoutes = require('./backend/api/user');
 const chatRoutes = require('./backend/api/chat');
-const { protect } = require('./backend/middleware/auth');
+const { protect, isAdmin } = require('./backend/middleware/auth');
 
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', protect, adminRoutes);
+app.use('/api/admin', protect, isAdmin, adminRoutes);
 app.use('/api/user', protect, userRoutes);
 app.use('/api/chat', protect, chatRoutes);
 
 // ==========================================================
 // NUEVA RUTA DINÁMICA PARA TIENDAS (por slug)
 // ==========================================================
-app.get('/tienda/:slug', async (req, res) => {
+app.get('/store/:slug', async (req, res) => {
     const storeSlug = req.params.slug;
     try {
         // Buscar la tienda por slug en Supabase

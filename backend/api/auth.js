@@ -28,13 +28,18 @@ router.post('/login', async (req, res) => {
                 `
                 uuid, 
                 password_hash, 
-                status, nombre, correo
+                status, nombre, correo, role
             `)
             .eq('correo', correo)
             .single();
 
+        console.log("[DEBUG LOGIN] Intento de login:", correo);
         if (error || !user) {
+            console.log("[DEBUG LOGIN] Usuario no encontrado en DB o error:", error);
             return res.status(401).json({ error: 'Credenciales inválidas.' });
+        } else {
+          console.log("[DEBUG LOGIN] Hash en BD:", user.password_hash);
+          console.log("[DEBUG LOGIN] Contraseña ingresada:", password);
         }
 
         // Comparar la contraseña proporcionada con el hash almacenado
@@ -86,7 +91,7 @@ router.post('/login', async (req, res) => {
 
     } catch (error) {
         console.error('Error en login:', error);
-        res.status(500).json({ error: 'Error interno del servidor.' });
+        res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
     }
 });
 
@@ -154,7 +159,7 @@ router.post('/complete-registration', async (req, res) => {
         if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
             return res.status(401).json({ error: 'El token es inválido o ha expirado. Vuelve a iniciar sesión.' });
         }
-        res.status(500).json({ error: 'Error interno del servidor.' });
+        res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
     }
 });
 
