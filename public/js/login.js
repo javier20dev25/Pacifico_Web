@@ -57,20 +57,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Error desconocido');
+                throw new Error(data.error || 'Error desconocido en el login');
             }
 
-            if (data.status === 'temporary_user') {
+            // Manejar token de sesión normal
+            if (data.sessionToken) {
+                localStorage.setItem('jwt_token', data.sessionToken);
+                window.location.href = '/dashboard.html';
+            
+            // Manejar token de usuario temporal
+            } else if (data.tempToken) {
                 tempToken = data.tempToken;
                 loginFormContainer.classList.add('hidden');
                 registrationFormContainer.classList.remove('hidden');
-            } else if (data.status === 'login_success') {
-                localStorage.setItem('jwt_token', data.token);
-                if (data.userEmail === 'admin@pacificoweb.com') {
-                    window.location.href = '/admin.html';
-                } else {
-                    window.location.href = '/dashboard.html';
-                }
+            
+            // Fallback por si la respuesta no es la esperada
+            } else {
+                throw new Error('Respuesta inesperada del servidor.');
             }
 
         } catch (error) {

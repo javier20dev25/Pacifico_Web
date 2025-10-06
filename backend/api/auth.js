@@ -5,6 +5,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sendEmail } = require('../services/email'); // Importar el servicio de correo
 
+// Middleware para asegurar el parsing de JSON en este router
+router.use(express.json());
+
 // --- Helper: Validador de Contraseña ---
 function isPasswordStrong(password) {
     const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{6,}$/;
@@ -15,86 +18,45 @@ function isPasswordStrong(password) {
 // 1. LOGIN DE USUARIO
 // ==========================================================
 router.post('/login', async (req, res) => {
-    const { correo, password } = req.body;
+    console.log('[DEBUG req.body]', req.body);
+
+    const correo = req.body.correo || req.body.email;
+    const password = req.body.contrasena || req.body.password;
+
     if (!correo || !password) {
         return res.status(400).json({ error: 'Correo y contraseña son obligatorios.' });
     }
 
+    console.log('[DEBUG LOGIN] Intento de login:', correo);
+
     try {
-        // Buscar usuario por correo en la tabla 'usuarios'
         const { data: user, error } = await supabaseAdmin
             .from('usuarios')
-            .select(
-                `
-                uuid, 
-                password_hash, 
-                status, nombre, correo, role
-            `)
+            .select('*')
             .eq('correo', correo)
             .single();
 
-        console.log("[DEBUG LOGIN] Intento de login:", correo);
         if (error || !user) {
-            console.log("[DEBUG LOGIN] Usuario no encontrado en DB o error:", error);
+            console.log('[DEBUG LOGIN] Usuario no encontrado en DB o error:', error);
             return res.status(401).json({ error: 'Credenciales inválidas.' });
-        } else {
-          console.log("[DEBUG LOGIN] Hash en BD:", user.password_hash);
-          console.log("[DEBUG LOGIN] Contraseña ingresada:", password);
         }
 
-        // Comparar la contraseña proporcionada con el hash almacenado
+        // bcrypt.compare usando el nombre real de la columna
         const isMatch = await bcrypt.compare(password, user.password_hash);
+
         if (!isMatch) {
             return res.status(401).json({ error: 'Credenciales inválidas.' });
         }
 
-        // Determinar email de forma robusta
-        const possibleEmail =
-            (user && user.correo) ||
-            (user && user.email) ||
-            (user && user.mail) ||
-            (user && user.username) ||
-            (user && user.dataValues && (user.dataValues.correo || user.dataValues.email)) ||
-            null;
-
-        // Flujo para usuario temporal
-        if (user.status === 'temporary') {
-            const tempToken = jwt.sign(
-                { uuid: user.uuid, purpose: 'complete-registration' },
-                process.env.JWT_SECRET,
-                { expiresIn: '15m' }
-            );
-            return res.json({
-                status: 'temporary_user', 
-                message: 'Por favor, actualiza tu contraseña.',
-                tempToken: tempToken
-            });
-        }
+        // Usuario activo, generar token de sesión
+        const sessionToken = jwt.sign({ uuid: user.uuid }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        res.json({ sessionToken });
         
-        // Flujo para usuario activo o suspendido
-        if (user.status === 'active' || user.status === 'suspended') {
-             const sessionToken = jwt.sign(
-                { uuid: user.uuid, status: user.status, role: user.role }, // Añadir rol si existe
-                process.env.JWT_SECRET,
-                { expiresIn: '7d' } // Sesión de 7 días
-            );
-            return res.json({
-                status: 'login_success',
-                message: user.status === 'suspended' ? 'Tu cuenta está suspendida.' : 'Login exitoso.',
-                token: sessionToken,
-                userEmail: possibleEmail // Usar el email resuelto de forma robusta
-            });
-        }
-
-        // Otro estado no manejado
-        return res.status(403).json({ error: 'El estado de la cuenta no permite el acceso.' });
-
     } catch (error) {
-        console.error('Error en login:', error);
-        res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
+        console.error('[ERROR LOGIN]', error);
+        res.status(500).json({ error: 'Error interno del servidor.' });
     }
 });
-
 // ==========================================================
 // 2. COMPLETAR REGISTRO (ACTUALIZAR CONTRASEÑA)
 // ==========================================================
