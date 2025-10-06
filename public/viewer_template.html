@@ -1,171 +1,249 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tienda</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #e0e5ec; }
-        .neomorphic-card { background-color: #e0e5ec; border-radius: 1rem; box-shadow: 8px 8px 16px #c8cdd4, -8px -8px 16px #f8fdff; }
-        .neomorphic-btn { background-color: #e0e5ec; border-radius: 0.5rem; font-weight: 700; text-decoration: none; box-shadow: 5px 5px 10px #c8cdd4, -5px -5px 10px #f8fdff; transition: all 0.3s ease-in-out; padding: 10px 18px; }
-        .neomorphic-btn:hover { box-shadow: inset 2px 2px 5px #c8cdd4, inset -2px -2px 5px #f8fdff; transform: scale(0.98); }
-        .neomorphic-input { background-color: #e0e5ec; border-radius: 0.5rem; padding: 0.5rem; box-shadow: inset 2px 2px 5px #c8cdd4, inset -2px -2px 5px #f8fdff; }
-        .cart-modal { transform: translateX(100%); transition: transform 0.3s ease-in-out; }
-        .cart-modal.open { transform: translateX(0); }
-        .hidden { display: none; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tienda</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    :root {
+      --bg: #e9eef6;
+      --card: #f6f8fb;
+      --muted: #6b7280;
+      --accent: #7ea1ff;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: linear-gradient(180deg, #e9eef6, #dfe8f8);
+      font-family: 'Inter', sans-serif;
+      color: #1a202c;
+    }
+    .neumorphic-card {
+      background: var(--card);
+      border-radius: 14px;
+      box-shadow: 8px 8px 20px rgba(170, 187, 204, 0.18), -8px -8px 20px rgba(255, 255, 255, 0.9);
+    }
+    .btn {
+      transition: transform 0.12s ease-in-out, box-shadow 0.12s ease-in-out;
+    }
+    .btn:active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+    .modal-overlay {
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+    }
+    .tag-item {
+        background-color: var(--accent);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+    }
+    .quantity-input {
+        display: flex;
+        align-items: center;
+        width: 100px;
+        background: var(--card);
+        border-radius: 8px;
+        box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05);
+    }
+    .qty-btn {
+        width: 30px;
+        height: 30px;
+        background: var(--card);
+        color: #4f46e5;
+        font-weight: bold;
+        border-radius: 8px;
+        transition: background 0.15s;
+    }
+    .qty-btn:active { background: #e5e9ee; }
+    .qty-display {
+        flex-grow: 1;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+  </style>
 </head>
-<body class="bg-[#e0e5ec] text-gray-800 flex flex-col min-h-screen">
+<body class="flex flex-col min-h-screen">
 
-    <!-- SERVER_DATA_INJECTION -->
+  <!-- SERVER_DATA_INJECTION -->
 
-    <script>
-        let cart = {};
+  <div id="store-container" class="container mx-auto p-4 md:p-6 lg:p-8">
+    <!-- El contenido de la tienda se renderizará aquí -->
+  </div>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof window.STORE_DATA === 'undefined') {
-                return showError('No se pudieron cargar los datos de la tienda.');
-            }
-            localStorage.setItem('storeData', JSON.stringify(window.STORE_DATA));
-            renderStore(window.STORE_DATA);
-            setupEventListeners();
-        });
+  <!-- Video Player Modal -->
+  <div id="videoModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay hidden">
+    <div class="neumorphic-card p-4 rounded-2xl w-full max-w-4xl relative">
+      <button id="closeVideoModal" class="absolute top-4 right-4 z-10 btn bg-white text-gray-700 w-8 h-8 rounded-full shadow-lg hover:bg-gray-200"><i class="fas fa-times"></i></button>
+      <div id="videoContent" class="w-full aspect-video rounded-xl overflow-hidden"></div>
+      <div id="videoTitle" class="text-lg font-bold mt-3 text-center"></div>
+    </div>
+  </div>
 
-        function renderStore(data) {
-            document.title = data.storeName || 'Tienda';
-            document.getElementById('logo-img').src = data.logo || '';
-            document.getElementById('store-name').textContent = data.storeName || '';
-            document.getElementById('store-description').textContent = data.description || '';
-            if (data.youtubeLink) {
-                document.getElementById('youtube-iframe').src = data.youtubeLink.replace("watch?v=", "embed/");
-            } else {
-                 document.getElementById('youtube-iframe').remove();
-            }
-            renderProducts(data.products);
+  <!-- Message Modal (para el carrito) -->
+  <div id="messageModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-overlay hidden">
+    <div class="neumorphic-card p-6 rounded-2xl w-full max-w-sm relative text-center">
+      <div id="messageText" class="text-lg font-semibold mb-4"></div>
+      <button id="messageOkBtn" class="btn bg-blue-500 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-600">OK</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof window.STORE_DATA === 'undefined' || !window.STORE_DATA.store || !window.STORE_DATA.products) {
+        document.getElementById('store-container').innerHTML = '<h1 class="text-center text-2xl font-bold text-red-500">Error: No se pudieron cargar los datos de la tienda.</h1>';
+        return;
+      }
+      
+      const { store, products } = window.STORE_DATA;
+      let shoppingCart = {};
+
+      const $ = id => document.getElementById(id);
+      const escapeHTML = (s) => (s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+      
+      function getYoutubeEmbedUrl(url) {
+        if (!url) return null;
+        const regExp = /(?:https?:\])?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/; 
+        const match = url.match(regExp);
+        return match && match[1] ? `https://www.youtube.com/embed/${match[1]}?autoplay=1` : null;
+      }
+
+      const formatCurrency = (amount) => {
+          if (typeof amount !== 'number' || isNaN(amount)) return '0.00';
+          return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      };
+
+      function getCustomerDeliveryText(p) {
+        if (p.deliveryCostType === 'no') return "<span class=\"text-red-500 font-semibold\"><i class=\"fas fa-ban\"></i> Retiro en tienda.</span>";
+        let costText = '';
+        if (p.deliveryCostType === 'included') costText = "<span class=\"text-green-600 font-semibold\">Costo de envío incluído.</span>";
+        else if (p.deliveryCostType === 'fixed') costText = `Envío Fijo Local: ${store.currency}${formatCurrency(p.deliveryFixedValue || 0)}`;
+        else if (p.deliveryCostType === 'range') costText = `Envío Local Aprox: ${store.currency}${formatCurrency(p.deliveryRangeStart || 0)} - ${store.currency}${formatCurrency(p.deliveryRangeEnd || 0)}`;
+        let noteText = p.deliveryNote ? `<span class="text-xs text-gray-500 block">(${escapeHTML(p.deliveryNote)})</span>` : '';
+        return `<span class="text-blue-600"><i class="fas fa-truck"></i> ${costText}</span>${noteText}`;
+      }
+
+      function getCustomerPriceAndDelivery(p) {
+          const c = store.currency;
+          if (p.productStockMode === 'stock') {
+              return {
+                  price: `<div class="font-bold text-3xl text-indigo-700">${c}${formatCurrency(p.airFinalPrice)}</div>`,
+                  time: `<div class="text-sm text-green-600 font-semibold"><i class="fas fa-boxes"></i> Entrega Inmediata</div>`
+              };
+          }
+          const shippingMethods = [];
+          const isDual = store.isLogisticsDual;
+          if (isDual) {
+            if (p.prodShipMethod === 'air' || p.prodShipMethod === 'both') shippingMethods.push({ method: 'AÉREO', price: `${c}${formatCurrency(p.airFinalPrice)}`, days: `${store.airMinDays}-${store.airMaxDays} días` });
+            if (p.prodShipMethod === 'sea' || p.prodShipMethod === 'both') shippingMethods.push({ method: 'MARÍTIMO', price: `${c}${formatCurrency(p.seaFinalPrice)}`, days: `${store.seaMinDays}-${store.seaMaxDays} días` });
+          }
+          if (!isDual || p.prodShipMethod === 'single') {
+             shippingMethods.push({ method: 'Precio Base', price: `${c}${formatCurrency(p.airFinalPrice)}`, days: 'Consultar al vendedor' });
+          }
+          if (shippingMethods.length === 0) return { price: '<div>No disponible.</div>', time: '<div>N/A</div>' };
+          const priceDisplay = shippingMethods.map(m => `<div class="font-bold text-xl flex justify-between items-center text-gray-800"><span class="${m.method.includes('AÉREO') ? 'text-blue-700' : m.method.includes('MARÍTIMO') ? 'text-green-700' : 'text-indigo-700'}">${m.method}:</span> <span>${m.price}</span></div>`).join('');
+          const timeDisplay = shippingMethods.map(m => `<div class="text-sm text-gray-600 flex justify-between"><span><i class="fas ${m.method.includes('AÉREO') ? 'fa-plane' : 'fa-ship'} mr-1"></i> ${m.method}:</span> <span class="font-semibold">${m.days}</span></div>`).join('');
+          return { price: `<div class="space-y-1">${priceDisplay}</div>`, time: `<div class="space-y-1 p-2 bg-gray-100 rounded-lg">${timeDisplay}</div>` };
+      }
+
+      function renderStoreView() {
+        document.title = store.nombre || 'Tienda';
+        const storeNameVal = store.nombre || 'Tienda Sin Nombre';
+        const storeLogoUrl = store.logoUrl || 'https://placehold.co/80x80/e9eef6/6b7280?text=LOGO';
+        
+        let headerHtml = `
+            <div class="text-center mb-6">
+                <img src="${storeLogoUrl}" class="w-20 h-20 rounded-full object-cover mx-auto mb-2 neumorphic-card" alt="Logo de la tienda">
+                <h3 class="text-2xl font-bold text-gray-800">${escapeHTML(storeNameVal)}</h3>
+                <p class="text-sm text-gray-600 mt-1">${escapeHTML(store.descripcion)}</p>
+                ${store.whatsapp ? `<a href="https://wa.me/${store.whatsapp.replace(/\s/g, '')}" target="_blank" class="text-teal-600 text-xs font-semibold inline-flex items-center mt-2"><i class="fab fa-whatsapp mr-1"></i> WhatsApp: ${store.whatsapp}</a>` : ''}
+            </div>`;
+        
+        if (getYoutubeEmbedUrl(store.youtubeLink)) {
+            headerHtml += `<div class="mb-6 p-4 rounded-xl border border-gray-200 bg-gray-50 text-center"><button class="btn bg-red-600 text-white px-4 py-2 rounded-full font-semibold hover:bg-red-700 text-sm" data-video-link="${store.youtubeLink}" data-video-title="Video Publicitario de la Tienda"><i class="fab fa-youtube mr-2"></i> Ver Video de la Tienda</button></div>`;
         }
 
-        function renderProducts(products = []) {
-            const container = document.getElementById('products-container');
-            container.innerHTML = '';
-            products.forEach(product => {
-                container.innerHTML += `
-                    <div class="p-6 neomorphic-card flex flex-col relative">
-                        <img src="${product.image || 'https://placehold.co/400x300/e0e5ec/6366f1?text=Producto'}" alt="${product.name}" class="rounded-lg object-cover h-48 w-full mb-4 neomorphic-card p-2">
-                        <h3 class="font-semibold text-lg mb-2">${product.name}</h3>
-                        <p class="font-bold text-xl text-indigo-600 mb-4">${product.currency} ${product.price}</p>
-                        <p class="text-sm text-gray-500 mb-2">Peso estimado: ${product.weight || 0}kg</p>
-                        <p class="text-sm text-gray-500 mb-2"><span class="font-semibold">Envío:</span> ${product.shippingType || 'No especificado'}</p>
-                        <div class="mt-auto flex items-center gap-2">
-                            <input type="number" id="qty-${product.id}" value="1" min="1" class="neomorphic-input w-16 text-center">
-                            <button onclick="addToCart('${product.id}')" class="neomorphic-btn flex-1">Añadir</button>
+        const productsHtml = products.map(p => {
+            const id = p.idLocal;
+            const tagsHtml = (p.tags || []).map(tag => `<span class="tag-item">#${escapeHTML(tag)}</span>`).join('');
+            const { price: priceDisplay, time: timeDisplay } = getCustomerPriceAndDelivery(p);
+            const deliveryNote = getCustomerDeliveryText(p);
+            const youtubeEmbed = getYoutubeEmbedUrl(p.youtubeLink);
+            const initialQty = shoppingCart[id] || 1;
+
+            return `
+                <div class="neumorphic-card p-4 flex flex-col gap-3" data-id="${id}">
+                    <div class="flex items-start gap-4">
+                        <img src="${p.imagePreview || 'https://placehold.co/100x100/f6f8fb/6b7280?text=IMG'}" class="w-24 h-24 rounded-lg object-cover flex-shrink-0" alt="${escapeHTML(p.name)}">
+                        <div class="flex-1">
+                            <h5 class="text-lg font-bold text-gray-800">${escapeHTML(p.name || 'Producto sin nombre')}</h5>
+                            <p class="text-xs text-gray-500 line-clamp-2 mt-1">${escapeHTML(p.description || 'Sin descripción.')}</p>
+                            ${youtubeEmbed ? `<button class="btn text-red-500 text-xs font-semibold mt-1 hover:text-red-700" onclick="openVideoModal('${youtubeEmbed}', '${escapeHTML(p.name)}')"><i class="fab fa-youtube mr-1"></i> Ver Video</button>` : ''}
                         </div>
                     </div>
-                `;
+                    <div class="border-t border-gray-100 pt-3 space-y-2">${priceDisplay}<div class="text-xs text-gray-600 font-semibold pt-1">Tiempos de Entrega Estimados:</div>${timeDisplay}<div class="text-sm border-t pt-2">${deliveryNote}</div></div>
+                    <div class="flex flex-wrap gap-2 pt-1 border-t border-gray-100 mb-3">${tagsHtml}</div>
+                    <div class="flex items-center justify-between mt-3 p-2 bg-gray-50 rounded-xl">
+                        <div class="quantity-input">
+                            <button class="qty-btn" onclick="handleCartAction('${id}', 'decrement', this)"><i class="fas fa-minus"></i></button>
+                            <span class="qty-display">${initialQty}</span>
+                            <button class="qty-btn" onclick="handleCartAction('${id}', 'increment', this)"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <button class="btn bg-teal-500 text-white px-4 py-2 rounded-full font-semibold hover:bg-teal-600 text-sm flex items-center" onclick="handleCartAction('${id}', 'add', this)"><i class="fas fa-cart-plus mr-2"></i> Añadir al Carrito</button>
+                    </div>
+                </div>`;
+        }).join('');
+
+        $('store-container').innerHTML = `<div class="text-left">${headerHtml}<h4 class="text-xl font-bold mt-8 mb-4 border-t pt-4">Catálogo de Productos</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${productsHtml || `<div class="text-center text-gray-400 py-8">No hay productos añadidos.</div>`}</div></div>`;
+        
+        $('store-container').querySelectorAll('[data-video-link]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const link = e.currentTarget.dataset.videoLink;
+                const title = e.currentTarget.dataset.videoTitle;
+                const embedUrl = getYoutubeEmbedUrl(link);
+                if (embedUrl) openVideoModal(embedUrl, title);
             });
-        }
+        });
+      }
 
-        function showError(message) {
-            document.body.innerHTML = `<div class="w-full h-screen flex items-center justify-center"><h1 class="text-center text-2xl font-bold text-red-600 p-8 neomorphic-card">${message}</h1></div>`;
-        }
+      window.openVideoModal = function(embedUrl, title) {
+          $('videoContent').innerHTML = `<iframe width="100%" height="100%" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+          $('videoTitle').textContent = title;
+          $('videoModal').classList.remove('hidden');
+      };
+      $('closeVideoModal').addEventListener('click', () => {
+          $('videoContent').innerHTML = '';
+          $('videoModal').classList.add('hidden');
+      });
 
-        function addToCart(productId) {
-            const qtyInput = document.getElementById(`qty-${productId}`);
-            const quantity = parseInt(qtyInput.value, 10);
-            if (isNaN(quantity) || quantity < 1) {
-                showToast('Por favor, introduce una cantidad válida.', true);
-                return;
-            }
-            cart[productId] = (cart[productId] || 0) + quantity;
-            showToast(`${quantity} x producto(s) añadido(s) al carrito.`);
-        }
-        window.addToCart = addToCart;
+      function showMessageModal(title, message) {
+          $('messageText').innerHTML = `<p class="font-bold text-xl mb-2">${title}</p><p>${message}</p>`;
+          $('messageModal').classList.remove('hidden');
+      }
+      $('messageOkBtn').addEventListener('click', () => $('messageModal').classList.add('hidden'));
 
-        function generateWhatsAppMessage() {
-            const storeData = JSON.parse(localStorage.getItem('storeData'));
-            const products = storeData.products || [];
-            let message = `¡Hola! Me gustaría hacer un pedido de "${storeData.storeName}":\n\n`;
-            let subtotal = 0;
-            let totalWeight = 0;
-            for (const id in cart) {
-                const product = products.find(p => p.id === id);
-                if (product) {
-                    const quantity = cart[id];
-                    const itemTotal = parseFloat(product.price) * quantity;
-                    const itemWeight = (product.weight || 0) * quantity;
-                    subtotal += itemTotal;
-                    totalWeight += itemWeight;
-                    message += `- ${product.name} (x${quantity})\n  Precio: ${product.currency} ${itemTotal.toFixed(2)}\n  Peso: ${itemWeight.toFixed(2)} kg\n`;
-                }
-            }
-            message += `\n*Subtotal del Pedido: C$${subtotal.toFixed(2)}*\n*Peso Total Estimado: ${totalWeight.toFixed(2)} kg*`;
-            const whatsappNumber = storeData.whatsappNumber;
-            if (!whatsappNumber) return alert("Lo sentimos, el número de contacto de esta tienda no está configurado.");
-            window.open(`https://wa.me/505${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
-        }
+      window.handleCartAction = function(productId, action, element) {
+          let qty = shoppingCart[productId] || 1;
+          if (action === 'increment') qty++;
+          else if (action === 'decrement' && qty > 1) qty--;
+          shoppingCart[productId] = qty;
+          if (action === 'add') {
+             const productName = products.find(p => p.idLocal === productId)?.name || 'Producto';
+             showMessageModal("¡Añadido al Carrito!", `${qty} unidad(es) de ${productName} ha(n) sido añadida(s) a tu carrito de compras (simulado).`);
+             return;
+          }
+          const displayEl = element.closest('.quantity-input')?.querySelector('.qty-display');
+          if (displayEl) displayEl.textContent = qty;
+      }
 
-        function setupEventListeners() {
-            document.getElementById('ver-carrito-btn').addEventListener('click', showCart);
-            document.getElementById('close-cart-btn').addEventListener('click', hideCart);
-            document.getElementById('place-order-btn').addEventListener('click', generateWhatsAppMessage);
-        }
-
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.classList.remove('hidden');
-            toast.classList.add(isError ? 'bg-red-500' : 'bg-green-500');
-            setTimeout(() => toast.classList.add('hidden'), 3000);
-        }
-
-        function showCart() { /* ... */ }
-        function hideCart() { /* ... */ }
-        function renderCart() { /* ... */ }
-
-        // Full definitions for cart functions
-        function showCart() { renderCart(); document.getElementById('cart-modal').classList.add('open'); }
-        function hideCart() { document.getElementById('cart-modal').classList.remove('open'); }
-        function renderCart() {
-            const cartItemsContainer = document.getElementById('cart-items');
-            cartItemsContainer.innerHTML = '';
-            const storeData = JSON.parse(localStorage.getItem('storeData'));
-            const products = storeData.products || [];
-            let subtotal = 0;
-            if (Object.keys(cart).length === 0) {
-                cartItemsContainer.innerHTML = `<p class="text-gray-500 text-center">Tu carrito está vacío.</p>`;
-                document.getElementById('cart-total').innerHTML = "";
-                return;
-            }
-            for (const id in cart) {
-                const product = products.find(p => p.id === id);
-                if (product) {
-                    const quantity = cart[id];
-                    const itemTotal = parseFloat(product.price) * quantity;
-                    subtotal += itemTotal;
-                    cartItemsContainer.innerHTML += `<div class="flex justify-between items-center mb-2 p-2 neomorphic-card text-sm"><span>${product.name} (x${quantity})</span><span class="font-bold">${product.currency} ${itemTotal.toFixed(2)}</span></div>`;
-                }
-            }
-            document.getElementById('cart-total').innerHTML = `<div class="font-bold text-lg">Subtotal: C$${subtotal.toFixed(2)}</div>`;
-        }
-    </script>
-
-    <!-- Page Content -->
-    <main class="container mx-auto p-4 md:p-8 flex-1 relative">
-        <div class="neomorphic-card p-6 md:p-10 mb-8 flex flex-col items-center text-center">
-            <img id="logo-img" src="" alt="Logo de la tienda" class="neomorphic-card p-1 rounded-full w-24 h-24 mb-4 object-cover">
-            <h1 id="store-name" class="text-4xl font-bold mb-2">Cargando...</h1>
-            <p id="store-description" class="text-gray-600 mb-6"></p>
-            <iframe id="youtube-iframe" class="w-full max-w-xl h-64 md:h-96 rounded-lg neomorphic-card p-2 mb-8" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-            <button id="ver-carrito-btn" class="neomorphic-btn text-gray-700">Ver mi Carrito</button>
-        </div>
-        <section id="products" class="mb-8">
-            <h2 class="text-2xl font-bold mb-6 text-center">Nuestros Productos</h2>
-            <div id="products-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </section>
-        <!-- Cart Modal & Toast -->
-        <div id="cart-modal" class="fixed right-0 top-0 h-full w-full sm:w-80 bg-[#e0e5ec] neomorphic-card z-50 p-4 cart-modal flex flex-col"><div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">Carrito</h3><button id="close-cart-btn" class="neomorphic-btn w-8 h-8 flex items-center justify-center">X</button></div><div id="cart-items" class="flex-1 overflow-y-auto mb-4"></div><div class="mt-auto px-2"><div id="cart-total"></div><button id="place-order-btn" class="w-full neomorphic-btn mt-4">Encargar por WhatsApp</button></div></div>
-        <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-gray-800 text-white py-2 px-4 rounded-lg shadow-lg hidden"></div>
-    </main>
+      renderStoreView();
+    });
+  </script>
 </body>
 </html>

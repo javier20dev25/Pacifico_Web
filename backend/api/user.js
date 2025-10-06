@@ -65,7 +65,7 @@ router.get('/stores', async (req, res) => {
     const { data: stores, error } = await supabaseAdmin
       .from('stores')
       // selecciona los campos que necesites mostrar al frontend
-      .select('id, nombre, descripcion, usuario_id, logo_url, activa, created_at')
+      .select('id, nombre, descripcion, usuario_id, logo_url, activa, created_at, slug')
       .eq('usuario_id', usuarioId);
 
     if (error) {
@@ -128,6 +128,38 @@ router.post('/stores', async (req, res) => {
   }
 });
 
+// DELETE /api/user/stores/:id
+router.delete('/stores/:id', async (req, res) => {
+  try {
+    const userUuid = req.user && (req.user.uuid || req.user.user_uuid);
+    if (!userUuid) return res.status(401).json({ error: 'No autenticado.' });
+
+    const { id } = req.params;
+
+    // Verificar que la tienda pertenece al usuario antes de borrar
+    const { data: userRec, error: userErr } = await supabaseAdmin
+      .from('usuarios').select('id').eq('uuid', userUuid).single();
+    if (userErr) return res.status(500).json({ error: 'Error al verificar usuario.' });
+    const usuarioId = userRec.id;
+
+    const { error } = await supabaseAdmin
+      .from('stores')
+      .delete()
+      .match({ id: id, usuario_id: usuarioId });
+
+    if (error) {
+      console.error('Error al eliminar la tienda:', error);
+      return res.status(500).json({ error: 'No se pudo eliminar la tienda.' });
+    }
+
+    res.status(200).json({ message: 'Tienda eliminada correctamente.' });
+
+  } catch (err) {
+    console.error('Error en DELETE /stores/:id:', err);
+    return res.status(500).json({ error: 'Ocurrió un error inesperado.' });
+  }
+});
+
 // ==========================================================
 // 3. GUARDAR UN NUEVO PEDIDO
 // ==========================================================
@@ -164,5 +196,90 @@ router.post('/orders', protect, async (req, res) => {
     }
 });
 
+
+
+// ==========================================================
+// 4. OBTENER Y ACTUALIZAR DATOS JSON DE LA TIENDA
+// ==========================================================
+
+// GET /api/user/store-data
+router.get('/store-data', async (req, res) => {
+    try {
+        const userUuid = req.user && (req.user.uuid || req.user.user_uuid);
+        if (!userUuid) return res.status(401).json({ error: 'No autenticado.' });
+
+        const { data: userRec, error: userErr } = await supabaseAdmin
+            .from('usuarios')
+            .select('id')
+            .eq('uuid', userUuid)
+            .single();
+
+        if (userErr || !userRec) {
+            return res.status(404).json({ error: 'Usuario no encontrado.' });
+        }
+        const usuarioId = userRec.id;
+
+        const { data: store, error: storeError } = await supabaseAdmin
+            .from('stores')
+            .select('data')
+            .eq('usuario_id', usuarioId)
+            .single();
+
+        if (storeError) {
+            // Si el error es 'PGRST116', significa que no encontró la tienda, lo cual es manejable.
+            if (storeError.code === 'PGRST116') {
+                return res.status(404).json({ error: 'No se encontró una tienda para este usuario.' });
+            }
+            console.error('Error al obtener datos de la tienda:', storeError);
+            return res.status(500).json({ error: 'No se pudieron obtener los datos de la tienda.' });
+        }
+
+        // Devolver los datos de la tienda (el JSON) o un objeto vacío si es null
+        res.json(store.data || {});
+
+    } catch (err) {
+        console.error('Error en GET /store-data:', err);
+        res.status(500).json({ error: 'Ocurrió un error inesperado.' });
+    }
+});
+
+// PUT /api/user/store-data
+router.put('/store-data', async (req, res) => {
+    try {
+        const userUuid = req.user && (req.user.uuid || req.user.user_uuid);
+        if (!userUuid) return res.status(401).json({ error: 'No autenticado.' });
+
+        const newStoreData = req.body;
+
+        const { data: userRec, error: userErr } = await supabaseAdmin
+            .from('usuarios')
+            .select('id')
+            .eq('uuid', userUuid)
+            .single();
+
+        if (userErr || !userRec) {
+            return res.status(404).json({ error: 'Usuario no encontrado.' });
+        }
+        const usuarioId = userRec.id;
+
+        const { data, error } = await supabaseAdmin
+            .from('stores')
+            .update({ data: newStoreData })
+            .eq('usuario_id', usuarioId)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error al actualizar datos de la tienda:', error);
+            return res.status(500).json({ error: 'No se pudieron actualizar los datos de la tienda.' });
+        }
+
+        res.json({ message: 'Datos de la tienda actualizados con éxito.', data });
+
+    } catch (err) {
+        console.error('Error en PUT /store-data:', err);
+        res.status(500).json({ error: 'Ocurrió un error inesperado.' });
+    }
+});
 
 module.exports = router;

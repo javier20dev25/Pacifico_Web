@@ -1,649 +1,1234 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Editor de Tienda — Pacífico Web</title>
-<!-- Simple neumorphism CSS -->
-<style>
-  :root{
-    --bg:#e9eef6; --card:#f6f8fb; --muted:#6b7280; --accent:#7ea1ff;
-    --success:#35c47a; --danger:#ef4444; --glass: rgba(255,255,255,0.6);
-  }
-  html,body{height:100%;margin:0;background:linear-gradient(180deg,#e9eef6,#dfe8f8);font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
-  .container{max-width:980px;margin:28px auto;padding:20px;}
-  h1{margin:0 0 8px;font-weight:700;color:#0f172a;}
-  p.lead{color:var(--muted);margin-top:0;margin-bottom:18px;}
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Editor de Tienda — Logística y Carrito</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    :root {
+      --bg: #e9eef6;
+      --card: #f6f8fb;
+      --muted: #6b7280;
+      --accent: #7ea1ff;
+      --success: #35c47a;
+      --danger: #ef4444;
+      --warning: #facc15;
+      --indigo: #4f46e5;
+      --teal: #14b8a6;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: linear-gradient(180deg, #e9eef6, #dfe8f8);
+      font-family: 'Inter', sans-serif;
+      color: #1a202c;
+    }
+    .neumorphic-card {
+      background: var(--card);
+      border-radius: 14px;
+      box-shadow: 8px 8px 20px rgba(170, 187, 204, 0.18), -8px -8px 20px rgba(255, 255, 255, 0.9);
+    }
+    .btn {
+      transition: transform 0.12s ease-in-out, box-shadow 0.12s ease-in-out;
+    }
+    .btn:active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+    .input {
+      background: linear-gradient(180deg, #f7f9fc, #eef4ff);
+      box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.03);
+    }
+    .modal-overlay {
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+    }
+    .tag-item {
+        background-color: var(--accent);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+    }
+    .margin-tag {
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 6px;
+    }
 
-  /* neumorphic card */
-  .card{background:var(--card);border-radius:14px;padding:18px;box-shadow: 8px 8px 20px rgba(170,187,204,0.18), -8px -8px 20px rgba(255,255,255,0.9);margin-bottom:18px;}
-  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;}
-  .col{flex:1;min-width:220px;}
-  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;}
-  input[type="text"], input[type="number"], textarea, select {width:100%;padding:10px;border-radius:10px;border:none;background:linear-gradient(180deg,#f7f9fc,#eef4ff);box-shadow: inset 2px 2px 5px rgba(0,0,0,0.03);font-size:14px}
-  textarea{min-height:80px;resize:vertical}
-  .small{font-size:13px;color:var(--muted);margin-top:6px}
-  .btn{display:inline-block;padding:10px 14px;border-radius:10px;border:none;background:linear-gradient(180deg,var(--accent),#5b8bff);color:white;font-weight:600;cursor:pointer;box-shadow: 0 6px 18px rgba(79,115,255,0.18);transition:transform .12s}
-  .btn:active{transform:translateY(1px)}
-  .btn.secondary{background:linear-gradient(180deg,#fff,#f0f4ff);color:#123;box-shadow:none;border:1px solid rgba(0,0,0,0.04)}
-  .btn.danger{background:linear-gradient(180deg,#ff8a8a,#ff5252)}
-  .muted{color:var(--muted)}
-  .center{ text-align:center; }
+    /* Estilo para el Toggle Switch (Tailwind CSS no lo trae nativo) */
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 34px;
+    }
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    input:checked + .slider {
+        background-color: var(--indigo);
+    }
+    input:checked + .slider:before {
+        transform: translateX(26px);
+    }
+    /* Estilos para el contador de cantidad */
+    .quantity-input {
+        display: flex;
+        align-items: center;
+        width: 100px;
+        background: var(--card);
+        border-radius: 8px;
+        box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05);
+    }
+    .qty-btn {
+        width: 30px;
+        height: 30px;
+        background: var(--card);
+        color: var(--indigo);
+        font-weight: bold;
+        border-radius: 8px;
+        transition: background 0.15s;
+    }
+    .qty-btn:active {
+        background: #e5e9ee;
+    }
+    .qty-display {
+        flex-grow: 1;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
 
-  /* logo preview */
-  .logo-drop{width:160px;height:160px;border-radius:12px;background:linear-gradient(180deg,#ffffff,#eef4ff);display:flex;align-items:center;justify-content:center;border:1px dashed rgba(15,23,42,0.06);cursor:pointer;overflow:hidden;position:relative}
-  .logo-drop img{width:100%;height:100%;object-fit:cover}
-  .hint{font-size:12px;color:var(--muted);margin-top:6px}
-
-  /* product list */
-  .product{border-radius:12px;padding:12px;margin-bottom:10px;background:linear-gradient(180deg,#fff,#f7fbff);display:flex;gap:10px;align-items:center}
-  .product img{width:80px;height:80px;border-radius:8px;object-fit:cover;border:1px solid rgba(0,0,0,0.04)}
-  .product .meta{flex:1}
-  .product .actions{display:flex;flex-direction:column;gap:6px}
-  .inline{display:flex;gap:8px;align-items:center}
-  .chip{padding:4px 8px;border-radius:999px;background:#f0f6ff;color:#234;border:1px solid rgba(0,0,0,0.03);font-size:13px}
-
-  /* small helpers */
-  .sep{height:1px;background:linear-gradient(90deg,transparent,#e6eefb,transparent);margin:14px 0;border-radius:4px;}
-  .notice{background:linear-gradient(180deg,#fff8e6,#fff2dc);padding:10px;border-radius:10px;border:1px solid rgba(235,181,56,0.12);color:#6b4a00}
-  .success-banner{background:linear-gradient(180deg,#ecfdf5,#d1fae5);padding:10px;border-radius:10px;color:#065f46;border:1px solid rgba(6,95,70,0.06);}
-
-  /* Modals */
-  .modal-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center;
-      z-index: 1000;
-  }
-  .modal-content {
-      background: var(--card); padding: 20px; border-radius: 14px;
-      box-shadow: 0 12px 24px rgba(0,0,0,0.1); max-width: 500px; width: 90%;
-      position: relative;
-  }
-  .modal-content h3 { margin-top: 0; }
-  .modal-actions {
-      display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;
-  }
-
-  /* responsive */
-  @media (max-width:720px){ .row{flex-direction:column} .logo-drop{width:120px;height:120px} .product img{width:64px;height:64px} }
-</style>
+  </style>
 </head>
-<body>
-<div class="container">
-  <h1>Editor de Tienda — Pacífico Web</h1>
-  <p class="lead">Edita tu tienda rápidamente. Los cambios se guardarán automáticamente en tu base de datos.</p>
-            <div class="flex justify-between items-center mb-4">
-              <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-eye"></i> Vista Previa</h2>
-              <button id="fullScreenPreviewBtn" class="btn bg-gray-200 text-gray-700 px-4 py-2 rounded-full font-semibold hover:bg-gray-300 text-sm"><i class="fas fa-expand-arrows-alt mr-2"></i> Pantalla Completa</button>
+<body class="flex flex-col min-h-screen">
+  <div class="container mx-auto p-4 md:p-6 lg:p-8">
+
+    <!-- Header Section -->
+    <header class="mb-6">
+      <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight">Editor de Tienda Profesional</h1>
+      <p class="text-lg text-gray-600 mt-2">Configuración de costos, márgenes y logística.</p>
+    </header>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      
+      <!-- Panel de Edición -->
+      <div class="flex flex-col space-y-8">
+        <!-- Store Info Card -->
+        <div class="neumorphic-card p-6">
+          <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><i class="fas fa-store"></i> Información y Logística de la Tienda</h2>
+          
+          <div class="space-y-4 mb-6">
+            <label for="storeLogoInput" class="block text-sm font-medium text-gray-500 mb-1">Logo de la Tienda (Opcional)</label>
+            <div id="storeLogoDrop" class="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center border border-dashed border-gray-300 cursor-pointer overflow-hidden relative shadow-inner mb-2 mx-auto" onclick="document.getElementById('storeLogoInput').click()">
+                <div id="storeLogoPlaceholder" class="flex flex-col items-center text-gray-400 text-xs">
+                    <i class="fas fa-camera text-xl mb-1"></i>
+                </div>
+                <img id="storeLogoPreview" class="w-full h-full object-cover" style="display:none" alt="store logo preview">
             </div>
-  <!-- STORE INFO -->
-  <div class="card" id="store-card">
-    <div class="row" style="align-items:center">
-      <div class="col" style="flex:0 0 180px">
-        <div id="logoDrop" class="logo-drop" title="Clic para subir logo" style="position: relative;">
-          <div id="logoPlaceholder" class="center muted">
-            <div style="font-size:28px">🏬</div>
-            <div class="hint">Subir logo</div>
+            <input type="file" id="storeLogoInput" accept="image/*" class="hidden" />
+
+            <label for="storeName" class="block text-sm font-medium text-gray-500 mb-1">Nombre de la tienda</label>
+            <input id="storeName" type="text" placeholder="Ej: Tienda La Esquina" class="input w-full p-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" value="Mi Tienda Express"/>
+
+            <label for="storeDescription" class="block text-sm font-medium text-gray-500 mb-1">Descripción de la tienda</label>
+            <textarea id="storeDescription" placeholder="Una breve descripción de lo que vendes." class="input w-full p-3 rounded-lg text-sm resize-y min-h-[4rem]">Tu mejor opción para importaciones rápidas y seguras.</textarea>
+
+            <label for="storeWhatsapp" class="block text-sm font-medium text-gray-500 mb-1">Número de WhatsApp (Contacto)</label>
+            <input id="storeWhatsapp" type="tel" placeholder="Ej: +505 8888-8888" class="input w-full p-3 rounded-lg text-sm" value="8888-8888"/>
+            
+            <label for="storeYoutubeLink" class="block text-sm font-medium text-gray-500 mb-1">Video Publicitario de YouTube (Opcional)</label>
+            <input id="storeYoutubeLink" type="url" placeholder="Ej: https://youtu.be/..." class="input w-full p-3 rounded-lg text-sm" value=""/>
+            <p class="text-xs text-gray-500 mt-1">Recomendamos crear y subir un video publicitario para mejorar la conversión.</p>
           </div>
-          <img id="logoPreview" style="display:none" alt="logo preview">
-          <input type="file" id="logoFile" accept="image/*" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
-        </div>
-        <div class="hint">Formato PNG/JPG. Recomendado: 600×600</div>
-      </div>
 
-      <div class="col">
-        <label>Nombre de la tienda</label>
-        <input id="storeName" type="text" placeholder="Ej: Tienda La Esquina" />
-        <div class="small">Se mostrará públicamente como el nombre de tu tienda.</div>
+          <!-- LÓGICA DE NEGOCIO: STOCK vs. ENCARGO/DUAL -->
+          <div class="flex items-center justify-between p-3 rounded-lg bg-gray-100 border border-gray-200">
+            <label for="isLogisticsDualToggle" class="text-sm font-bold text-gray-700">
+                <i class="fas fa-toggle-on text-indigo-500"></i> ¿Tienda de Encargo (Importación DUAL)?
+                <p class="font-normal text-xs text-gray-500 mt-1">Activa si importas con envío Aéreo/Marítimo. Desactiva para tiendas con *Stock* local (ej. celulares).</p>
+            </label>
+            <label class="toggle-switch ml-4">
+                <input type="checkbox" id="isLogisticsDualToggle" checked>
+                <span class="slider"></span>
+            </label>
+          </div>
 
-        <div style="height:10px"></div>
+          <!-- Logistical Settings DUAL (CONDICIONAL) -->
+          <div id="dualLogisticsContainer" class="mt-6 space-y-4">
+              <h3 class="font-bold text-gray-700 mb-4 border-t pt-4">Ajustes DUALES de Logística y Tiempos</h3>
+              <p class="text-sm text-indigo-600 mb-4 font-semibold">Define aquí las tarifas por libra y tiempos, necesarios para calcular el costo base de tus productos *Por Encargo*.</p>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <!-- Air Settings -->
+                <div class="p-4 rounded-xl border border-blue-200 bg-blue-50">
+                  <h4 class="font-bold text-blue-700 mb-3 flex items-center gap-2"><i class="fas fa-plane"></i> Envío Aéreo</h4>
+                  <label for="airRate" class="block text-xs font-medium text-gray-500 mb-1">Costo por libra (Aéreo)</label>
+                  <input id="airRate" type="number" placeholder="ej. 5.50" step="0.01" class="input w-full p-3 rounded-lg text-sm mb-3" value="5.50"/>
 
-        <label>Descripción (opcional)</label>
-        <textarea id="storeDesc" placeholder="Describe tu tienda, productos o horario..."></textarea>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Días de Entrega (Rango)</label>
+                  <div class="flex gap-2">
+                      <input id="airMinDays" type="number" placeholder="Min" class="input w-1/2 p-3 rounded-lg text-sm" value="7"/>
+                      <input id="airMaxDays" type="number" placeholder="Max" class="input w-1/2 p-3 rounded-lg text-sm" value="15"/>
+                  </div>
+                </div>
 
-        <div style="height:10px"></div>
+                <!-- Sea Settings -->
+                <div class="p-4 rounded-xl border border-green-200 bg-green-50">
+                  <h4 class="font-bold text-green-700 mb-3 flex items-center gap-2"><i class="fas fa-ship"></i> Envío Marítimo</h4>
+                  <label for="seaRate" class="block text-xs font-medium text-gray-500 mb-1">Costo por libra (Marítimo)</label>
+                  <input id="seaRate" type="number" placeholder="ej. 3.00" step="0.01" class="input w-full p-3 rounded-lg text-sm mb-3" value="3.00"/>
 
-        <label>Enlace de YouTube (opcional)</label>
-        <input id="storeVideo" type="text" placeholder="https://www.youtube.com/watch?v=XXXXXXXX" />
-        <div id="videoPreview" style="margin-top:8px"></div>
-      </div>
-    </div>
-
-    <div class="sep"></div>
-
-    <!-- Delivery & Pricing -->
-    <div class="row">
-      <div class="col">
-        <label>Costo del proveedor por libra (para cálculo de envío)</label>
-        <div class="inline">
-          <input id="providerRate" type="number" placeholder="ej. 0.50" step="0.01" />
-          <div class="small muted">USD por libra (usa la moneda que fijes abajo)</div>
-        </div>
-      </div>
-
-      <div class="col">
-        <label>Opciones de envío</label>
-        <div class="inline">
-          <label><input id="shipAir" type="checkbox"> Aéreo</label>
-          <label style="margin-left:8px"><input id="shipSea" type="checkbox"> Marítimo</label>
-        </div>
-        <div class="small">Si no marcas ninguna, se asumirá pickup/consulta.</div>
-      </div>
-
-      <div class="col">
-        <label>WhatsApp de la tienda (cliente verá botón de contacto)</label>
-        <div class="inline">
-          <select id="countryCode" style="width:86px;padding:8px;border-radius:8px;border:none;background:linear-gradient(180deg,#fff,#f7fbff)">
-            <option value="+505">+505</option>
-            <option value="+1">+1</option>
-            <option value="+52">+52</option>
-            <option value="+506">+506</option>
-          </select>
-          <input id="whatsappNumber" type="text" placeholder="8888-8888" style="flex:1" />
-        </div>
-      </div>
-    </div>
-
-    <div class="sep"></div>
-    <div class="row" style="align-items:center">
-      <div class="col">
-        <button id="saveStoreBtn" class="btn">💾 Guardar cambios</button>
-      </div>
-      <div class="col center">
-        <div id="saveMsg" class="muted small">Estado: sin cambios</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PRODUCTS -->
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div>
-        <h3 style="margin:0">Productos</h3>
-        <div class="small muted">Añade productos — 1 imagen por producto.</div>
-      </div>
-      <div>
-        <button id="addProductBtn" class="btn">➕ Añadir producto</button>
-      </div>
-    </div>
-    <div id="productsList"></div>
-    <div class="sep"></div>
-    <div class="notice">
-      <strong>Notas:</strong> Los precios mostrados incluyen el precio base + ganancia. El cálculo de envío se basa en el peso y en el coste por libra que configuraste arriba.
-    </div>
-  </div>
-
-  <!-- bottom actions -->
-  <div style="height:12px"></div>
-  <div class="center">
-    <button id="finalSaveBtn" class="btn">💾 Guardar todo</button>
-    <div style="height:8px"></div>
-    <div id="opResult" class="muted small"></div>
-  </div>
-
-</div>
-
-<!-- Custom Modal -->
-<div id="customModal" class="modal-overlay">
-    <div class="modal-content">
-        <h3 id="modalTitle"></h3>
-        <p id="modalMessage"></p>
-        <div class="modal-actions">
-            <button id="modalBtnConfirm" class="btn danger" style="display:none;">Confirmar</button>
-            <button id="modalBtnCancel" class="btn secondary">Cerrar</button>
-        </div>
-    </div>
-</div>
-
-<!-- JS -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, onSnapshot, collection, query, addDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-// Habilitar logs de depuración para Firestore
-setLogLevel('Debug');
-
-const __app_id = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-const $ = id => document.getElementById(id);
-const q = (s, root=document) => root.querySelector(s);
-const escapeHTML = (s) => (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const uid = () => Math.random().toString(36).slice(2, 9);
-
-const modalOverlay = $('customModal');
-const modalTitle = $('modalTitle');
-const modalMessage = $('modalMessage');
-const modalBtnConfirm = $('modalBtnConfirm');
-const modalBtnCancel = $('modalBtnCancel');
-
-function showModal({ title, message, onConfirm = null }) {
-    modalTitle.textContent = title;
-    modalMessage.textContent = message;
-    modalBtnConfirm.style.display = onConfirm ? 'inline-block' : 'none';
-    modalOverlay.style.display = 'flex';
-
-    const handleConfirm = () => {
-        if (onConfirm) onConfirm();
-        modalOverlay.style.display = 'none';
-        modalBtnConfirm.removeEventListener('click', handleConfirm);
-    };
-    modalBtnConfirm.addEventListener('click', handleConfirm);
-    modalBtnCancel.onclick = () => {
-        modalOverlay.style.display = 'none';
-        modalBtnConfirm.removeEventListener('click', handleConfirm);
-    };
-}
-
-class StoreEditor {
-    constructor() {
-        this.storeId = null;
-        this.userId = null;
-        this.db = db;
-        this.auth = auth;
-        this.storeRef = null;
-        this.productsRef = null;
-        this.products = [];
-
-        this.initUI();
-        this.initAuth();
-    }
-
-    initUI() {
-        // console.log('DEBUG: initUI() iniciado.'); // Este log no lo verás
-        this.logoDrop = $('logoDrop');
-        this.logoFile = $('logoFile');
-        this.logoPreview = $('logoPreview');
-        this.logoPlaceholder = $('logoPlaceholder');
-        this.storeName = $('storeName');
-        this.storeDesc = $('storeDesc');
-        this.storeVideo = $('storeVideo');
-        this.videoPreview = $('videoPreview');
-        this.providerRate = $('providerRate');
-        this.shipAir = $('shipAir');
-        this.shipSea = $('shipSea');
-        this.countryCode = $('countryCode');
-        this.whatsappNumber = $('whatsappNumber');
-        this.saveStoreBtn = $('saveStoreBtn');
-        this.addProductBtn = $('addProductBtn');
-        this.productsList = $('productsList');
-        this.finalSaveBtn = $('finalSaveBtn');
-        this.saveMsg = $('saveMsg');
-        this.opResult = $('opResult');
-        this.userIdDisplay = $('userIdDisplay');
-        const fullScreenPreviewBtn = $('fullScreenPreviewBtn');
-
-        // Añadir feedback visual para el estado de los elementos
-        this.saveMsg.textContent = `Estado inicial: logoDrop: ${this.logoDrop ? 'OK' : 'NULL'}, logoFile: ${this.logoFile ? 'OK' : 'NULL'}`;
-
-        // El input file ahora es directamente clickeable, no necesitamos el click programático en logoDrop
-        // if (this.logoDrop) {
-        //     this.logoDrop.addEventListener('click', () => {
-        //         this.saveMsg.textContent = 'DEBUG: logoDrop click detectado. Abriendo selector de archivo...';
-        //         this.logoFile.click();
-        //     });
-        // } else {
-        //     this.saveMsg.textContent = 'Error: logoDrop no encontrado en el DOM.';
-        // }
-
-        if (this.logoFile) {
-            this.logoFile.addEventListener('change', e => {
-                this.saveMsg.textContent = 'DEBUG: logoFile change detectado. Procesando archivo...';
-                this.handleLogoFile(e.target.files && e.target.files[0]);
-            });
-        } else {
-            this.saveMsg.textContent = 'Error: logoFile no encontrado en el DOM.';
-        }
-
-        // ... (resto de tus event listeners y drag & drop)
-        if (this.storeVideo) this.storeVideo.addEventListener('blur', () => { /* console.log('DEBUG: storeVideo blur'); */ this.renderVideoPreview(); });
-        if (this.saveStoreBtn) this.saveStoreBtn.addEventListener('click', () => { /* console.log('DEBUG: saveStoreBtn click'); */ this.saveStore(); });
-        if (this.addProductBtn) this.addProductBtn.addEventListener('click', () => { /* console.log('DEBUG: addProductBtn click'); */ this.addProduct(); });
-        if (this.finalSaveBtn) this.finalSaveBtn.addEventListener('click', () => { /* console.log('DEBUG: finalSaveBtn click'); */ this.saveStore(); });
-        if (fullScreenPreviewBtn) fullScreenPreviewBtn.addEventListener('click', () => {
-            /* console.log('DEBUG: fullScreenPreviewBtn click'); */
-            const livePreview = $('livePreview');
-            const storeName = $('storeName');
-            const storeNameVal = storeName.value || 'Vista Previa de la Tienda';
-
-            const newTab = window.open();
-            let htmlContent = '<!doctype html><html lang="es"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>' + escapeHTML(storeNameVal) + '</title>';
-            htmlContent += '<script src="https://cdn.tailwindcss.com/"><\/script>';
-            htmlContent += '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">';
-            htmlContent += '<style>:root {--bg: #e9eef6;--card: #f6f8fb;--muted: #6b7280;}body {background: linear-gradient(180deg, #e9eef6, #dfe8f8);font-family: \'Inter\', sans-serif;color: #1a202c;padding: 2rem;}.neumorphic-card {background: var(--card);border-radius: 14px;box-shadow: 8px 8px 20px rgba(170, 187, 204, 0.18), -8px -8px 20px rgba(255, 255, 255, 0.9);}.btn {transition: transform 0.12s ease-in-out, box-shadow 0.12s ease-in-out;}.btn:active {transform: translateY(1px);box-shadow: none;}</style>';
-            htmlContent += '</head><body><div class="container mx-auto">' + livePreview.innerHTML + '</div></body></html>';
-            newTab.document.write(htmlContent);
-            newTab.document.close();
-        });
-
-
-        // Manejar drag & drop para el logo
-        if (this.logoDrop) {
-            this.logoDrop.addEventListener('dragover', e => { e.preventDefault(); this.logoDrop.style.opacity = 0.8; /* console.log('DEBUG: logoDrop dragover'); */ });
-            this.logoDrop.addEventListener('dragleave', () => { this.logoDrop.style.opacity = 1; /* console.log('DEBUG: logoDrop dragleave'); */ });
-            this.logoDrop.addEventListener('drop', e => {
-                e.preventDefault();
-                this.logoDrop.style.opacity = 1;
-                const file = e.dataTransfer.files && e.dataTransfer.files[0];
-                if (file) { /* console.log('DEBUG: logoDrop drop, file:', file); */ this.handleLogoFile(file); }
-            });
-        }
-
-        // Event listeners para autoguardado básico en campos de texto
-        if (this.storeName) this.storeName.addEventListener('change', () => { /* console.log('DEBUG: storeName change'); */ this.saveStore(false); });
-        if (this.storeDesc) this.storeDesc.addEventListener('change', () => { /* console.log('DEBUG: storeDesc change'); */ this.saveStore(false); });
-        if (this.storeVideo) this.storeVideo.addEventListener('change', () => { /* console.log('DEBUG: storeVideo change'); */ this.saveStore(false); });
-        if (this.providerRate) this.providerRate.addEventListener('change', () => { /* console.log('DEBUG: providerRate change'); */ this.saveStore(false); });
-        if (this.shipAir) this.shipAir.addEventListener('change', () => { /* console.log('DEBUG: shipAir change'); */ this.saveStore(false); });
-        if (this.shipSea) this.shipSea.addEventListener('change', () => { /* console.log('DEBUG: shipSea change'); */ this.saveStore(false); });
-        if (this.whatsappNumber) this.whatsappNumber.addEventListener('change', () => { /* console.log('DEBUG: whatsappNumber change'); */ this.saveStore(false); });
-    }
-
-    async initAuth() {
-        onAuthStateChanged(this.auth, async (user) => {
-            if (user) {
-                this.userId = user.uid;
-                this.userIdDisplay.textContent = `ID de usuario: ${this.userId}`;
-                const storeIdParam = new URLSearchParams(location.search).get('store_id');
-                this.storeId = storeIdParam;
-                this.storeRef = doc(this.db, 'artifacts', __app_id, 'users', this.userId, 'stores', this.storeId || 'main');
-                this.productsRef = collection(this.db, 'artifacts', __app_id, 'users', this.userId, 'products');
-                this.listenForData();
-            } else {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(this.auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(this.auth);
-                }
-            }
-        });
-    }
-
-    listenForData() {
-        if (!this.storeRef || !this.productsRef) return;
-
-        // Escuchar cambios en los detalles de la tienda
-        onSnapshot(this.storeRef, (doc) => {
-            if (doc.exists()) {
-                const data = doc.data();
-                this.storeName.value = data.nombre || '';
-                this.storeDesc.value = data.descripcion || '';
-                this.storeVideo.value = data.video || '';
-                this.providerRate.value = data.providerRate || 0;
-                this.shipAir.checked = !!data.shipAir;
-                this.shipSea.checked = !!data.shipSea;
-                const wa = data.whatsapp || '';
-                if (wa.startsWith('+')) {
-                    this.countryCode.value = wa.substring(0, wa.length - 8);
-                    this.whatsappNumber.value = wa.substring(wa.length - 8);
-                } else {
-                    this.whatsappNumber.value = wa;
-                }
-                this.renderVideoPreview();
-                if (data.logo_url) {
-                    this.logoPreview.src = data.logo_url;
-                    this.logoPreview.style.display = 'block';
-                    this.logoPlaceholder.style.display = 'none';
-                }
-            }
-        });
-
-        // Escuchar cambios en la lista de productos
-        onSnapshot(this.productsRef, (snapshot) => {
-            this.products = snapshot.docs.map(d => ({ ...d.data(), id: d.id, imagePreview: d.data().image_url || null }));
-            this.renderProducts();
-        });
-    }
-
-    async saveStore() {
-        this.saveMsg.textContent = 'Guardando...';
-        const payload = {
-            nombre: this.storeName.value.trim(),
-            descripcion: this.storeDesc.value.trim(),
-            video: this.storeVideo.value.trim(),
-            providerRate: parseFloat(this.providerRate.value) || 0,
-            shipAir: !!this.shipAir.checked,
-            shipSea: !!this.shipSea.checked,
-            whatsapp: this.countryCode.value + this.whatsappNumber.value,
-        };
-
-        try {
-            await setDoc(this.storeRef, payload, { merge: true });
-            this.saveMsg.textContent = 'Guardado correctamente!';
-        } catch (error) {
-            console.error('Error guardando la tienda:', error);
-            this.saveMsg.textContent = 'Error al guardar.';
-        }
-    }
-
-    async handleLogoFile(file) {
-        // console.log('DEBUG: handleLogoFile iniciado, file:', file); // Este log no lo verás, pero es lo que haría en un entorno de depuración
-        if (!file) {
-            this.saveMsg.textContent = 'Error: No se seleccionó ningún archivo.';
-            // console.log('DEBUG: handleLogoFile - No file selected.');
-            return;
-        }
-
-        this.saveMsg.textContent = 'Procesando logo...';
-        // console.log('DEBUG: handleLogoFile - Processing file.');
-
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-            // console.log('DEBUG: FileReader onloadend.');
-            if (!this.storeRef) {
-                this.saveMsg.textContent = 'Error: Referencia de tienda no disponible para guardar logo.';
-                // console.log('DEBUG: handleLogoFile - storeRef is null.');
-                return;
-            }
-            try {
-                // Aquí es donde el código original intentaría guardar en Firestore.
-                // Como no usas Firestore, esta parte fallará o no hará nada útil.
-                // Necesitamos adaptar esto para tu backend de Supabase.
-                // Por ahora, solo actualizaremos la previsualización local.
-
-                // Simplemente previsualizamos el logo localmente
-                this.logoPreview.src = reader.result;
-                this.logoPreview.style.display = 'block';
-                this.logoPlaceholder.style.display = 'none';
-                this.saveMsg.textContent = 'Logo previsualizado localmente. (Guardado en DB pendiente)';
-                // console.log('DEBUG: Logo previsualizado localmente.');
-
-                // TODO: Aquí deberías añadir la lógica para subir el archivo a Supabase Storage
-                // y luego actualizar la URL del logo en tu tabla 'stores' de Supabase.
-                // Esto implicaría una llamada fetch a tu API de backend.
-
-            } catch (error) {
-                // console.error('DEBUG: Error al guardar logo en Firestore (o simulación):', error);
-                this.saveMsg.textContent = `Error al procesar logo: ${error.message || 'Desconocido'}`;
-            }
-        };
-        reader.onerror = (error) => {
-            // console.error('DEBUG: FileReader error:', error);
-            this.saveMsg.textContent = `Error al leer archivo: ${error.message || 'Desconocido'}`;
-        };
-        reader.readAsDataURL(file);
-    }
-
-    renderVideoPreview() {
-        const v = this.storeVideo.value.trim();
-        this.videoPreview.innerHTML = '';
-        if (!v) return;
-        let id = null;
-        const m = v.match(/[?&]v=([^&]+)/) || v.match(/youtu\.be\/([^?&]+)/) || v.match(/embed\/([^?&]+)/);
-        if (m) id = m[1];
-        if (id) {
-            this.videoPreview.innerHTML = `<iframe width="320" height="180" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen style="border-radius:8px"></iframe>`;
-        } else {
-            this.videoPreview.innerHTML = `<div class="muted small">Enlace no reconocido como YouTube.</div>`;
-        }
-    }
-
-    renderProducts() {
-        this.productsList.innerHTML = '';
-        if (this.products.length === 0) {
-            this.productsList.innerHTML = `<div class="muted">No hay productos. Pulsa "Añadir producto".</div>`;
-            return;
-        }
-        this.products.forEach(p => {
-            const div = document.createElement('div');
-            div.className = 'product';
-            div.innerHTML = `
-              <img src="${p.imagePreview || 'https://placehold.co/80x80/e9eef6/6b7280?text=IMG'}" alt="product image">
-              <div class="meta">
-                <div style="font-weight:700">${escapeHTML(p.name || 'Producto sin nombre')}</div>
-                <div class="small muted" style="margin-top:6px">
-                  Precio: ${p.currency || 'C$'}${p.price != null ? p.price.toFixed(2) : '0.00'} • Peso: ${p.weight || 0} lb
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Días de Entrega (Rango)</label>
+                  <div class="flex gap-2">
+                      <input id="seaMinDays" type="number" placeholder="Min" class="input w-1/2 p-3 rounded-lg text-sm" value="30"/>
+                      <input id="seaMaxDays" type="number" placeholder="Max" class="input w-1/2 p-3 rounded-lg text-sm" value="45"/>
+                  </div>
                 </div>
               </div>
-              <div class="actions">
-                <button class="btn secondary edit-btn" data-id="${p.id}">Editar</button>
-                <button class="btn danger remove-btn" data-id="${p.id}">Eliminar</button>
+          </div>
+          
+        </div>
+
+        <!-- Products Card -->
+        <div class="neumorphic-card p-6">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-box-open"></i> Productos y Márgenes</h3>
+              <div class="text-sm text-gray-500 mt-1">Añade, edita y gestiona tus productos.</div>
+            </div>
+            <button id="addProductBtn" class="bg-blue-500 text-white p-2 rounded-full shadow-lg hover:bg-blue-600 transition-all duration-200 btn">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+          <div id="productsList" class="space-y-4"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row justify-center gap-4 py-4">
+          <button id="saveStoreBtn" class="btn bg-gray-400 text-white px-6 py-3 rounded-full shadow-lg hover:bg-gray-500 font-semibold"><i class="fas fa-save mr-2"></i> Guardar Cambios (Simulado)</button>
+        </div>
+      </div>
+      
+      <!-- Panel de Vista Previa -->
+      <div class="flex flex-col space-y-8">
+        <div id="previewCard" class="neumorphic-card p-6 min-h-[50vh]">
+          <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><i class="fas fa-eye"></i> Vista Previa (Simulada para Cliente)</h2>
+          <div id="livePreview" class="neumorphic-card bg-gray-50 p-6 rounded-lg shadow-inner min-h-[40vh] text-center text-gray-500">
+            <i class="fas fa-store-slash text-6xl mb-4 text-gray-300"></i>
+            <p>Tu tienda aparecerá aquí. Actualiza la información para ver los cambios.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Product Editor Modal (Lógica de Margen) -->
+  <div id="productEditorModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay hidden">
+    <div class="neumorphic-card p-6 rounded-2xl w-full max-w-xl relative animate-fade-in-up my-4 max-h-screen overflow-y-auto">
+      <h3 class="text-2xl font-bold mb-4">Editar Producto</h3>
+      <div class="space-y-6">
+        
+        <!-- Nombre, Imagen, Descripcion, Video -->
+        <div>
+          <label for="prodNameInput" class="block text-sm font-medium text-gray-500 mb-1">Nombre del Producto</label>
+          <input id="prodNameInput" type="text" class="input w-full p-3 rounded-lg text-sm" />
+        </div>
+        <div>
+          <label for="prodDescInput" class="block text-sm font-medium text-gray-500 mb-1">Descripción</label>
+          <textarea id="prodDescInput" placeholder="Detalles, características o beneficios..." class="input w-full p-3 rounded-lg text-sm resize-y min-h-[4rem]"></textarea>
+        </div>
+        
+        <div class="pt-2">
+            <label for="prodYoutubeLink" class="block text-sm font-medium text-gray-500 mb-1">Video de YouTube del Producto (Opcional)</label>
+            <input id="prodYoutubeLink" type="url" placeholder="Ej: https://youtu.be/..." class="input w-full p-3 rounded-lg text-sm" />
+            <p class="text-xs text-gray-500 mt-1">Si está lleno, el cliente verá una opción para ver el video en la tarjeta.</p>
+        </div>
+
+
+        <!-- 3. CONFIGURACIÓN DE COSTOS (CRÍTICA y AHORA MÁS CLARA) -->
+        <div class="space-y-4 p-4 border rounded-xl border-indigo-300 bg-indigo-50">
+            <h4 class="font-semibold text-indigo-800 flex items-center gap-2 text-lg"><i class="fas fa-calculator"></i> Lógica Financiera</h4>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="prodInitialCost" class="block text-sm font-medium text-gray-700 mb-1">
+                        1. Costo Inicial del Proveedor ($) <span class="text-xs text-gray-500">(Adquisición pura)</span>
+                    </label>
+                    <input id="prodInitialCost" type="number" step="0.01" value="0.00" class="input w-full p-3 rounded-lg text-sm font-mono" />
+                </div>
+                <!-- Peso (CONDICIONAL: SOLO PARA DUAL/ENCARGO) -->
+                <div id="prodWeightContainer">
+                    <label for="prodWeight" class="block text-sm font-medium text-gray-700 mb-1">
+                        2. Peso Estimado (lb) <span class="text-xs text-gray-500">(Para cálculo de flete)</span>
+                    </label>
+                    <input id="prodWeight" type="number" step="0.01" value="0.00" class="input w-full p-3 rounded-lg text-sm font-mono" />
+                </div>
+            </div>
+
+            <div class="border-t border-indigo-300 pt-4">
+              <h4 class="text-sm font-bold text-indigo-800 mb-2">3. Define tu Margen de Ganancia</h4>
+              <div class="flex gap-2 mb-4">
+                  <select id="prodMarginType" class="input p-3 rounded-lg text-sm w-1/3">
+                    <option value="fixed">Valor Fijo ($)</option>
+                    <option value="percent">Porcentaje (%)</option>
+                  </select>
+                  <input id="prodMarginValue" type="number" step="0.01" value="5.00" class="input p-3 rounded-lg text-sm w-2/3 font-mono" />
               </div>
-            `;
-            this.productsList.appendChild(div);
-        });
-        document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', e => this.openProductEditor(e.target.dataset.id)));
-        document.querySelectorAll('.remove-btn').forEach(btn => btn.addEventListener('click', e => this.removeProduct(e.target.dataset.id)));
-    }
+            </div>
+            
+            <!-- Display de Cálculo Automático DUAL (O ÚNICO para Stock) -->
+            <div class="p-3 rounded-lg bg-indigo-200 text-indigo-800 font-mono text-sm">
+                <p class="font-bold text-base mb-1">
+                    Costo Base (Adquisición): <span id="baseCostAirDisplay" class="font-extrabold text-indigo-700">C$0.00</span> 
+                    <span id="baseCostSeaDisplay" class="font-extrabold text-green-700 ml-4 hidden">C$0.00</span>
+                </p>
+                <p class="text-xs mt-2" id="formulaDisplay">
+                    Fórmula (Dual): Proveedor + (Peso * Tarifa por lb). El **Costo Base (Adquisición)** es tu costo *real* antes de la ganancia.
+                </p>
+            </div>
+        </div>
 
-    addProduct() {
-        showModal({
-            title: 'Añadir nuevo producto',
-            message: '¿Quieres añadir un nuevo producto? Los cambios se guardarán automáticamente.',
-            onConfirm: () => this.openProductEditor(null)
-        });
-    }
+        <!-- 4. Disponibilidad y Método de Venta -->
+        <div>
+          <label for="prodStockMode" class="block text-sm font-medium text-gray-500 mb-1">Método de Venta</label>
+          <select id="prodStockMode" class="input w-full p-3 rounded-lg text-sm">
+            <option value="stock">Entrega Inmediata (Stock)</option>
+            <option value="made">Por Encargo (Requiere Envío DUAL/Único)</option>
+            <option value="both">Ambas (Stock limitado + Encargo)</option>
+          </select>
+          <p class="text-xs text-gray-500 mt-1">Si es Por Encargo, el cliente verá los precios de los métodos de envío disponibles.</p>
+        </div>
+        
+        <!-- Contenedor Condicional: Por Encargo Opciones (SOLO VISIBLE SI LOGÍSTICA DUAL Y ES POR ENCARGO) -->
+        <div id="madeToOrderContainer" class="space-y-4 p-4 border rounded-xl border-indigo-200 bg-indigo-50 hidden">
+          <h4 class="font-semibold text-indigo-700">Opciones de Envío para Encargo</h4>
+          <div>
+            <label for="prodShipMethod" class="block text-sm font-medium text-gray-500 mb-1">Métodos de Envío Disponibles al Cliente</label>
+            <select id="prodShipMethod" class="input w-full p-3 rounded-lg text-sm">
+              <option value="both">Aéreo y Marítimo</option>
+              <option value="air">Solo Aéreo</option>
+              <option value="sea">Solo Marítimo</option>
+              <option value="single">Único (Tiendas sin logística DUAL)</option>
+            </select>
+            <p class="text-xs text-gray-500 mt-1">Si la tienda no usa Logística DUAL, solo se aplicará el precio Único (Costo Base + Ganancia).</p>
+          </div>
+        </div>
 
-    async removeProduct(id) {
-        showModal({
-            title: 'Confirmar eliminación',
-            message: '¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.',
-            onConfirm: async () => {
-                try {
-                    await deleteDoc(doc(this.productsRef, id));
-                    this.opResult.textContent = 'Producto eliminado.';
-                } catch (error) {
-                    console.error('Error al eliminar producto:', error);
-                    this.opResult.textContent = 'Error al eliminar.';
-                }
+        <!-- 5. Opciones de Delivery (Desde Tienda a Cliente) -->
+        <div class="space-y-4 p-4 border rounded-xl border-gray-200 bg-gray-50">
+          <h4 class="font-semibold text-gray-700">Costo de Delivery Local (Desde tu tienda al cliente)</h4>
+          <div>
+            <label for="prodDeliveryCostType" class="block text-sm font-medium text-gray-500 mb-1">Costo de Delivery</label>
+            <select id="prodDeliveryCostType" class="input w-full p-3 rounded-lg text-sm">
+              <option value="range">Costo por Rango (Extra)</option>
+              <option value="fixed">Costo Fijo (Extra)</option>
+              <option value="included">Incluído en el Precio Final</option>
+              <option value="no">No disponible / Retiro en tienda</option>
+            </select>
+          </div>
+          
+          <div id="deliveryCostInputs" class="space-y-4 hidden">
+            <div id="fixedCostInput" class="hidden">
+              <label for="prodDeliveryFixed" class="block text-sm font-medium text-gray-500 mb-1">Valor Fijo de Envío</label>
+              <input id="prodDeliveryFixed" type="number" step="0.01" placeholder="Ej: 5.00" class="input w-full p-3 rounded-lg text-sm" />
+            </div>
+            <div id="rangeCostInput" class="hidden grid grid-cols-2 gap-4">
+              <div>
+                <label for="prodDeliveryRangeStart" class="block text-sm font-medium text-gray-500 mb-1">Rango Mínimo</label>
+                <input id="prodDeliveryRangeStart" type="number" step="0.01" placeholder="Ej: 2.00" class="input w-full p-3 rounded-lg text-sm" />
+              </div>
+              <div>
+                <label for="prodDeliveryRangeEnd" class="block text-sm font-medium text-gray-500 mb-1">Rango Máximo</label>
+                <input id="prodDeliveryRangeEnd" type="number" step="0.01" placeholder="Ej: 8.00" class="input w-full p-3 rounded-lg text-sm" />
+              </div>
+            </div>
+            
+            <div>
+              <label for="prodDeliveryNote" class="block text-sm font-medium text-gray-500 mb-1">Nota Opcional (Máx 15 palabras)</label>
+              <input id="prodDeliveryNote" type="text" placeholder="Ej: Costo varía por zona." class="input w-full p-3 rounded-lg text-sm" maxlength="80"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Hashtags/Etiquetas -->
+        <div>
+          <label for="prodTags" class="block text-sm font-medium text-gray-500 mb-1">Etiquetas/Hashtags (Máx 5, separadas por coma)</label>
+          <input id="prodTags" type="text" placeholder="Ej: #tendencia, #artesanal, #regalo" class="input w-full p-3 rounded-lg text-sm" />
+          <div id="tagsPreview" class="mt-2 flex flex-wrap gap-2 text-xs"></div>
+        </div>
+        
+        <!-- Image Input -->
+        <div class="pt-4 border-t">
+          <label class="block text-sm font-medium text-gray-500 mb-1">Imagen del Producto (Opcional)</label>
+          <div id="prodImageDrop" class="w-full h-24 rounded-xl bg-gray-100 flex items-center justify-center border border-dashed border-gray-300 cursor-pointer overflow-hidden relative shadow-inner mb-2">
+            <div id="prodImagePlaceholder" class="flex flex-col items-center text-gray-400">
+              <i class="fas fa-camera text-xl mb-1"></i>
+              <div class="text-xs">Seleccionar Imagen</div>
+            </div>
+            <img id="prodImagePreview" class="w-full h-full object-cover" style="display:none" alt="product image preview">
+          </div>
+          <input type="file" id="prodImageInput" accept="image/*" class="hidden" />
+        </div>
+        
+      </div>
+      
+      <!-- Botones del Modal -->
+      <div class="mt-6 flex justify-end gap-4">
+        <button id="cancelProductBtn" class="btn bg-gray-200 text-gray-700 px-6 py-2 rounded-full font-semibold hover:bg-gray-300">Cancelar</button>
+        <button id="saveProductBtn" class="btn bg-blue-500 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-600">Guardar Producto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video Player Modal -->
+  <div id="videoModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay hidden">
+    <div class="neumorphic-card p-4 rounded-2xl w-full max-w-4xl relative animate-fade-in-up">
+      <button id="closeVideoModal" class="absolute top-4 right-4 z-10 btn bg-white text-gray-700 w-8 h-8 rounded-full shadow-lg hover:bg-gray-200"><i class="fas fa-times"></i></button>
+      <div id="videoContent" class="w-full aspect-video rounded-xl overflow-hidden">
+        <!-- YouTube iframe will be loaded here -->
+      </div>
+      <div id="videoTitle" class="text-lg font-bold mt-3 text-center"></div>
+    </div>
+  </div>
+
+
+  <!-- Message Modal -->
+  <div id="messageModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-overlay hidden">
+    <div class="neumorphic-card p-6 rounded-2xl w-full max-w-sm relative text-center">
+      <div id="messageText" class="text-lg font-semibold mb-4"></div>
+      <button id="messageOkBtn" class="btn bg-blue-500 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-600">OK</button>
+    </div>
+  </div>
+
+  <script>
+    // --- Lógica del Editor y Cálculos Financieros ---
+
+    (() => {
+      
+      const $ = id => document.getElementById(id);
+      const uid = () => Math.random().toString(36).slice(2, 9);
+      const escapeHTML = (s) => (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+      
+      // Función para convertir URL de YouTube a URL de Embed
+      function getYoutubeEmbedUrl(url) {
+        if (!url) return null;
+        let videoId = null;
+
+        // Pattern for common YouTube URLs (youtu.be/ and youtube.com/watch?v=)
+        const regExp = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+        const match = url.match(regExp);
+
+        if (match && match[1].length === 11) {
+          videoId = match[1];
+        }
+
+        return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1` : null;
+      }
+      
+      // Función de Formato de Moneda (Muestra: 10,000.00)
+      const formatCurrency = (amount) => {
+          if (typeof amount !== 'number' || isNaN(amount)) return '0.00';
+          return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      };
+      
+      // --- ESTADO GLOBAL ---
+      let store = { 
+          id: null, 
+          nombre: 'Mi Tienda Express', 
+          descripcion: 'Tu mejor opción para importaciones rápidas y seguras.', 
+          whatsapp: '8888-8888',
+          logoUrl: null, 
+          youtubeLink: null,
+          isLogisticsDual: true, 
+          airRate: 5.50, airMinDays: 7, airMaxDays: 15, 
+          seaRate: 3.00, seaMinDays: 30, seaMaxDays: 45,
+          currency: 'USD' 
+      };
+      let products = [];
+      let currentEditingProduct = null;
+      let shoppingCart = {}; // { productId: quantity }
+
+      // --- REFERENCIAS DE UI ---
+      const storeName = $('storeName'), storeDescription = $('storeDescription'), storeWhatsapp = $('storeWhatsapp'), storeYoutubeLink = $('storeYoutubeLink');
+      const storeLogoInput = $('storeLogoInput'), storeLogoPreview = $('storeLogoPreview'), storeLogoPlaceholder = $('storeLogoPlaceholder');
+      const airRate = $('airRate'), seaRate = $('seaRate'), airMinDays = $('airMinDays'), airMaxDays = $('airMaxDays'), seaMinDays = $('seaMinDays'), seaMaxDays = $('seaMaxDays');
+      const isLogisticsDualToggle = $('isLogisticsDualToggle'), dualLogisticsContainer = $('dualLogisticsContainer');
+      const productsList = $('productsList'), addProductBtn = $('addProductBtn'), livePreview = $('livePreview');
+      const productEditorModal = $('productEditorModal');
+      const prodNameInput = $('prodNameInput'), prodDescInput = $('prodDescInput'), prodInitialCost = $('prodInitialCost'), prodYoutubeLink = $('prodYoutubeLink');
+      const prodWeight = $('prodWeight'), prodWeightContainer = $('prodWeightContainer');
+      const prodMarginType = $('prodMarginType'), prodMarginValue = $('prodMarginValue');
+      const baseCostAirDisplay = $('baseCostAirDisplay'), baseCostSeaDisplay = $('baseCostSeaDisplay'), formulaDisplay = $('formulaDisplay');
+      const prodStockMode = $('prodStockMode'), prodShipMethod = $('prodShipMethod'), madeToOrderContainer = $('madeToOrderContainer');
+      const prodDeliveryCostType = $('prodDeliveryCostType'), deliveryCostInputs = $('deliveryCostInputs'), fixedCostInput = $('fixedCostInput'), rangeCostInput = $('rangeCostInput');
+      const prodDeliveryFixed = $('prodDeliveryFixed'), prodDeliveryRangeStart = $('prodDeliveryRangeStart'), prodDeliveryRangeEnd = $('prodDeliveryRangeEnd'), prodDeliveryNote = $('prodDeliveryNote');
+      const prodTags = $('prodTags'), tagsPreview = $('tagsPreview');
+      const prodImageDrop = $('prodImageDrop'), prodImageInput = $('prodImageInput'), prodImagePreview = $('prodImagePreview'), prodImagePlaceholder = $('prodImagePlaceholder');
+      const videoModal = $('videoModal'), closeVideoModal = $('closeVideoModal'), videoContent = $('videoContent'), videoTitle = $('videoTitle');
+
+
+      // --- GESTIÓN DE LA TIENDA (INFORMACIÓN GENERAL) ---
+      function updateStoreInfo() {
+        store.nombre = storeName.value.trim();
+        store.descripcion = storeDescription.value.trim();
+        store.whatsapp = storeWhatsapp.value.trim();
+        store.youtubeLink = storeYoutubeLink.value.trim();
+        
+        // Sincronizar rates/días
+        store.airRate = parseFloat(airRate.value) || 0;
+        store.seaRate = parseFloat(seaRate.value) || 0;
+        store.airMinDays = parseInt(airMinDays.value) || 0;
+        store.airMaxDays = parseInt(airMaxDays.value) || 0;
+        store.seaMinDays = parseInt(seaMinDays.value) || 0;
+        store.seaMaxDays = parseInt(seaMaxDays.value) || 0;
+        
+        updatePreview();
+      }
+
+      // Sincronizar store global con inputs y actualizar preview
+      [storeName, storeDescription, storeWhatsapp, storeYoutubeLink, airRate, seaRate, airMinDays, airMaxDays, seaMinDays, seaMaxDays].forEach(el => {
+          el.addEventListener('input', updateStoreInfo);
+      });
+      
+      // Logo de la Tienda
+      storeLogoInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+            store.logoUrl = URL.createObjectURL(file);
+            storeLogoPreview.src = store.logoUrl;
+            storeLogoPreview.style.display = 'block';
+            storeLogoPlaceholder.style.display = 'none';
+        } else {
+            store.logoUrl = null;
+            storeLogoPreview.style.display = 'none';
+            storeLogoPlaceholder.style.display = 'flex';
+        }
+        updatePreview();
+      });
+
+      // --- LÓGICA DE CÁLCULO FINANCIERO CRÍTICA Y DUAL ---
+      function calculateProductCosts() {
+        if (!currentEditingProduct) return;
+        
+        // 1. Obtener valores
+        const isDual = store.isLogisticsDual;
+        const initialCost = parseFloat(prodInitialCost.value) || 0;
+        const weight = parseFloat(prodWeight.value) || 0;
+        const marginType = prodMarginType.value;
+        const marginValue = parseFloat(prodMarginValue.value) || 0;
+        
+        const airRateVal = parseFloat(airRate.value) || 0;
+        const seaRateVal = parseFloat(seaRate.value) || 0;
+        const currencySymbol = store.currency; 
+        
+        let airBaseCost, seaBaseCost;
+
+        if (isDual) {
+            // Lógica DUAL: Costo de Adquisición = Proveedor + Flete por Peso
+            airBaseCost = initialCost + (weight * airRateVal);
+            seaBaseCost = initialCost + (weight * seaRateVal);
+            
+            if (currentEditingProduct.productStockMode === 'stock' || currentEditingProduct.productStockMode === 'both') {
+                airBaseCost = seaBaseCost = Math.max(airBaseCost, seaBaseCost);
+            }
+        } else {
+            // Lógica ÚNICA (STOCK): Costo de Adquisición = Costo del Proveedor (No hay flete por libra)
+            airBaseCost = initialCost; 
+            seaBaseCost = initialCost;
+        }
+
+
+        // 2. Calcular MARGEN
+        const getMargin = (cost) => {
+            if (marginType === 'percent') {
+                return cost * (marginValue / 100);
+            }
+            return marginValue; 
+        };
+
+        const airMargin = getMargin(airBaseCost);
+        const seaMargin = getMargin(seaBaseCost);
+
+        // 3. Calcular PRECIO FINAL (Base + Margen)
+        const airFinalPrice = airBaseCost + airMargin;
+        const seaFinalPrice = seaBaseCost + seaMargin;
+        
+        // 4. Actualizar el estado del producto
+        currentEditingProduct.initialCost = initialCost;
+        currentEditingProduct.weight = isDual ? weight : 0; 
+        currentEditingProduct.marginType = marginType;
+        currentEditingProduct.marginValue = marginValue;
+        currentEditingProduct.airBaseCost = airBaseCost;
+        currentEditingProduct.seaBaseCost = seaBaseCost;
+        currentEditingProduct.airFinalPrice = airFinalPrice;
+        currentEditingProduct.seaFinalPrice = seaFinalPrice;
+        currentEditingProduct.airMargin = airMargin;
+        currentEditingProduct.seaMargin = seaMargin;
+
+        // 5. Actualizar display en el modal
+        baseCostAirDisplay.textContent = `${currencySymbol}${formatCurrency(airBaseCost)}`;
+        
+        if (isDual) {
+            baseCostSeaDisplay.textContent = `${currencySymbol}${formatCurrency(seaBaseCost)}`;
+            baseCostSeaDisplay.classList.remove('hidden');
+            formulaDisplay.innerHTML = 'Fórmula: Proveedor + (Peso * Tarifa por lb). El **Costo Base (Adquisición)** es tu costo *real* antes de la ganancia.';
+            prodWeightContainer.classList.remove('hidden');
+        } else {
+            baseCostSeaDisplay.classList.add('hidden');
+            formulaDisplay.innerHTML = 'Fórmula: Proveedor + Ganancia. El **Costo Base (Adquisición)** es igual al Costo del Proveedor (ya que no hay flete por libra).';
+            prodWeightContainer.classList.add('hidden');
+        }
+      }
+
+      // Añadir listeners para el cálculo en tiempo real
+      [prodInitialCost, prodWeight, prodMarginType, prodMarginValue].forEach(el => {
+          el.addEventListener('input', () => {
+              if (productEditorModal.classList.contains('hidden')) return;
+              calculateProductCosts();
+          });
+      });
+      
+      // Manejar el toggle global de logística
+      isLogisticsDualToggle.addEventListener('change', () => {
+          store.isLogisticsDual = isLogisticsDualToggle.checked;
+          
+          if (store.isLogisticsDual) {
+              dualLogisticsContainer.classList.remove('hidden');
+          } else {
+              dualLogisticsContainer.classList.add('hidden');
+          }
+
+          if (!productEditorModal.classList.contains('hidden')) {
+              calculateProductCosts();
+              handleConditionalFields();
+          }
+          updatePreview();
+      });
+
+      // --- Manejo de Visibilidad Condicional en el Modal ---
+      function handleConditionalFields() {
+        const isDual = store.isLogisticsDual;
+        const stockMode = prodStockMode.value;
+        const deliveryCostType = prodDeliveryCostType.value;
+        
+        if (isDual) {
+            prodWeightContainer.classList.remove('hidden');
+        } else {
+            prodWeightContainer.classList.add('hidden');
+        }
+
+        if (stockMode === 'made' || stockMode === 'both') {
+            madeToOrderContainer.classList.remove('hidden');
+        } else {
+            madeToOrderContainer.classList.add('hidden');
+        }
+        
+        // Ajustar opciones del método de envío en encargo
+        const shipMethodOptions = prodShipMethod.querySelectorAll('option');
+        shipMethodOptions.forEach(opt => {
+            if (opt.value === 'single') {
+                opt.classList.toggle('hidden', isDual);
+            } else if (opt.value === 'air' || opt.value === 'sea' || opt.value === 'both') {
+                 opt.classList.toggle('hidden', !isDual);
             }
         });
-    }
+        
+        if (!isDual && prodShipMethod.value !== 'single') {
+            prodShipMethod.value = 'single';
+        }
+        if (isDual && prodShipMethod.value === 'single') {
+            prodShipMethod.value = 'both';
+        }
 
-    openProductEditor(id) {
-        const product = id ? this.products.find(p => p.id === id) : { id: null, name: '', price: 0, currency: 'C$', weight: 0, stockType: 'stock', days: 0, imageFile: null, deliveryIncluded: true };
-        const editor = document.createElement('div');
-        editor.className = 'modal-overlay';
-        editor.innerHTML = `
-          <div class="modal-content">
-            <h3 style="margin:0">${id ? 'Editar Producto' : 'Añadir Producto'}</h3>
-            <div style="height:10px"></div>
-            <label>Imagen (1 foto)</label>
-            <input type="file" id="prodImageInput" accept="image/*" />
-            <div style="height:8px"></div>
-            <label>Nombre</label><input id="prodNameInput" type="text" value="${escapeHTML(product.name)}" />
-            <label>Precio</label><input id="prodPriceInput" type="number" value="${product.price}" step="0.01" />
-            <label>Moneda</label>
-            <select id="prodCurrency">
-              <option value="C$"${product.currency === 'C$' ? ' selected' : ''}>Córdobas (C$)</option>
-              <option value="USD"${product.currency === 'USD' ? ' selected' : ''}>USD ($)</option>
-            </select>
-            <label>Peso (lb)</label><input id="prodWeight" type="number" value="${product.weight}" step="0.01" />
-            <label>Tipo</label>
-            <select id="prodType">
-              <option value="stock"${product.stockType === 'stock' ? ' selected' : ''}>Disponible (stock)</option>
-              <option value="made"${product.stockType === 'made' ? ' selected' : ''}>Por encargo</option>
-            </select>
-            <label>Días si es por encargo</label><input id="prodDays" type="number" value="${product.days}" />
-            <label>Delivery incluido?</label>
-            <select id="prodDelivery">
-              <option value="included"${product.deliveryIncluded ? ' selected' : ''}>Incluido</option>
-              <option value="extra"${!product.deliveryIncluded ? ' selected' : ''}>Costo extra</option>
-            </select>
-            <div class="modal-actions">
-              <button id="saveProduct" class="btn">Guardar</button>
-              <button id="cancelProduct" class="btn secondary">Cancelar</button>
+
+        // Opciones de Costo de Delivery Local
+        deliveryCostInputs.classList.add('hidden');
+        fixedCostInput.classList.add('hidden');
+        rangeCostInput.classList.add('hidden');
+        
+        if (deliveryCostType !== 'included' && deliveryCostType !== 'no') {
+            deliveryCostInputs.classList.remove('hidden');
+            if (deliveryCostType === 'fixed') {
+                fixedCostInput.classList.remove('hidden');
+            } else if (deliveryCostType === 'range') {
+                rangeCostInput.classList.remove('hidden');
+            }
+        } else if (deliveryCostType === 'included') {
+            deliveryCostInputs.classList.remove('hidden');
+        }
+
+        // Previsualización de Tags
+        const tags = prodTags.value.split(',').map(t => t.trim().replace(/^#/, '')).filter(t => t.length > 0);
+        tagsPreview.innerHTML = tags.slice(0, 5).map(tag => `<span class="tag-item">#${escapeHTML(tag)}</span>`).join('');
+      }
+
+      [prodStockMode, prodDeliveryCostType, prodShipMethod].forEach(el => el.addEventListener('change', () => {
+          handleConditionalFields();
+          calculateProductCosts(); 
+      }));
+      prodTags.addEventListener('input', handleConditionalFields);
+      
+      // --- Lógica de Productos (EDITOR VIEW) ---
+
+      function getMarginTag(p) {
+          const isPercent = p.marginType === 'percent';
+          const marginText = isPercent ? `${p.marginValue}%` : `${store.currency}${formatCurrency(p.marginValue)}`;
+          
+          const effectiveMargin = (p.airMargin + p.seaMargin) / (store.isLogisticsDual ? 2 : 1);
+
+          let marginColor;
+          if (effectiveMargin > 5) {
+            marginColor = 'bg-green-200 text-green-800';
+          } else if (effectiveMargin > 0) {
+             marginColor = 'bg-yellow-200 text-yellow-800';
+          } else {
+             marginColor = 'bg-red-200 text-red-800';
+          }
+          
+          return `<span class="margin-tag ${marginColor} font-bold">Ganancia: ${marginText}</span>`;
+      }
+
+      function renderProducts() {
+        productsList.innerHTML = '';
+        if (products.length === 0) {
+          productsList.innerHTML = `<div class="text-gray-500 text-center py-8">No hay productos. Pulsa <span class="text-blue-500 font-semibold">"+"</span> para añadir uno.</div>`;
+          return;
+        }
+        products.forEach(p => {
+          const isDual = store.isLogisticsDual && (p.prodShipMethod === 'both' || p.prodShipMethod === 'air' || p.prodShipMethod === 'sea');
+          const isStock = p.productStockMode === 'stock';
+          
+          const div = document.createElement('div');
+          div.className = 'bg-white p-4 rounded-xl shadow-sm flex items-start space-x-4 border border-gray-100';
+          div.innerHTML = `
+            <img src="${p.imagePreview || 'https://placehold.co/80x80/e9eef6/6b7280?text=IMG'}" class="w-16 h-16 rounded-lg object-cover flex-shrink-0" alt="${escapeHTML(p.name)}">
+            <div class="flex-1 min-w-0">
+              <div class="font-bold text-gray-800">${escapeHTML(p.name || 'Producto sin nombre')} ${getMarginTag(p)}</div>
+              <div class="text-xs text-gray-500 mt-1">
+                <span class="font-semibold">${p.productStockMode.toUpperCase()}</span> | Tipo: ${isDual ? 'DUAL' : 'ÚNICO'}
+              </div>
+              
+              <!-- Detalles de Costo y Precio Final para el EDITOR -->
+              <div class="mt-2 text-xs flex flex-col gap-1 border-t pt-1">
+                ${isStock || !isDual ? 
+                    `<span class="text-indigo-600 font-semibold"><i class="fas fa-money-bill-wave"></i> ÚNICO: 
+                        Base (Adq.): ${store.currency}${formatCurrency(p.airBaseCost)} | Final: ${store.currency}${formatCurrency(p.airFinalPrice)}
+                    </span>`
+                    :
+                    `<span class="text-blue-600 font-semibold"><i class="fas fa-plane"></i> AÉREO: 
+                        Base (Adq.): ${store.currency}${formatCurrency(p.airBaseCost)} | Final: ${store.currency}${formatCurrency(p.airFinalPrice)}
+                    </span>
+                    <span class="text-green-600 font-semibold"><i class="fas fa-ship"></i> MARÍTIMO: 
+                        Base (Adq.): ${store.currency}${formatCurrency(p.seaBaseCost)} | Final: ${store.currency}${formatCurrency(p.seaFinalPrice)}
+                    </span>`
+                }
+              </div>
+            </div>
+            <div class="flex flex-col gap-2 flex-shrink-0">
+              <button class="btn edit-btn bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-300" data-id="${p.idLocal}"><i class="fas fa-edit text-xs"></i></button>
+              <button class="btn delete-btn bg-red-400 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-500" data-id="${p.idLocal}"><i class="fas fa-trash-alt text-xs"></i></button>
+            </div>
+          `;
+          productsList.appendChild(div);
+        });
+
+        document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', (e) => openProductEditor(e.currentTarget.dataset.id)));
+        document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', (e) => {
+          products = products.filter(x => x.idLocal !== e.currentTarget.dataset.id);
+          renderProducts();
+        }));
+        updatePreview();
+      }
+
+      // Add product flow
+      addProductBtn.addEventListener('click', () => {
+        currentEditingProduct = { 
+            idLocal: uid(), id: null, name: '', description: '', youtubeLink: '',
+            initialCost: 0, weight: 0, marginType: 'fixed', marginValue: 5.00,
+            airBaseCost: 0, seaBaseCost: 0, airFinalPrice: 0, seaFinalPrice: 0, airMargin: 0, seaMargin: 0,
+            productStockMode: 'stock', 
+            prodShipMethod: store.isLogisticsDual ? 'both' : 'single', 
+            deliveryCostType: 'range', deliveryFixedValue: 0, deliveryRangeStart: 2.00, deliveryRangeEnd: 8.00, deliveryNote: 'Costo varía por zona.', 
+            tags: [], imageFile: null, imagePreview: null 
+        };
+        products.push(currentEditingProduct);
+        openProductEditor(currentEditingProduct.idLocal);
+      });
+
+      // Product editor modal
+      function openProductEditor(idLocal) {
+        const p = products.find(x => x.idLocal === idLocal);
+        if (!p) return;
+
+        currentEditingProduct = p;
+        
+        // Cargar datos
+        prodNameInput.value = p.name || '';
+        prodDescInput.value = p.description || '';
+        prodYoutubeLink.value = p.youtubeLink || '';
+        prodInitialCost.value = p.initialCost || 0;
+        prodWeight.value = p.weight || 0;
+        prodMarginType.value = p.marginType || 'fixed';
+        prodMarginValue.value = p.marginValue || 5.00;
+        
+        prodStockMode.value = p.productStockMode || 'stock';
+        prodShipMethod.value = p.prodShipMethod || (store.isLogisticsDual ? 'both' : 'single');
+
+        prodDeliveryCostType.value = p.deliveryCostType || 'range';
+        prodDeliveryFixed.value = p.deliveryFixedValue || 0;
+        prodDeliveryRangeStart.value = p.deliveryRangeStart || 0;
+        prodDeliveryRangeEnd.value = p.deliveryRangeEnd || 0;
+        prodDeliveryNote.value = p.deliveryNote || '';
+        
+        prodTags.value = (p.tags || []).join(', ');
+        
+        updateProductModalImage(p.imagePreview);
+        prodImageInput.value = ''; 
+        
+        calculateProductCosts();
+        handleConditionalFields(); 
+
+        productEditorModal.classList.remove('hidden');
+      }
+
+      saveProductBtn.addEventListener('click', () => {
+        if (!currentEditingProduct) return;
+        
+        currentEditingProduct.name = prodNameInput.value.trim();
+        currentEditingProduct.description = prodDescInput.value.trim();
+        currentEditingProduct.youtubeLink = prodYoutubeLink.value.trim();
+        
+        calculateProductCosts(); 
+        
+        const minBaseCost = Math.min(currentEditingProduct.airBaseCost, currentEditingProduct.seaBaseCost);
+        const minFinalPrice = Math.min(currentEditingProduct.airFinalPrice, currentEditingProduct.seaFinalPrice);
+        
+        if (minFinalPrice < minBaseCost) {
+            showMessageModal("¡Advertencia Financiera!", `Tu precio final es menor que el Costo Base (Adquisición). Tu margen es negativo. Por favor, ajusta el Margen de Ganancia.`, true);
+            return;
+        } else if (minFinalPrice <= minBaseCost) {
+            showMessageModal("¡Advertencia Financiera!", `Tu margen de ganancia es cero. Considera aumentarlo para cubrir imprevistos.`, true);
+        }
+
+        currentEditingProduct.productStockMode = prodStockMode.value;
+        currentEditingProduct.prodShipMethod = prodShipMethod.value;
+
+        currentEditingProduct.deliveryCostType = prodDeliveryCostType.value;
+        currentEditingProduct.deliveryFixedValue = parseFloat(prodDeliveryFixed.value) || 0;
+        currentEditingProduct.deliveryRangeStart = parseFloat(prodDeliveryRangeStart.value) || 0;
+        currentEditingProduct.deliveryRangeEnd = parseFloat(prodDeliveryRangeEnd.value) || 0;
+        
+        const note = prodDeliveryNote.value.trim();
+        const wordLimit = 15;
+        currentEditingProduct.deliveryNote = note.split(/\s+/).slice(0, wordLimit).join(' ');
+        
+        const rawTags = prodTags.value.split(',').map(t => t.trim().replace(/^#/, '')).filter(t => t.length > 0);
+        currentEditingProduct.tags = rawTags.slice(0, 5);
+
+        renderProducts();
+        productEditorModal.classList.add('hidden');
+      });
+
+      cancelProductBtn.addEventListener('click', () => {
+        productEditorModal.classList.add('hidden');
+        if (!currentEditingProduct.name && !currentEditingProduct.id) {
+          products = products.filter(p => p.idLocal !== currentEditingProduct.idLocal);
+          renderProducts();
+        }
+      });
+      
+      // Image Handling (Simplified)
+      prodImageDrop.addEventListener('click', () => prodImageInput.click());
+      prodImageInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file && currentEditingProduct) {
+            currentEditingProduct.imageFile = file;
+            const url = URL.createObjectURL(file);
+            currentEditingProduct.imagePreview = url; 
+            updateProductModalImage(url);
+        }
+      });
+      function updateProductModalImage(url) {
+        if (url) {
+            prodImagePreview.src = url;
+            prodImagePreview.style.display = 'block';
+            prodImagePlaceholder.style.display = 'none';
+        } else {
+            prodImagePreview.style.display = 'none';
+            prodImagePlaceholder.style.display = 'flex';
+        }
+      }
+      
+      // Custom Message Modal
+      const messageModal = $('messageModal');
+      const messageText = $('messageText');
+      const messageOkBtn = $('messageOkBtn');
+      function showMessageModal(title, message, isWarning = false) {
+          messageText.innerHTML = `<p class="font-bold text-xl mb-2 ${isWarning ? 'text-red-600' : 'text-gray-800'}">${title}</p><p>${message}</p>`;
+          messageModal.classList.remove('hidden');
+          productEditorModal.style.pointerEvents = 'none';
+      }
+      messageOkBtn.addEventListener('click', () => {
+          messageModal.classList.add('hidden');
+          productEditorModal.style.pointerEvents = 'auto';
+      });
+
+      // --- VISTA PREVIA PARA EL CLIENTE ---
+      
+      function getCustomerDeliveryText(p) {
+        if (p.deliveryCostType === 'no') return `<span class="text-red-500 font-semibold"><i class="fas fa-ban"></i> Retiro en tienda.</span>`;
+        
+        let costText = '';
+        if (p.deliveryCostType === 'included') {
+            costText = `<span class="text-green-600 font-semibold">Costo de envío incluído.</span>`;
+        } else if (p.deliveryCostType === 'fixed') {
+            costText = `Envío Fijo Local: ${store.currency}${formatCurrency(p.deliveryFixedValue || 0)}`;
+        } else if (p.deliveryCostType === 'range') {
+            costText = `Envío Local Aprox: ${store.currency}${formatCurrency(p.deliveryRangeStart || 0)} - ${store.currency}${formatCurrency(p.deliveryRangeEnd || 0)}`;
+        }
+        
+        let noteText = p.deliveryNote ? `<span class="text-xs text-gray-500 block">(${escapeHTML(p.deliveryNote)})</span>` : '';
+        
+        return `<span class="text-blue-600"><i class="fas fa-truck"></i> ${costText}</span>${noteText}`;
+      }
+
+      function getCustomerPriceAndDelivery(p) {
+          const c = store.currency;
+          
+          if (p.productStockMode === 'stock') {
+              const finalPrice = p.airFinalPrice; 
+              return {
+                  price: `<div class="font-bold text-3xl text-indigo-700">${c}${formatCurrency(finalPrice)}</div>`,
+                  time: `<div class="text-sm text-green-600 font-semibold"><i class="fas fa-boxes"></i> Entrega Inmediata</div>`
+              };
+          }
+          
+          const shippingMethods = [];
+          const isDual = store.isLogisticsDual;
+          
+          if (isDual) {
+            if (p.prodShipMethod === 'air' || p.prodShipMethod === 'both') {
+                shippingMethods.push({
+                    method: 'AÉREO',
+                    price: `${c}${formatCurrency(p.airFinalPrice)}`,
+                    days: `${store.airMinDays}-${store.airMaxDays} días`
+                });
+            }
+            if (p.prodShipMethod === 'sea' || p.prodShipMethod === 'both') {
+                shippingMethods.push({
+                    method: 'MARÍTIMO',
+                    price: `${c}${formatCurrency(p.seaFinalPrice)}`,
+                    days: `${store.seaMinDays}-${store.seaMaxDays} días`
+                });
+            }
+          }
+          
+          if (!isDual || p.prodShipMethod === 'single') {
+             shippingMethods.push({
+                method: 'Precio Base',
+                price: `${c}${formatCurrency(p.airFinalPrice)}`,
+                days: 'Consultar al vendedor (Stock/Único)'
+             });
+          }
+
+          if (shippingMethods.length === 0) {
+              return { price: '<div>No disponible.</div>', time: '<div>N/A</div>' };
+          }
+          
+          const priceDisplay = shippingMethods.map(m => 
+              `<div class="font-bold text-xl flex justify-between items-center text-gray-800">
+                  <span class="${m.method.includes('AÉREO') ? 'text-blue-700' : m.method.includes('MARÍTIMO') ? 'text-green-700' : 'text-indigo-700'}">${m.method}:</span> 
+                  <span>${m.price}</span>
+              </div>`
+          ).join('');
+
+          const timeDisplay = shippingMethods.map(m => {
+              const icon = m.method.includes('AÉREO') ? 'fa-plane' : m.method.includes('MARÍTIMO') ? 'fa-ship' : 'fa-clock';
+              return `<div class="text-sm text-gray-600 flex justify-between">
+                  <span><i class="fas ${icon} mr-1"></i> ${m.method}:</span>
+                  <span class="font-semibold">${m.days}</span>
+              </div>`
+          }).join('');
+
+          return { 
+              price: `<div class="space-y-1">${priceDisplay}</div>`, 
+              time: `<div class="space-y-1 p-2 bg-gray-100 rounded-lg">${timeDisplay}</div>` 
+          };
+      }
+      
+      // --- Lógica de Carrito
+      function handleCartAction(productId, action, element) {
+          let qty = shoppingCart[productId] || 1; 
+
+          if (action === 'increment') {
+              qty++;
+          } else if (action === 'decrement' && qty > 1) {
+              qty--;
+          } else if (action === 'set' && element) {
+              const newQty = parseInt(element.value);
+              if (!isNaN(newQty) && newQty >= 1) {
+                  qty = newQty;
+              }
+          } else if (action === 'add') {
+             // El botón de añadir carrito simplemente guarda la cantidad actual
+             const productName = products.find(p => p.idLocal === productId)?.name || 'Producto';
+             showMessageModal("¡Añadido al Carrito!", `${qty} unidad(es) de ${productName} ha(n) sido añadida(s) a tu carrito de compras (simulado).`, false);
+             // Aquí iría la lógica real de añadir al carrito
+             return;
+          }
+          
+          shoppingCart[productId] = qty;
+          
+          // Actualizar el display
+          const displayEl = element.closest('.quantity-input')?.querySelector('.qty-display') || element;
+          if (displayEl) {
+             displayEl.textContent = qty;
+          }
+      }
+
+      function updatePreview() {
+        const storeNameVal = store.nombre || 'Tienda Sin Nombre';
+        const storeLogoUrl = store.logoUrl || 'https://placehold.co/80x80/e9eef6/6b7280?text=LOGO';
+        
+        // Contenido Principal de la Tienda (Header)
+        let headerHtml = `
+            <div class="text-center mb-6">
+                <img src="${storeLogoUrl}" class="w-20 h-20 rounded-full object-cover mx-auto mb-2 neumorphic-card" alt="Logo de la tienda">
+                <h3 class="text-2xl font-bold text-gray-800">${escapeHTML(storeNameVal)}</h3>
+                <p class="text-sm text-gray-600 mt-1">${escapeHTML(store.descripcion)}</p>
+                ${store.whatsapp ? `<a href="https://wa.me/${store.whatsapp.replace(/\s/g, '')}" target="_blank" class="text-teal-600 text-xs font-semibold inline-flex items-center mt-2"><i class="fab fa-whatsapp mr-1"></i> WhatsApp: ${store.whatsapp}</a>` : ''}
+            </div>
+        `;
+        
+        // Video de la Tienda (Opcional)
+        if (getYoutubeEmbedUrl(store.youtubeLink)) {
+            headerHtml += `
+                <div class="mb-6 p-4 rounded-xl border border-gray-200 bg-gray-50 text-center">
+                    <button class="btn bg-red-600 text-white px-4 py-2 rounded-full font-semibold hover:bg-red-700 text-sm" data-video-link="${store.youtubeLink}" data-video-title="Video Publicitario de la Tienda"><i class="fab fa-youtube mr-2"></i> Ver Video de la Tienda</button>
+                </div>
+            `;
+        }
+
+        const productsHtml = products.map(p => {
+            const id = p.idLocal;
+            const tagsHtml = (p.tags || []).map(tag => `<span class="tag-item">#${escapeHTML(tag)}</span>`).join('');
+            const { price: priceDisplay, time: timeDisplay } = getCustomerPriceAndDelivery(p);
+            const deliveryNote = getCustomerDeliveryText(p);
+            const youtubeEmbed = getYoutubeEmbedUrl(p.youtubeLink);
+            
+            const initialQty = shoppingCart[id] || 1;
+
+            return `
+                <div class="neumorphic-card p-4 flex flex-col gap-3" data-id="${id}">
+                    <div class="flex items-start gap-4">
+                        <img src="${p.imagePreview || 'https://placehold.co/100x100/f6f8fb/6b7280?text=IMG'}" class="w-24 h-24 rounded-lg object-cover flex-shrink-0" alt="${escapeHTML(p.name)}">
+                        <div class="flex-1">
+                            <h5 class="text-lg font-bold text-gray-800">${escapeHTML(p.name || 'Producto sin nombre')}</h5>
+                            <p class="text-xs text-gray-500 line-clamp-2 mt-1">${escapeHTML(p.description || 'Sin descripción.')}</p>
+                            ${youtubeEmbed ? `<button class="btn text-red-500 text-xs font-semibold mt-1 hover:text-red-700" onclick="openVideoModal('${youtubeEmbed}', '${escapeHTML(p.name)}')"><i class="fab fa-youtube mr-1"></i> Ver Video</button>` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-gray-100 pt-3 space-y-2">
+                        <!-- PRECIO FINAL (Lo que ve el cliente) -->
+                        ${priceDisplay}
+                        
+                        <div class="text-xs text-gray-600 font-semibold pt-1">Tiempos de Entrega Estimados:</div>
+                        ${timeDisplay}
+                        
+                        <!-- DELIVERY LOCAL -->
+                        <div class="text-sm border-t pt-2">${deliveryNote}</div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-2 pt-1 border-t border-gray-100 mb-3">
+                        ${tagsHtml}
+                    </div>
+
+                    <!-- Lógica de Carrito -->
+                    <div class="flex items-center justify-between mt-3 p-2 bg-gray-50 rounded-xl">
+                        <div class="quantity-input">
+                            <button class="qty-btn" onclick="handleCartAction('${id}', 'decrement', this)"><i class="fas fa-minus"></i></button>
+                            <span class="qty-display">${initialQty}</span>
+                            <button class="qty-btn" onclick="handleCartAction('${id}', 'increment', this)"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <button class="btn bg-teal-500 text-white px-4 py-2 rounded-full font-semibold hover:bg-teal-600 text-sm flex items-center" onclick="handleCartAction('${id}', 'add', this)"><i class="fas fa-cart-plus mr-2"></i> Añadir al Carrito</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        livePreview.innerHTML = `
+          <div class="text-left">
+            ${headerHtml}
+            
+            <h4 class="text-xl font-bold mt-8 mb-4 border-t pt-4">Catálogo de Productos</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              ${productsHtml || `<div class="text-center text-gray-400 py-8">No hay productos añadidos.</div>`}
             </div>
           </div>
         `;
-        document.body.appendChild(editor);
-        editor.style.display = 'flex';
-
-        editor.querySelector('#cancelProduct').addEventListener('click', () => editor.remove());
-
-        editor.querySelector('#saveProduct').addEventListener('click', async () => {
-            const prodImageInput = editor.querySelector('#prodImageInput');
-            const newProduct = {
-                name: editor.querySelector('#prodNameInput').value.trim(),
-                price: parseFloat(editor.querySelector('#prodPriceInput').value) || 0,
-                currency: editor.querySelector('#prodCurrency').value,
-                weight: parseFloat(editor.querySelector('#prodWeight').value) || 0,
-                stockType: editor.querySelector('#prodType').value,
-                days: parseInt(editor.querySelector('#prodDays').value) || 0,
-                deliveryIncluded: editor.querySelector('#prodDelivery').value === 'included',
-                image_url: product.imagePreview
-            };
-
-            if (prodImageInput.files && prodImageInput.files[0]) {
-                const reader = new FileReader();
-                reader.onloadend = async () => {
-                    newProduct.image_url = reader.result;
-                    this.saveProduct(id, newProduct);
-                };
-                reader.readAsDataURL(prodImageInput.files[0]);
-            } else {
-                this.saveProduct(id, newProduct);
-            }
-            editor.remove();
+        
+        // Re-attach video listeners for store video
+        livePreview.querySelectorAll('[data-video-link]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const link = e.currentTarget.dataset.videoLink;
+                const title = e.currentTarget.dataset.videoTitle;
+                const embedUrl = getYoutubeEmbedUrl(link);
+                if (embedUrl) {
+                    openVideoModal(embedUrl, title);
+                }
+            });
         });
-    }
-
-    async saveProduct(id, data) {
-        try {
-            if (id) {
-                await setDoc(doc(this.productsRef, id), data, { merge: true });
-                this.opResult.textContent = 'Producto actualizado.';
-            } else {
-                await addDoc(this.productsRef, data);
-                this.opResult.textContent = 'Producto añadido.';
-            }
-        } catch (error) {
-            console.error('Error al guardar producto:', error);
-            this.opResult.textContent = 'Error al guardar.';
-        }
-    }
-}
-
-      // event bindings
-      saveStoreBtn.addEventListener('click', () => saveStoreToServer(false));
-      launchStoreBtn.addEventListener('click', () => saveStoreToServer(true));
+        
+        // Exponer la función de carrito globalmente para los botones
+        window.handleCartAction = handleCartAction;
+      }
       
-      const fullScreenPreviewBtn = $('fullScreenPreviewBtn');
-      fullScreenPreviewBtn.addEventListener('click', () => {
-        const previewContent = livePreview.innerHTML;
-        const storeNameVal = storeName.value || 'Vista Previa de la Tienda';
-
-        const newTab = window.open();
-        let htmlContent = '<!doctype html><html lang="es"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>' + escapeHTML(storeNameVal) + '</title>';
-        htmlContent += '<script src="https://cdn.tailwindcss.com/"><\/script>';
-        htmlContent += '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">';
-        htmlContent += '<style>:root {--bg: #e9eef6;--card: #f6f8fb;--muted: #6b7280;}body {background: linear-gradient(180deg, #e9eef6, #dfe8f8);font-family: \'Inter\', sans-serif;color: #1a202c;padding: 2rem;}.neumorphic-card {background: var(--card);border-radius: 14px;box-shadow: 8px 8px 20px rgba(170, 187, 204, 0.18), -8px -8px 20px rgba(255, 255, 255, 0.9);}.btn {transition: transform 0.12s ease-in-out, box-shadow 0.12s ease-in-out;}.btn:active {transform: translateY(1px);box-shadow: none;}</style>';
-        htmlContent += '</head><body><div class="container mx-auto">' + previewContent + '</div></body></html>';
-        newTab.document.write(htmlContent);
-        newTab.document.close();
+      // Lógica del Modal de Video
+      window.openVideoModal = function(embedUrl, title) {
+          videoContent.innerHTML = `<iframe width="100%" height="100%" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+          videoTitle.textContent = title;
+          videoModal.classList.remove('hidden');
+      };
+      
+      closeVideoModal.addEventListener('click', () => {
+          videoContent.innerHTML = ''; // Detiene la reproducción
+          videoModal.classList.add('hidden');
       });
 
-      // For initial load: try fetch store data if storeIdParam exists
-      async function loadProfileAndStores() {
+      // --- INTEGRACIÓN CON BACKEND ---
+      const saveStoreBtn = $('saveStoreBtn');
 
+      // 1. Cargar datos al iniciar
+      window.addEventListener('load', async () => {
+          try {
+              const token = localStorage.getItem('sessionToken');
+              const response = await fetch('/api/user/store-data', {
+                  headers: { 'Authorization': `Bearer ${token}` }
+              });
 
-</script>
+              if (!response.ok) {
+                  if (response.status === 404) {
+                      console.log("No hay datos de tienda existentes. Usando valores por defecto.");
+                      // No es un error fatal, simplemente no hay datos que cargar.
+                  } else {
+                      throw new Error('Error del servidor al cargar los datos.');
+                  }
+              } else {
+                  const data = await response.json();
+                  if (data && Object.keys(data).length > 0) {
+                      // Actualizar estado global con datos del backend
+                      if(data.store) Object.assign(store, data.store);
+                      if(data.products) products = data.products;
+                      console.log("Datos de la tienda cargados desde el backend.");
+                  }
+              }
+          } catch (error) {
+              console.error("Error al cargar datos de la tienda:", error);
+              showMessageModal("Error de Carga", "No se pudieron cargar los datos de la tienda. Por favor, recarga la página.", true);
+          } finally {
+              // Poblar el formulario con los datos (ya sean los por defecto o los cargados)
+              populateFormWithState();
+          }
+      });
+
+      function populateFormWithState() {
+          storeName.value = store.nombre;
+          storeDescription.value = store.descripcion;
+          storeWhatsapp.value = store.whatsapp;
+          storeYoutubeLink.value = store.youtubeLink;
+          if (store.logoUrl) {
+              storeLogoPreview.src = store.logoUrl;
+              storeLogoPreview.style.display = 'block';
+              storeLogoPlaceholder.style.display = 'none';
+          }
+
+          airRate.value = store.airRate;
+          seaRate.value = store.seaRate;
+          airMinDays.value = store.airMinDays;
+          airMaxDays.value = store.airMaxDays;
+          seaMinDays.value = store.seaMinDays;
+          seaMaxDays.value = store.seaMaxDays;
+          isLogisticsDualToggle.checked = store.isLogisticsDual;
+          
+          isLogisticsDualToggle.dispatchEvent(new Event('change'));
+          renderProducts();
+      }
+
+      // 2. Guardar datos al hacer clic
+      saveStoreBtn.addEventListener('click', async () => {
+          saveStoreBtn.disabled = true;
+          saveStoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...';
+
+          // Recolectar todos los datos en un único objeto
+          // Nota: Las imágenes (logo, productos) no se guardan aquí, requerirían un manejo de subida de archivos aparte.
+          const fullStoreData = {
+              store: store,
+              products: products.map(p => ({ ...p, imageFile: null })) // Excluir el objeto File
+          };
+
+          try {
+              const token = localStorage.getItem('sessionToken');
+              const response = await fetch('/api/user/store-data', {
+                  method: 'PUT',
+                  headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify(fullStoreData)
+              });
+
+              if (!response.ok) {
+                  throw new Error('El servidor respondió con un error.');
+              }
+
+              const result = await response.json();
+              console.log("Datos guardados con éxito:", result);
+              showMessageModal("¡Éxito!", "Los datos de tu tienda se han guardado correctamente.");
+
+          } catch (error) {
+              console.error("Error al guardar los datos:", error);
+              showMessageModal("Error al Guardar", "No se pudieron guardar los cambios. Revisa tu conexión e inténtalo de nuevo.", true);
+          } finally {
+              saveStoreBtn.disabled = false;
+              saveStoreBtn.innerHTML = '<i class="fas fa-save mr-2"></i> Guardar Cambios';
+          }
+      });
+
+      // Initial Load (se mueve a la lógica de carga asíncrona)
+      /*
+      (() => {
+        // Cargar valores iniciales de la store
+        populateFormWithState();
+      })();
+      */
+
+    })();
+  </script>
 </body>
 </html>
 
