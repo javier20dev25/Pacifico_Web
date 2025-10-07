@@ -31,12 +31,14 @@ const authRoutes = require('./backend/api/auth');
 const adminRoutes = require('./backend/api/admin');
 const userRoutes = require('./backend/api/user');
 const chatRoutes = require('./backend/api/chat');
+const uploadRoutes = require('./backend/api/uploads');
 const { protect, isAdmin } = require('./backend/middleware/auth');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', protect, isAdmin, adminRoutes);
 app.use('/api/user', protect, userRoutes);
 app.use('/api/chat', protect, chatRoutes);
+app.use('/api', protect, uploadRoutes);
 
 // ==========================================================
 // NUEVA RUTA DINÁMICA PARA TIENDAS (por slug)

@@ -159,7 +159,7 @@
         
         let headerHtml = `
             <div class="text-center mb-6">
-                <img src="${storeLogoUrl}" class="w-20 h-20 rounded-full object-cover mx-auto mb-2 neumorphic-card" alt="Logo de la tienda">
+                <img src="${store.logoUrl || 'https://placehold.co/80x80/e9eef6/6b7280?text=LOGO'}" class="w-20 h-20 rounded-full object-cover mx-auto mb-2 neumorphic-card" alt="Logo de la tienda">
                 <h3 class="text-2xl font-bold text-gray-800">${escapeHTML(storeNameVal)}</h3>
                 <p class="text-sm text-gray-600 mt-1">${escapeHTML(store.descripcion)}</p>
                 ${store.whatsapp ? `<a href="https://wa.me/${store.whatsapp.replace(/\s/g, '')}" target="_blank" class="text-teal-600 text-xs font-semibold inline-flex items-center mt-2"><i class="fab fa-whatsapp mr-1"></i> WhatsApp: ${store.whatsapp}</a>` : ''}
@@ -180,7 +180,7 @@
             return `
                 <div class="neumorphic-card p-4 flex flex-col gap-3" data-id="${id}">
                     <div class="flex items-start gap-4">
-                        <img src="${p.imagePreview || 'https://placehold.co/100x100/f6f8fb/6b7280?text=IMG'}" class="w-24 h-24 rounded-lg object-cover flex-shrink-0" alt="${escapeHTML(p.name)}">
+                        <img src="${p.imageUrl || 'https://placehold.co/100x100/f6f8fb/6b7280?text=IMG'}" class="w-24 h-24 rounded-lg object-cover flex-shrink-0" alt="${escapeHTML(p.name)}">
                         <div class="flex-1">
                             <h5 class="text-lg font-bold text-gray-800">${escapeHTML(p.name || 'Producto sin nombre')}</h5>
                             <p class="text-xs text-gray-500 line-clamp-2 mt-1">${escapeHTML(p.description || 'Sin descripción.')}</p>

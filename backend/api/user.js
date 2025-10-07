@@ -1,4 +1,5 @@
 const express = require('express');
+const util = require('util');
 const router = express.Router();
 const { supabaseAdmin } = require('../services/supabase');
 const { protect } = require('../middleware/auth');
@@ -243,43 +244,65 @@ router.get('/store-data', async (req, res) => {
     }
 });
 
-// PUT /api/user/store-data
+// PUT /api/user/store-data (Versión de Depuración Avanzada)
 router.put('/store-data', async (req, res) => {
-    try {
-        const userUuid = req.user && (req.user.uuid || req.user.user_uuid);
-        if (!userUuid) return res.status(401).json({ error: 'No autenticado.' });
+  console.log('\n--- [PUT /store-data] Petición Recibida ---');
+  console.log('[PUT /store-data] headers:', {
+    'content-type': req.headers['content-type'],
+    'content-length': req.headers['content-length'],
+    'authorization': !!req.headers['authorization']
+  });
 
-        const newStoreData = req.body;
+  try {
+    const newStoreData = req.body;
+    console.log('[DEBUG] Intentando guardar - preview:', util.inspect(newStoreData, { depth: 2, colors: true }));
 
-        const { data: userRec, error: userErr } = await supabaseAdmin
-            .from('usuarios')
-            .select('id')
-            .eq('uuid', userUuid)
-            .single();
-
-        if (userErr || !userRec) {
-            return res.status(404).json({ error: 'Usuario no encontrado.' });
-        }
-        const usuarioId = userRec.id;
-
-        const { data, error } = await supabaseAdmin
-            .from('stores')
-            .update({ data: newStoreData })
-            .eq('usuario_id', usuarioId)
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Error al actualizar datos de la tienda:', error);
-            return res.status(500).json({ error: 'No se pudieron actualizar los datos de la tienda.' });
-        }
-
-        res.json({ message: 'Datos de la tienda actualizados con éxito.', data });
-
-    } catch (err) {
-        console.error('Error en PUT /store-data:', err);
-        res.status(500).json({ error: 'Ocurrió un error inesperado.' });
+    if (!newStoreData || typeof newStoreData !== 'object') {
+      console.warn('[PUT /store-data] payload inválido o vacío');
+      return res.status(400).json({ error: 'Payload inválido o ausente.' });
     }
+
+    if (JSON.stringify(newStoreData).includes('blob:')) {
+      console.warn('[PUT /store-data] Alerta: El payload contiene URLs de tipo \"blob:\". Estas son referencias locales del navegador y no se pueden guardar. Deberían ser eliminadas antes de enviar.');
+    }
+
+    const userUuid = req.user && (req.user.uuid || req.user.user_uuid);
+    if (!userUuid) return res.status(401).json({ error: 'No autenticado.' });
+
+    const { data: userRec, error: userErr } = await supabaseAdmin
+        .from('usuarios')
+        .select('id')
+        .eq('uuid', userUuid)
+        .single();
+
+    if (userErr || !userRec) {
+        console.error('[PUT /store-data] Usuario no encontrado o error:', userErr);
+        return res.status(401).json({ error: 'Usuario de sesión no válido.' });
+    }
+    const usuarioId = userRec.id;
+
+    console.log(`[PUT /store-data] Actualizando tienda para usuario_id: ${usuarioId}`);
+
+    const { data, error } = await supabaseAdmin
+        .from('stores')
+        .update({ data: newStoreData })
+        .eq('usuario_id', usuarioId)
+        .select();
+
+    console.log('[PUT /store-data] Respuesta de Supabase (data):', util.inspect(data, { depth: 2, colors: true }));
+    console.log('[PUT /store-data] Respuesta de Supabase (error):', util.inspect(error, { depth: 2, colors: true }));
+
+    if (error) {
+      console.error('[PUT /store-data] Error final al actualizar:', error);
+      return res.status(500).json({ error: 'Error de base de datos al actualizar la tienda.' });
+    }
+
+    return res.json({ message: 'Datos de la tienda actualizados con éxito.', data });
+
+  } catch (err) {
+    console.error('[ERROR GENERAL PUT /store-data]', err.stack || err);
+    return res.status(500).json({ error: 'Error interno fatal en el servidor.' });
+  }
 });
 
 module.exports = router;

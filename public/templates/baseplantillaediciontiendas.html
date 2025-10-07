@@ -228,7 +228,7 @@
 
         <!-- Action Buttons -->
         <div class="flex flex-col sm:flex-row justify-center gap-4 py-4">
-          <button id="saveStoreBtn" class="btn bg-gray-400 text-white px-6 py-3 rounded-full shadow-lg hover:bg-gray-500 font-semibold"><i class="fas fa-save mr-2"></i> Guardar Cambios (Simulado)</button>
+          <button id="saveStoreBtn" class="btn bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg hover:bg-blue-700 font-semibold"><i class="fas fa-save mr-2"></i> Guardar y Publicar Cambios</button>
         </div>
       </div>
       
@@ -424,9 +424,16 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
     // --- Lógica del Editor y Cálculos Financieros ---
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
+    // 1. INICIALIZACIÓN DE SUPABASE (CLIENT-SIDE)
+    const SUPABASE_URL = 'https://vuoospopyjojarfzjjiu.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1b29zcG9weWpvamFyZnpqaml1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTg5MjAsImV4cCI6MjA3MzYzNDkyMH0.IH-h0HlvxeK73Y9wXtvJUwmVRgsFi5RwaiQSmlqv7gM';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // El resto de tu código de editor va aquí
     (() => {
       
       const $ = id => document.getElementById(id);
@@ -514,15 +521,17 @@
           el.addEventListener('input', updateStoreInfo);
       });
       
-      // Logo de la Tienda
       storeLogoInput.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0];
         if (file) {
-            store.logoUrl = URL.createObjectURL(file);
-            storeLogoPreview.src = store.logoUrl;
+            store.logoFile = file; // Guardar el objeto File
+            const previewUrl = URL.createObjectURL(file);
+            store.logoUrl = previewUrl; // <--- AÑADIDO: Actualizar el estado para la vista previa
+            storeLogoPreview.src = previewUrl; // Actualizar la imagen pequeña
             storeLogoPreview.style.display = 'block';
             storeLogoPlaceholder.style.display = 'none';
         } else {
+            store.logoFile = null;
             store.logoUrl = null;
             storeLogoPreview.style.display = 'none';
             storeLogoPlaceholder.style.display = 'flex';
@@ -866,7 +875,7 @@
       prodImageInput.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0];
         if (file && currentEditingProduct) {
-            currentEditingProduct.imageFile = file;
+            currentEditingProduct.imageFile = file; // Guardar el objeto File
             const url = URL.createObjectURL(file);
             currentEditingProduct.imagePreview = url; 
             updateProductModalImage(url);
@@ -1179,43 +1188,90 @@
           renderProducts();
       }
 
-      // 2. Guardar datos al hacer clic
+      // --- NUEVO FLUJO DE GUARDADO CON SUBIDA POR BACKEND ---
+
+      async function uploadFileViaBackend(file) {
+        if (!file) return null;
+        const token = localStorage.getItem('jwt_token');
+        
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await fetch('/api/upload-image', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error al subir el archivo al servidor.');
+        }
+
+        const result = await response.json();
+        return result.publicUrl;
+      }
+
+      function jwt_decode(token) {
+        try {
+            return JSON.parse(atob(token.split('.')[1]));
+        } catch (e) {
+            return null;
+        }
+      }
+
       saveStoreBtn.addEventListener('click', async () => {
           saveStoreBtn.disabled = true;
-          saveStoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...';
-
-          // Recolectar todos los datos en un único objeto
-          // Nota: Las imágenes (logo, productos) no se guardan aquí, requerirían un manejo de subida de archivos aparte.
-          const fullStoreData = {
-              store: store,
-              products: products.map(p => ({ ...p, imageFile: null })) // Excluir el objeto File
-          };
+          saveStoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Iniciando guardado...';
 
           try {
-              const token = localStorage.getItem('sessionToken');
+              const token = localStorage.getItem('jwt_token');
+              if (!token) throw new Error('No autenticado.');
+              
+              let dataToSave = JSON.parse(JSON.stringify({ store, products }));
+
+              if (store.logoFile instanceof File) {
+                  saveStoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Subiendo logo...';
+                  const publicUrl = await uploadFileViaBackend(store.logoFile);
+                  dataToSave.store.logoUrl = publicUrl;
+              }
+
+              for (let i = 0; i < products.length; i++) {
+                  if (products[i].imageFile instanceof File) {
+                      saveStoreBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Subiendo producto ${i + 1}/${products.length}...`;
+                      const publicUrl = await uploadFileViaBackend(products[i].imageFile);
+                      dataToSave.products[i].imageUrl = publicUrl;
+                  }
+              }
+
+              saveStoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Finalizando guardado...';
+
+              delete dataToSave.store.logoFile;
+              dataToSave.products.forEach(p => {
+                  delete p.imageFile;
+                  delete p.imagePreview;
+              });
+
               const response = await fetch('/api/user/store-data', {
                   method: 'PUT',
-                  headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${token}`
-                  },
-                  body: JSON.stringify(fullStoreData)
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                  body: JSON.stringify(dataToSave)
               });
 
               if (!response.ok) {
-                  throw new Error('El servidor respondió con un error.');
+                  const errorData = await response.json();
+                  throw new Error(errorData.error || 'El servidor respondió con un error al guardar los datos.');
               }
 
               const result = await response.json();
-              console.log("Datos guardados con éxito:", result);
-              showMessageModal("¡Éxito!", "Los datos de tu tienda se han guardado correctamente.");
+              showMessageModal("¡Éxito!", "Los datos de tu tienda se han guardado y publicado correctamente.");
 
           } catch (error) {
-              console.error("Error al guardar los datos:", error);
-              showMessageModal("Error al Guardar", "No se pudieron guardar los cambios. Revisa tu conexión e inténtalo de nuevo.", true);
+              console.error("Error en el flujo de guardado:", error);
+              showMessageModal("Error al Guardar", `No se pudieron guardar los cambios. (${error.message})`, true);
           } finally {
               saveStoreBtn.disabled = false;
-              saveStoreBtn.innerHTML = '<i class="fas fa-save mr-2"></i> Guardar Cambios';
+              saveStoreBtn.innerHTML = '<i class="fas fa-save mr-2"></i> Guardar y Publicar Cambios';
           }
       });
 
