@@ -8,29 +8,50 @@ const { protect } = require('../middleware/auth');
 // 1. OBTENER PERFIL DE USUARIO
 // ==========================================================
 router.get('/profile', protect, async (req, res) => {
+    console.log('[DEBUG] Entrando a /api/user/profile, req.user =', req.user);
     try {
         const userUuid = req.user.uuid; 
 
-        const { data: userProfile, error } = await supabaseAdmin
-            .from('vw_usuarios_planes')
-            .select('*')
-            .eq('usuario_uuid', userUuid)
+        // 1. Obtener datos del usuario de la tabla 'usuarios'
+        const { data: userData, error: userError } = await supabaseAdmin
+            .from('usuarios')
+            .select('id, uuid, nombre, correo, status')
+            .eq('uuid', userUuid)
             .single();
 
-        console.log('[DEBUG PROFILE RAW] ->', JSON.stringify(userProfile));
-
-        if (error || !userProfile) {
+        if (userError || !userData) {
+            console.error('[GET /profile] Error fetching user:', userError);
             return res.status(404).json({ error: 'Perfil de usuario no encontrado.' });
         }
 
-        // Mapear campos para asegurar compatibilidad con el frontend
-        const responseProfile = {
-    ...userProfile,
-    plan: userProfile.plan ?? userProfile.plan_nombre ?? null
-  };
+        // 2. Obtener datos del contrato y plan de la tabla 'contratos'
+        const { data: contractData, error: contractError } = await supabaseAdmin
+            .from('contratos')
+            .select('plan, fecha_expiracion, activo')
+            .eq('usuario_uuid', userUuid) // CORREGIDO: Usar uuid en lugar de id numérico
+            .eq('activo', true)
+            .order('fecha_inicio', { ascending: false })
+            .limit(1)
+            .single();
 
-  console.log('[DEBUG PROFILE] responseProfile ->', JSON.stringify(responseProfile));
-        res.json({ user: responseProfile }); // Anidar la respuesta bajo la clave 'user'
+        // Es posible que un usuario no tenga un contrato activo, no es un error fatal.
+        if (contractError && contractError.code !== 'PGRST116') {
+            console.error('[GET /profile] Error fetching contract:', contractError);
+        }
+
+        // 3. Combinar los datos en un solo perfil
+        const userProfile = {
+            usuario_uuid: userData.uuid,
+            nombre: userData.nombre,
+            correo: userData.correo,
+            status: userData.status,
+            plan: contractData?.plan || 'sin plan',
+            fecha_expiracion: contractData?.fecha_expiracion || null,
+            activo: contractData?.activo || false
+        };
+
+        console.log('[DEBUG PROFILE] responseProfile ->', JSON.stringify(userProfile));
+        res.json({ user: userProfile });
 
     } catch (error) {
         console.error('Error al obtener el perfil del usuario:', error);
@@ -209,6 +230,18 @@ router.get('/store-data', async (req, res) => {
         const userUuid = req.user && (req.user.uuid || req.user.user_uuid);
         if (!userUuid) return res.status(401).json({ error: 'No autenticado.' });
 
+        // 1. Obtener el plan del usuario desde la vista
+        const { data: profileData, error: profileError } = await supabaseAdmin
+            .from('vw_usuarios_planes')
+            .select('plan')
+            .eq('usuario_uuid', userUuid)
+            .single();
+
+        if (profileError || !profileData) {
+            return res.status(404).json({ error: 'No se pudo determinar el plan del usuario.' });
+        }
+
+        // 2. Obtener los datos de la tienda (lógica existente)
         const { data: userRec, error: userErr } = await supabaseAdmin
             .from('usuarios')
             .select('id')
@@ -222,21 +255,21 @@ router.get('/store-data', async (req, res) => {
 
         const { data: store, error: storeError } = await supabaseAdmin
             .from('stores')
-            .select('data')
+            .select('data, slug') // <--- MODIFICADO: pedir también el slug
             .eq('usuario_id', usuarioId)
             .single();
 
-        if (storeError) {
-            // Si el error es 'PGRST116', significa que no encontró la tienda, lo cual es manejable.
-            if (storeError.code === 'PGRST116') {
-                return res.status(404).json({ error: 'No se encontró una tienda para este usuario.' });
-            }
+        if (storeError && storeError.code !== 'PGRST116') {
             console.error('Error al obtener datos de la tienda:', storeError);
             return res.status(500).json({ error: 'No se pudieron obtener los datos de la tienda.' });
         }
 
-        // Devolver los datos de la tienda (el JSON) o un objeto vacío si es null
-        res.json(store.data || {});
+        // 3. Devolver ambos: los datos de la tienda y el plan del usuario
+        res.json({
+            storeData: store ? store.data : {},
+            plan: profileData.plan,
+            slug: store ? store.slug : null // <--- AÑADIDO: devolver el slug
+        });
 
     } catch (err) {
         console.error('Error en GET /store-data:', err);

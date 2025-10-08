@@ -2,6 +2,7 @@ const dns = require('dns');
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises; // Importar fs.promises para leer archivos

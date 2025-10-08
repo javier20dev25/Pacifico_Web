@@ -227,8 +227,9 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="flex flex-col sm:flex-row justify-center gap-4 py-4">
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-4 py-4">
           <button id="saveStoreBtn" class="btn bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg hover:bg-blue-700 font-semibold"><i class="fas fa-save mr-2"></i> Guardar y Publicar Cambios</button>
+          <a id="public-preview-btn" href="#" target="_blank" class="btn bg-gray-300 text-gray-600 px-6 py-3 rounded-full shadow-inner cursor-not-allowed opacity-50"><i class="fas fa-eye mr-2"></i> Ver Tienda en Vivo</a>
         </div>
       </div>
       
@@ -464,11 +465,11 @@
       
       // --- ESTADO GLOBAL ---
       let store = { 
-          id: null, 
           nombre: 'Mi Tienda Express', 
           descripcion: 'Tu mejor opción para importaciones rápidas y seguras.', 
           whatsapp: '8888-8888',
           logoUrl: null, 
+          logoFile: null,
           youtubeLink: null,
           isLogisticsDual: true, 
           airRate: 5.50, airMinDays: 7, airMaxDays: 15, 
@@ -476,6 +477,15 @@
           currency: 'USD' 
       };
       let products = [];
+      let userPlan = ''; // Variable para guardar el plan del usuario
+      let hasUnsavedChanges = false;
+      const DRAFT_KEY = 'storeEditorDraft';
+
+      const PLAN_LIMITS = {
+          'plan emprendedor clasico': 15,
+          'oro bisness': 30,
+          'oro ejevutivo': 50
+      };
       let currentEditingProduct = null;
       let shoppingCart = {}; // { productId: quantity }
 
@@ -500,6 +510,7 @@
 
       // --- GESTIÓN DE LA TIENDA (INFORMACIÓN GENERAL) ---
       function updateStoreInfo() {
+        hasUnsavedChanges = true;
         store.nombre = storeName.value.trim();
         store.descripcion = storeDescription.value.trim();
         store.whatsapp = storeWhatsapp.value.trim();
@@ -725,68 +736,77 @@
         productsList.innerHTML = '';
         if (products.length === 0) {
           productsList.innerHTML = `<div class="text-gray-500 text-center py-8">No hay productos. Pulsa <span class="text-blue-500 font-semibold">"+"</span> para añadir uno.</div>`;
-          return;
-        }
-        products.forEach(p => {
-          const isDual = store.isLogisticsDual && (p.prodShipMethod === 'both' || p.prodShipMethod === 'air' || p.prodShipMethod === 'sea');
-          const isStock = p.productStockMode === 'stock';
-          
-          const div = document.createElement('div');
-          div.className = 'bg-white p-4 rounded-xl shadow-sm flex items-start space-x-4 border border-gray-100';
-          div.innerHTML = `
-            <img src="${p.imagePreview || 'https://placehold.co/80x80/e9eef6/6b7280?text=IMG'}" class="w-16 h-16 rounded-lg object-cover flex-shrink-0" alt="${escapeHTML(p.name)}">
-            <div class="flex-1 min-w-0">
-              <div class="font-bold text-gray-800">${escapeHTML(p.name || 'Producto sin nombre')} ${getMarginTag(p)}</div>
-              <div class="text-xs text-gray-500 mt-1">
-                <span class="font-semibold">${p.productStockMode.toUpperCase()}</span> | Tipo: ${isDual ? 'DUAL' : 'ÚNICO'}
-              </div>
+        } else {
+            products.forEach(p => {
+              const isDual = store.isLogisticsDual && (p.prodShipMethod === 'both' || p.prodShipMethod === 'air' || p.prodShipMethod === 'sea');
+              const isStock = p.productStockMode === 'stock';
               
-              <!-- Detalles de Costo y Precio Final para el EDITOR -->
-              <div class="mt-2 text-xs flex flex-col gap-1 border-t pt-1">
-                ${isStock || !isDual ? 
-                    `<span class="text-indigo-600 font-semibold"><i class="fas fa-money-bill-wave"></i> ÚNICO: 
-                        Base (Adq.): ${store.currency}${formatCurrency(p.airBaseCost)} | Final: ${store.currency}${formatCurrency(p.airFinalPrice)}
-                    </span>`
-                    :
-                    `<span class="text-blue-600 font-semibold"><i class="fas fa-plane"></i> AÉREO: 
-                        Base (Adq.): ${store.currency}${formatCurrency(p.airBaseCost)} | Final: ${store.currency}${formatCurrency(p.airFinalPrice)}
-                    </span>
-                    <span class="text-green-600 font-semibold"><i class="fas fa-ship"></i> MARÍTIMO: 
-                        Base (Adq.): ${store.currency}${formatCurrency(p.seaBaseCost)} | Final: ${store.currency}${formatCurrency(p.seaFinalPrice)}
-                    </span>`
-                }
-              </div>
-            </div>
-            <div class="flex flex-col gap-2 flex-shrink-0">
-              <button class="btn edit-btn bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-300" data-id="${p.idLocal}"><i class="fas fa-edit text-xs"></i></button>
-              <button class="btn delete-btn bg-red-400 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-500" data-id="${p.idLocal}"><i class="fas fa-trash-alt text-xs"></i></button>
-            </div>
-          `;
-          productsList.appendChild(div);
-        });
+              const div = document.createElement('div');
+              div.className = 'bg-white p-4 rounded-xl shadow-sm flex items-start space-x-4 border border-gray-100';
+              div.innerHTML = `
+                <img src="${p.imageUrl || p.imagePreview || 'https://placehold.co/80x80/e9eef6/6b7280?text=IMG'}" class="w-16 h-16 rounded-lg object-cover flex-shrink-0" alt="${escapeHTML(p.name)}">
+                <div class="flex-1 min-w-0">
+                  <div class="font-bold text-gray-800">${escapeHTML(p.name || 'Producto sin nombre')} ${getMarginTag(p)}</div>
+                  <div class="text-xs text-gray-500 mt-1">
+                    <span class="font-semibold">${p.productStockMode.toUpperCase()}</span> | Tipo: ${isDual ? 'DUAL' : 'ÚNICO'}
+                  </div>
+                  
+                  <!-- Detalles de Costo y Precio Final para el EDITOR -->
+                  <div class="mt-2 text-xs flex flex-col gap-1 border-t pt-1">
+                    ${isStock || !isDual ? 
+                        `<span class="text-indigo-600 font-semibold"><i class="fas fa-money-bill-wave"></i> ÚNICO: 
+                            Base (Adq.): ${store.currency}${formatCurrency(p.airBaseCost)} | Final: ${store.currency}${formatCurrency(p.airFinalPrice)}
+                        </span>`
+                        :
+                        `<span class="text-blue-600 font-semibold"><i class="fas fa-plane"></i> AÉREO: 
+                            Base (Adq.): ${store.currency}${formatCurrency(p.airBaseCost)} | Final: ${store.currency}${formatCurrency(p.airFinalPrice)}
+                        </span>
+                        <span class="text-green-600 font-semibold"><i class="fas fa-ship"></i> MARÍTIMO: 
+                            Base (Adq.): ${store.currency}${formatCurrency(p.seaBaseCost)} | Final: ${store.currency}${formatCurrency(p.seaFinalPrice)}
+                        </span>`
+                    }
+                  </div>
+                </div>
+                <div class="flex flex-col gap-2 flex-shrink-0">
+                  <button class="btn edit-btn bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-300" data-id="${p.idLocal}"><i class="fas fa-edit text-xs"></i></button>
+                  <button class="btn delete-btn bg-red-400 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-500" data-id="${p.idLocal}"><i class="fas fa-trash-alt text-xs"></i></button>
+                </div>
+              `;
+              productsList.appendChild(div);
+            });
+        }
+
+        // Comprobar y aplicar el límite de productos
+        const limit = PLAN_LIMITS[userPlan] || 0;
+        if (limit > 0 && products.length >= limit) {
+            addProductBtn.disabled = true;
+            addProductBtn.title = `Límite de ${limit} productos alcanzado para tu plan.`;
+            addProductBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            addProductBtn.disabled = false;
+            addProductBtn.title = 'Añadir nuevo producto';
+            addProductBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
 
         document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', (e) => openProductEditor(e.currentTarget.dataset.id)));
-        document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', (e) => {
-          products = products.filter(x => x.idLocal !== e.currentTarget.dataset.id);
-          renderProducts();
-        }));
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                products = products.filter(x => x.idLocal !== e.currentTarget.dataset.id);
+                hasUnsavedChanges = true;
+                renderProducts(); // Volver a renderizar para actualizar el estado del botón de añadir
+            });
+        });
         updatePreview();
       }
 
-      // Add product flow
+      // Add product flow - MODIFICADO para comprobar límite
       addProductBtn.addEventListener('click', () => {
-        currentEditingProduct = { 
-            idLocal: uid(), id: null, name: '', description: '', youtubeLink: '',
-            initialCost: 0, weight: 0, marginType: 'fixed', marginValue: 5.00,
-            airBaseCost: 0, seaBaseCost: 0, airFinalPrice: 0, seaFinalPrice: 0, airMargin: 0, seaMargin: 0,
-            productStockMode: 'stock', 
-            prodShipMethod: store.isLogisticsDual ? 'both' : 'single', 
-            deliveryCostType: 'range', deliveryFixedValue: 0, deliveryRangeStart: 2.00, deliveryRangeEnd: 8.00, deliveryNote: 'Costo varía por zona.', 
-            tags: [], imageFile: null, imagePreview: null 
-        };
-        products.push(currentEditingProduct);
-        openProductEditor(currentEditingProduct.idLocal);
-      });
+        const limit = PLAN_LIMITS[userPlan] || Infinity;
+        if (products.length >= limit) {
+            showMessageModal('Límite Alcanzado', `Has alcanzado el límite de ${limit} productos para tu plan.`);
+            return;
+        }
+        hasUnsavedChanges = true;
 
       // Product editor modal
       function openProductEditor(idLocal) {
@@ -1129,13 +1149,39 @@
           videoModal.classList.add('hidden');
       });
 
-      // --- INTEGRACIÓN CON BACKEND ---
-      const saveStoreBtn = $('saveStoreBtn');
+      // --- LÓGICA DE AUTO-GUARDADO ---
+      function saveDraft() {
+        if (!hasUnsavedChanges) return;
+        console.log('Guardando borrador en localStorage...');
+        const draft = { store, products, savedAt: new Date().toISOString() };
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      }
 
+      // Guardar un borrador cada 15 segundos si hay cambios
+      setInterval(saveDraft, 15000);
+
+      // --- INTEGRACIÓN CON BACKEND ---
+      
       // 1. Cargar datos al iniciar
       window.addEventListener('load', async () => {
+          // Restaurar borrador si existe
+          const draftJson = localStorage.getItem(DRAFT_KEY);
+          if (draftJson) {
+              const draft = JSON.parse(draftJson);
+              if (confirm(`Se encontró un borrador no guardado de las ${new Date(draft.savedAt).toLocaleTimeString()}. ¿Deseas restaurarlo?`)) {
+                  store = draft.store;
+                  products = draft.products;
+                  console.log('Borrador restaurado desde localStorage.');
+                  populateFormWithState();
+                  return; // Salir para no sobrescribir con datos del servidor
+              } else {
+                  localStorage.removeItem(DRAFT_KEY); // El usuario descartó el borrador
+              }
+          }
+
+          // Si no hay borrador, cargar desde el servidor
           try {
-              const token = localStorage.getItem('sessionToken');
+              const token = localStorage.getItem('jwt_token');
               const response = await fetch('/api/user/store-data', {
                   headers: { 'Authorization': `Bearer ${token}` }
               });
@@ -1143,25 +1189,34 @@
               if (!response.ok) {
                   if (response.status === 404) {
                       console.log("No hay datos de tienda existentes. Usando valores por defecto.");
-                      // No es un error fatal, simplemente no hay datos que cargar.
                   } else {
                       throw new Error('Error del servidor al cargar los datos.');
                   }
               } else {
                   const data = await response.json();
-                  if (data && Object.keys(data).length > 0) {
-                      // Actualizar estado global con datos del backend
-                      if(data.store) Object.assign(store, data.store);
-                      if(data.products) products = data.products;
-                      console.log("Datos de la tienda cargados desde el backend.");
+                  if (data) {
+                      if (data.storeData && Object.keys(data.storeData).length > 0) {
+                          if(data.storeData.store) Object.assign(store, data.storeData.store);
+                          if(data.storeData.products) products = data.storeData.products;
+                      }
+                      userPlan = data.plan || '';
+                      store.slug = data.slug || null; // Guardar el slug
+                      console.log("Datos de la tienda y plan cargados desde el backend.");
                   }
               }
           } catch (error) {
               console.error("Error al cargar datos de la tienda:", error);
               showMessageModal("Error de Carga", "No se pudieron cargar los datos de la tienda. Por favor, recarga la página.", true);
           } finally {
-              // Poblar el formulario con los datos (ya sean los por defecto o los cargados)
+              // Poblar el formulario con los datos
               populateFormWithState();
+              // Activar el botón de vista previa si tenemos un slug
+              const previewBtn = document.getElementById('public-preview-btn');
+              if (store.slug && previewBtn) {
+                  previewBtn.href = `/store/${store.slug}`;
+                  previewBtn.classList.remove('bg-gray-300', 'cursor-not-allowed', 'opacity-50');
+                  previewBtn.classList.add('bg-white', 'hover:bg-gray-100');
+              }
           }
       });
 
@@ -1190,12 +1245,16 @@
 
       // --- NUEVO FLUJO DE GUARDADO CON SUBIDA POR BACKEND ---
 
-      async function uploadFileViaBackend(file) {
+      async function uploadFileViaBackend(file, folder = 'uploads', fileId = null) {
         if (!file) return null;
         const token = localStorage.getItem('jwt_token');
         
         const formData = new FormData();
         formData.append('image', file);
+        formData.append('folder', folder);
+        if (fileId) {
+            formData.append('fileId', fileId);
+        }
 
         const response = await fetch('/api/upload-image', {
             method: 'POST',
@@ -1204,12 +1263,11 @@
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Error al subir el archivo al servidor.');
+            const errorData = await response.json().catch(() => ({ error: 'Error desconocido al subir archivo.' }));
+            throw new Error(errorData.error);
         }
 
-        const result = await response.json();
-        return result.publicUrl;
+        return await response.json(); // Devuelve { path, publicUrl }
       }
 
       function jwt_decode(token) {
@@ -1232,14 +1290,14 @@
 
               if (store.logoFile instanceof File) {
                   saveStoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Subiendo logo...';
-                  const publicUrl = await uploadFileViaBackend(store.logoFile);
+                  const { publicUrl } = await uploadFileViaBackend(store.logoFile, 'logos'); // No se pasa fileId para el logo
                   dataToSave.store.logoUrl = publicUrl;
               }
 
               for (let i = 0; i < products.length; i++) {
                   if (products[i].imageFile instanceof File) {
                       saveStoreBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Subiendo producto ${i + 1}/${products.length}...`;
-                      const publicUrl = await uploadFileViaBackend(products[i].imageFile);
+                      const { publicUrl } = await uploadFileViaBackend(products[i].imageFile, 'productos', products[i].idLocal); // Se pasa el idLocal del producto
                       dataToSave.products[i].imageUrl = publicUrl;
                   }
               }
@@ -1265,6 +1323,11 @@
 
               const result = await response.json();
               showMessageModal("¡Éxito!", "Los datos de tu tienda se han guardado y publicado correctamente.");
+              
+              // Limpiar el borrador después de guardar exitosamente
+              localStorage.removeItem(DRAFT_KEY);
+              hasUnsavedChanges = false;
+              console.log('Borrador eliminado después de guardar.');
 
           } catch (error) {
               console.error("Error en el flujo de guardado:", error);

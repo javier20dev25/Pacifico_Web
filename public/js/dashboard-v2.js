@@ -1,20 +1,13 @@
 // ==========================================================
 // 1. HELPER DE SEGURIDAD PARA MANIPULACIÓN DEL DOM
 // ==========================================================
-
-/**
- * Escribe texto o HTML en un elemento del DOM de forma segura.
- * Comprueba si el elemento existe antes de intentar modificarlo.
- * @param {string} id - El ID del elemento HTML.
- * @param {string} text - El texto o HTML a insertar.
- */
 function safeSetText(id, text) {
   try {
     const el = document.getElementById(id);
     if (el) {
       el.innerHTML = text ?? '';
     } else {
-      console.warn('[safeSetText] Elemento no encontrado:', id, '| Valor que se intentó escribir:', text);
+      console.warn('[safeSetText] Elemento no encontrado:', id);
     }
   } catch (err) {
     console.error('[safeSetText] Error al escribir en el DOM:', id, err);
@@ -24,10 +17,6 @@ function safeSetText(id, text) {
 // ==========================================================
 // 2. LÓGICA PRINCIPAL DEL DASHBOARD
 // ==========================================================
-
-/**
- * Función central que inicializa todo el dashboard.
- */
 async function initDashboard() {
   const token = localStorage.getItem('jwt_token');
   if (!token) {
@@ -37,55 +26,39 @@ async function initDashboard() {
   const headers = { 'Authorization': `Bearer ${token}` };
 
   try {
-    // Cargar perfil de usuario y tiendas en paralelo para más eficiencia
     const [profileResponse, storesResponse] = await Promise.all([
       fetch('/api/user/profile', { headers }),
       fetch('/api/user/stores', { headers })
     ]);
 
-    // --- Procesar Perfil ---
-    if (!profileResponse.ok) {
-      throw new Error('No se pudo cargar el perfil. Sesión podría haber expirado.');
-    }
+    if (!profileResponse.ok) throw new Error('No se pudo cargar el perfil.');
     const profilePayload = await profileResponse.json();
     const user = profilePayload.user || profilePayload;
     
     safeSetText('user-name', user.nombre || 'Usuario');
     safeSetText('user-email', user.correo || '-');
-    safeSetText('user-plan', user.plan || user.plan_nombre || 'Sin plan');
+    safeSetText('user-plan', user.plan || 'Sin plan');
     safeSetText('user-status', user.status || '-');
 
-    // --- Procesar Tiendas ---
-    if (!storesResponse.ok) {
-        throw new Error('No se pudieron cargar las tiendas.');
-    }
+    if (!storesResponse.ok) throw new Error('No se pudieron cargar las tiendas.');
     const stores = await storesResponse.json();
     renderStoreManagement(stores, headers);
+
+    // Añadir listeners de eventos principales después de cargar todo
+    setupEventListeners();
 
   } catch (error) {
     console.error('[initDashboard] Error cargando datos:', error);
     showErrorBanner(error.message);
-    // Opcional: Redirigir si el error es de autenticación
-    if (error.message.includes('expirado')) {
-        setTimeout(() => { window.location.href = '/login.html'; }, 3000);
-    }
   }
 }
 
-/**
- * Renderiza el panel de gestión de la tienda.
- */
 function renderStoreManagement(stores, headers) {
     const wrapper = document.getElementById('store-management-wrapper');
-    if (!wrapper) return; // Salir si el contenedor no existe
+    if (!wrapper) return;
 
     if (stores.length === 0) {
-        wrapper.innerHTML = `
-            <div class="text-center neomorphic-card p-8">
-                <p class="text-gray-500 mb-4">Aún no has creado tu tienda.</p>
-                <a href="/templates/baseplantillaediciontiendas.html" class="neomorphic-btn">➕ Crear mi Primera Tienda</a>
-            </div>
-        `;
+        wrapper.innerHTML = `<div class="text-center neomorphic-card p-8"><p class="text-gray-500 mb-4">Aún no has creado tu tienda.</p><a href="/templates/baseplantillaediciontiendas.html" class="neomorphic-btn">➕ Crear mi Primera Tienda</a></div>`;
         return;
     }
 
@@ -98,46 +71,17 @@ function renderStoreManagement(stores, headers) {
     wrapper.innerHTML = `
         <div class="neomorphic-card p-4">
             <div class="aspect-w-16 aspect-h-9 border-2 border-gray-200 rounded-lg overflow-hidden mb-4 bg-gray-100">
-                ${store.slug ? `<iframe src="${publicUrl}" class="w-full h-full"></iframe>` : '<div class="flex items-center justify-center h-full text-gray-500">Vista previa no disponible (sin slug).</div>'}
+                <iframe src="${publicUrl}" class="w-full h-full"></iframe>
             </div>
             <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a href="/templates/baseplantillaediciontiendas.html" id="edit-store-btn" class="neomorphic-btn w-full sm:w-auto text-center">✏️ Editar Tienda</a>
+                <a href="/templates/baseplantillaediciontiendas.html" class="neomorphic-btn w-full sm:w-auto text-center">✏️ Editar Tienda</a>
                 <button id="share-store-btn" class="neomorphic-btn w-full sm:w-auto">🔗 Compartir Enlace</button>
                 <button id="delete-store-btn" class="neomorphic-btn w-full sm:w-auto hover:!text-red-500">🗑️ Eliminar</button>
             </div>
         </div>
     `;
-
-    // Listeners para los botones de acción
-    const shareBtn = document.getElementById('share-store-btn');
-    if (shareBtn) {
-        shareBtn.addEventListener('click', () => {
-            if (!store.slug) { alert('La tienda no tiene un enlace público para compartir.'); return; }
-            navigator.clipboard.writeText(publicUrl).then(() => {
-                alert('¡Enlace de la tienda copiado al portapapeles!');
-            }).catch(err => alert('No se pudo copiar el enlace.'));
-        });
-    }
-
-    const deleteBtn = document.getElementById('delete-store-btn');
-    if (deleteBtn) {
-        deleteBtn.addEventListener('click', async () => {
-            if (!confirm(`¿Estás seguro de que quieres eliminar la tienda "${storeName}"? Esta acción es permanente.`)) return;
-            try {
-                const response = await fetch(`/api/user/stores/${store.id}`, { method: 'DELETE', headers });
-                if (!response.ok) throw new Error((await response.json()).error || 'Error en el servidor');
-                alert('¡Tienda eliminada con éxito!');
-                window.location.reload();
-            } catch (error) {
-                showErrorBanner(`Error al eliminar la tienda: ${error.message}`);
-            }
-        });
-    }
 }
 
-/**
- * Muestra un banner de error en la parte superior de la página.
- */
 function showErrorBanner(msg){
   let b = document.getElementById('error-banner');
   if(!b){
@@ -151,8 +95,224 @@ function showErrorBanner(msg){
 }
 
 // ==========================================================
-// 3. PUNTO DE ENTRADA
+// 3. LÓGICA DEL GESTOR DE PEDIDOS
 // ==========================================================
 
-// Asegurarse de que el DOM esté listo antes de ejecutar cualquier script
+async function handleProcessOrder() {
+    const text = document.getElementById('whatsapp-order-input').value;
+    if (!text) {
+        alert('Por favor, pega el texto del pedido de WhatsApp.');
+        return;
+    }
+    try {
+        const parsedOrder = parseOrderText(text);
+        renderProcessedOrder(parsedOrder);
+        await saveOrder(parsedOrder);
+        alert('¡Pedido procesado y guardado con éxito!');
+    } catch (error) {
+        showErrorBanner(`Error al procesar el pedido: ${error.message}`);
+    }
+}
+
+function parseOrderText(text) {
+    const order = { products: [], raw_message: text };
+    const headerRegex = /^ \[(\d{1,2}\/\d{1,2}\/\d{2,4}), (\d{1,2}:\d{2}:\d{2})\] ([^:]+):/m;
+    const headerMatch = text.match(headerRegex);
+    order.order_date = headerMatch ? new Date(`${headerMatch[1].split('/').reverse().join('-')}T${headerMatch[2]}`) : new Date();
+    order.customer_name = headerMatch ? headerMatch[3] : 'Desconocido';
+
+    const productRegex = /- (.+?) \(x(\d+)\) - [A-Z]{3} (\d+\.\d{2})/g;
+    let productMatch;
+    while ((productMatch = productRegex.exec(text)) !== null) {
+        order.products.push({
+            name: productMatch[1].trim(),
+            quantity: parseInt(productMatch[2], 10),
+            price: parseFloat(productMatch[3])
+        });
+    }
+
+    const totalRegex = /\*Total a Pagar:\* [A-Z]{3} (\d+\.\d{2})/;
+    const totalMatch = text.match(totalRegex);
+    order.total_price = totalMatch ? parseFloat(totalMatch[1]) : 0;
+
+    if (order.products.length === 0) {
+        throw new Error('No se encontraron productos con el formato esperado.');
+    }
+    return order;
+}
+
+function renderProcessedOrder(order) {
+    const outputDiv = document.getElementById('processed-order-output');
+    const downloadBtn = document.getElementById('download-invoice-btn');
+    let tableHTML = `
+        <div id="invoice-to-download" class="p-4 bg-white border rounded-lg">
+            <h4 class="font-bold text-lg mb-4">Factura de Pedido</h4>
+            <p><b>Cliente:</b> ${order.customer_name}</p>
+            <p><b>Fecha:</b> ${new Date(order.order_date).toLocaleString()}</p>
+            <table class="w-full mt-4 text-sm text-left">
+                <thead class="bg-gray-100"><tr><th class="p-2">Producto</th><th class="p-2">Cant.</th><th class="p-2">Precio</th></tr></thead>
+                <tbody>`;
+    order.products.forEach(p => {
+        tableHTML += `<tr><td class="p-2 border-t">${p.name}</td><td class="p-2 border-t">${p.quantity}</td><td class="p-2 border-t">C$${p.price.toFixed(2)}</td></tr>`;
+    });
+    tableHTML += `</tbody><tfoot class="font-bold"><tr class="border-t-2"><td class="p-2" colspan="2">Total</td><td class="p-2">C$${order.total_price.toFixed(2)}</td></tr></tfoot></table></div>`;
+    outputDiv.innerHTML = tableHTML;
+    if(downloadBtn) downloadBtn.classList.remove('hidden');
+}
+
+async function downloadInvoiceAsImage() {
+    const invoiceElement = document.getElementById('invoice-to-download');
+    if (!invoiceElement) return alert('No se encontró la factura para descargar.');
+    try {
+        const canvas = await html2canvas(invoiceElement, { scale: 2, useCORS: true });
+        const imageURL = canvas.toDataURL('image/png');
+        const downloadLink = document.createElement('a');
+        downloadLink.href = imageURL;
+        downloadLink.download = `factura_${order.customer_name || 'cliente'}_${Date.now()}.png`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    } catch (error) {
+        console.error('Error al generar la imagen:', error);
+        alert('Hubo un error al generar la imagen.');
+    }
+}
+
+async function saveOrder(order) {
+    const token = localStorage.getItem('jwt_token');
+    const response = await fetch('/api/user/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(order)
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'No se pudo guardar el pedido.');
+    }
+    return response.json();
+}
+
+// ==========================================================
+// 4. EVENT LISTENERS
+// ==========================================================
+
+function setupEventListeners() {
+    const logoutBtn = document.getElementById('logout-button');
+    if(logoutBtn) logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('jwt_token');
+        window.location.href = '/login.html';
+    });
+
+    const processOrderBtn = document.getElementById('process-order-btn');
+    if(processOrderBtn) processOrderBtn.addEventListener('click', handleProcessOrder);
+
+    const downloadInvoiceBtn = document.getElementById('download-invoice-btn');
+    if(downloadInvoiceBtn) downloadInvoiceBtn.addEventListener('click', downloadInvoiceAsImage);
+
+    // Listeners para el Chat de IA
+    const chatSendBtn = document.getElementById('chat-send-btn');
+    if(chatSendBtn) chatSendBtn.addEventListener('click', handleSendMessage);
+
+    const chatInput = document.getElementById('chat-input');
+    if(chatInput) chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleSendMessage();
+        }
+    });
+    
+    // Listeners para la gestión de la tienda (se añaden en renderStoreManagement)
+}
+
+// ==========================================================
+// 5. LÓGICA DEL CHAT DE IA
+// ==========================================================
+
+async function handleSendMessage() {
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+    if (!message) return;
+
+    addMessageToChatUI(message, 'user');
+    input.value = '';
+    
+    addMessageToChatUI('...', 'ai', true);
+
+    try {
+        const jwtToken = localStorage.getItem('jwt_token');
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}`
+            },
+            body: JSON.stringify({ message })
+        });
+
+        const typingIndicator = document.getElementById('typing-indicator');
+        if(typingIndicator) typingIndicator.remove();
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'El asistente no pudo responder.');
+        }
+
+        const data = await response.json();
+        addMessageToChatUI(data.response, 'ai');
+
+    } catch (error) {
+        const typingIndicator = document.getElementById('typing-indicator');
+        if(typingIndicator) typingIndicator.remove();
+        addMessageToChatUI(`Error: ${error.message}`, 'ai', false, true);
+    }
+}
+
+function addMessageToChatUI(message, sender, isTyping = false, isError = false) {
+    const messagesDiv = document.getElementById('chat-messages');
+    if (!messagesDiv) return;
+
+    const messageContainer = document.createElement('div');
+    messageContainer.className = `chat-message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
+
+    if (isTyping) {
+        messageContainer.id = 'typing-indicator';
+    }
+
+    const avatar = document.createElement('div');
+    avatar.className = 'chat-avatar';
+    avatar.textContent = sender === 'user' ? 'TÚ' : 'IA';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+
+    if (isTyping) {
+        bubble.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+    } else {
+        bubble.innerHTML = message; // Usar innerHTML para renderizar <strong>, <br>, etc.
+    }
+    
+    if (isError) {
+        bubble.style.backgroundColor = '#fecaca';
+        bubble.style.color = '#991b1b';
+    }
+
+    if (sender === 'user') {
+        messageContainer.appendChild(bubble);
+        messageContainer.appendChild(avatar);
+    } else {
+        messageContainer.appendChild(avatar);
+        messageContainer.appendChild(bubble);
+    }
+
+    const initialMessage = messagesDiv.querySelector('.text-gray-500');
+    if (initialMessage) {
+        initialMessage.remove();
+    }
+
+    messagesDiv.appendChild(messageContainer);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// ==========================================================
+// 5. PUNTO DE ENTRADA
+// ==========================================================
 document.addEventListener('DOMContentLoaded', initDashboard);

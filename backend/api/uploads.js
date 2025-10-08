@@ -1,53 +1,58 @@
+// backend/api/uploads.js
 const express = require('express');
 const multer = require('multer');
+const { createClient } = require('@supabase/supabase-js');
 const { supabaseAdmin } = require('../services/supabase');
-
-// Configuración de Multer para manejar el archivo en memoria
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
+// Configuración: nombre del bucket desde env (por defecto 'imagenes')
+const BUCKET = process.env.STORAGE_BUCKET || 'imagenes';
+
+// Helper: sanitize filename
+function sanitizeFilename(name) {
+  return name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+}
+
+// POST /api/upload-image
+// Recibe un multipart/form-data con campo 'image'.
+// Opcional: campo form 'folder' para subcarpeta (ej: 'productos' o 'logos')
 router.post('/upload-image', upload.single('image'), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No se proporcionó ningún archivo.' });
-    }
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    // Usar el UUID del usuario autenticado para la ruta
-    const userUuid = req.user.uuid;
-    if (!userUuid) {
-        return res.status(401).json({ error: 'Usuario no autenticado.' });
-    }
+    const userId = (req.user && (req.user.uuid || req.user.id)) || 'anon';
+    const subfolder = req.body.folder ? sanitizeFilename(req.body.folder) : 'uploads';
+    
+    // Usar un ID predecible para el nombre del archivo, o 'logo' por defecto
+    const fileId = req.body.fileId ? sanitizeFilename(req.body.fileId) : 'logo';
+    const ext = req.file.originalname.includes('.') ? req.file.originalname.slice(req.file.originalname.lastIndexOf('.')) : '';
+    const filename = `${fileId}${ext}`;
 
-    const file = req.file;
-    const timestamp = Date.now();
-    const safeFileName = file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
-    const filePath = `imagenes/${userUuid}/${timestamp}_${safeFileName}`;
+    const path = `${subfolder}/${userId}/${filename}`;
 
-    // Subir el buffer del archivo a Supabase Storage
-    const { data, error: uploadError } = await supabaseAdmin.storage
-      .from('imagenes')
-      .upload(filePath, file.buffer, {
-        contentType: file.mimetype,
-        upsert: false
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .upload(path, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true // <--- ¡IMPORTANTE! Habilitar la sobrescritura
       });
 
     if (uploadError) {
-      console.error('Error al subir a Supabase Storage:', uploadError);
-      throw new Error(uploadError.message);
+      console.error('[upload-image] supabase upload error:', uploadError);
+      return res.status(500).json({ error: 'Error subiendo archivo a storage', details: uploadError });
     }
 
-    // Obtener la URL pública del archivo subido
-    const { data: publicUrlData } = supabaseAdmin.storage
-      .from('imagenes')
-      .getPublicUrl(data.path);
+    const { data: publicData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(uploadData.path);
+    const publicUrl = publicData?.publicUrl || publicData?.publicURL || null;
 
-    res.json({ publicUrl: publicUrlData.publicUrl });
-
-  } catch (error) {
-    console.error('[ERROR /upload-image]', error);
-    res.status(500).json({ error: 'Error interno del servidor al subir la imagen.' });
+    return res.json({
+      path: uploadData.path,
+      publicUrl
+    });
+  } catch (err) {
+    console.error('[upload-image] exception:', err && err.stack ? err.stack : err);
+    return res.status(500).json({ error: 'Error interno al subir archivo.' });
   }
 });
 

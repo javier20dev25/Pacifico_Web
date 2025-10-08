@@ -7,243 +7,315 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
-    :root {
-      --bg: #e9eef6;
-      --card: #f6f8fb;
-      --muted: #6b7280;
-      --accent: #7ea1ff;
-    }
-    html, body {
-      height: 100%;
-      margin: 0;
-      background: linear-gradient(180deg, #e9eef6, #dfe8f8);
-      font-family: 'Inter', sans-serif;
-      color: #1a202c;
-    }
-    .neumorphic-card {
-      background: var(--card);
-      border-radius: 14px;
-      box-shadow: 8px 8px 20px rgba(170, 187, 204, 0.18), -8px -8px 20px rgba(255, 255, 255, 0.9);
-    }
-    .btn {
-      transition: transform 0.12s ease-in-out, box-shadow 0.12s ease-in-out;
-    }
-    .btn:active {
-      transform: translateY(1px);
-      box-shadow: none;
-    }
-    .modal-overlay {
-      background-color: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(5px);
-    }
-    .tag-item {
-        background-color: var(--accent);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-    }
-    .quantity-input {
-        display: flex;
-        align-items: center;
-        width: 100px;
-        background: var(--card);
-        border-radius: 8px;
-        box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05);
-    }
-    .qty-btn {
-        width: 30px;
-        height: 30px;
-        background: var(--card);
-        color: #4f46e5;
-        font-weight: bold;
-        border-radius: 8px;
-        transition: background 0.15s;
-    }
-    .qty-btn:active { background: #e5e9ee; }
-    .qty-display {
-        flex-grow: 1;
-        text-align: center;
-        font-weight: 600;
-        font-size: 0.9rem;
-    }
+    :root { --bg: #e9eef6; --card: #f6f8fb; --muted: #6b7280; --accent: #7ea1ff; }
+    html, body { scroll-behavior: smooth; }
+    body { background: linear-gradient(180deg, #e9eef6, #dfe8f8); font-family: 'Inter', sans-serif; color: #1a202c; }
+    .neumorphic-card { background: var(--card); border-radius: 14px; box-shadow: 8px 8px 20px rgba(170, 187, 204, 0.18), -8px -8px 20px rgba(255, 255, 255, 0.9); }
+    .btn { transition: transform 0.12s ease-in-out, box-shadow 0.12s ease-in-out; }
+    .btn:active { transform: translateY(1px); box-shadow: none; }
+    .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px); }
+    .tag-item { background-color: var(--accent); color: white; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; }
+    #cart-button-container { position: fixed; bottom: 20px; right: 20px; z-index: 40; }
+    #cart-count { position: absolute; top: -5px; right: -5px; background-color: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; }
   </style>
 </head>
 <body class="flex flex-col min-h-screen">
 
+  <!-- Inyección de datos del servidor -->
   <!-- SERVER_DATA_INJECTION -->
 
-  <div id="store-container" class="container mx-auto p-4 md:p-6 lg:p-8">
-    <!-- El contenido de la tienda se renderizará aquí -->
-  </div>
+  <!-- Contenedor principal de la tienda -->
+  <div id="store-container" class="container mx-auto p-4 md:p-6 lg:p-8"></div>
 
-  <!-- Video Player Modal -->
-  <div id="videoModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay hidden">
-    <div class="neumorphic-card p-4 rounded-2xl w-full max-w-4xl relative">
-      <button id="closeVideoModal" class="absolute top-4 right-4 z-10 btn bg-white text-gray-700 w-8 h-8 rounded-full shadow-lg hover:bg-gray-200"><i class="fas fa-times"></i></button>
-      <div id="videoContent" class="w-full aspect-video rounded-xl overflow-hidden"></div>
-      <div id="videoTitle" class="text-lg font-bold mt-3 text-center"></div>
-    </div>
-  </div>
+  <!-- Botón del carrito flotante -->
+  <div id="cart-button-container"></div>
 
-  <!-- Message Modal (para el carrito) -->
-  <div id="messageModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-overlay hidden">
-    <div class="neumorphic-card p-6 rounded-2xl w-full max-w-sm relative text-center">
-      <div id="messageText" class="text-lg font-semibold mb-4"></div>
-      <button id="messageOkBtn" class="btn bg-blue-500 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-600">OK</button>
-    </div>
-  </div>
+  <!-- Modales -->
+  <div id="modals-container"></div>
 
-  <script>
+  <script type="module">
+    // ==========================================================
+    // ESTADO Y CONFIGURACIÓN GLOBAL
+    // ==========================================================
+    let store = {};
+    let products = [];
+    let shoppingCart = {}; // Formato: { productId: quantity }
+    let selectedShippingMethod = 'air'; // 'air' o 'sea'
+
+    const $ = id => document.getElementById(id);
+    const escapeHTML = (s) => (s || '').replace(/[&<>""]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+    // ==========================================================
+    // INICIALIZACIÓN
+    // ==========================================================
     document.addEventListener('DOMContentLoaded', () => {
       if (typeof window.STORE_DATA === 'undefined' || !window.STORE_DATA.store || !window.STORE_DATA.products) {
-        document.getElementById('store-container').innerHTML = '<h1 class="text-center text-2xl font-bold text-red-500">Error: No se pudieron cargar los datos de la tienda.</h1>';
+        $('store-container').innerHTML = '<h1 class="text-center text-2xl font-bold text-red-500">Error: No se pudieron cargar los datos de la tienda.</h1>';
         return;
       }
+      store = window.STORE_DATA.store;
+      products = window.STORE_DATA.products;
       
-      const { store, products } = window.STORE_DATA;
-      let shoppingCart = {};
+      renderStoreView();
+      renderModals();
+      renderCartButton();
+      attachGlobalListeners();
+    });
 
-      const $ = id => document.getElementById(id);
-      const escapeHTML = (s) => (s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-      
-      function getYoutubeEmbedUrl(url) {
-        if (!url) return null;
-        const regExp = /(?:https?:\])?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/; 
-        const match = url.match(regExp);
-        return match && match[1] ? `https://www.youtube.com/embed/${match[1]}?autoplay=1` : null;
-      }
+    // ==========================================================
+    // FUNCIONES DE RENDERIZADO
+    // ==========================================================
 
-      const formatCurrency = (amount) => {
-          if (typeof amount !== 'number' || isNaN(amount)) return '0.00';
-          return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-      };
-
-      function getCustomerDeliveryText(p) {
-        if (p.deliveryCostType === 'no') return "<span class=\"text-red-500 font-semibold\"><i class=\"fas fa-ban\"></i> Retiro en tienda.</span>";
-        let costText = '';
-        if (p.deliveryCostType === 'included') costText = "<span class=\"text-green-600 font-semibold\">Costo de envío incluído.</span>";
-        else if (p.deliveryCostType === 'fixed') costText = `Envío Fijo Local: ${store.currency}${formatCurrency(p.deliveryFixedValue || 0)}`;
-        else if (p.deliveryCostType === 'range') costText = `Envío Local Aprox: ${store.currency}${formatCurrency(p.deliveryRangeStart || 0)} - ${store.currency}${formatCurrency(p.deliveryRangeEnd || 0)}`;
-        let noteText = p.deliveryNote ? `<span class="text-xs text-gray-500 block">(${escapeHTML(p.deliveryNote)})</span>` : '';
-        return `<span class="text-blue-600"><i class="fas fa-truck"></i> ${costText}</span>${noteText}`;
-      }
-
-      function getCustomerPriceAndDelivery(p) {
-          const c = store.currency;
-          if (p.productStockMode === 'stock') {
-              return {
-                  price: `<div class="font-bold text-3xl text-indigo-700">${c}${formatCurrency(p.airFinalPrice)}</div>`,
-                  time: `<div class="text-sm text-green-600 font-semibold"><i class="fas fa-boxes"></i> Entrega Inmediata</div>`
-              };
-          }
-          const shippingMethods = [];
-          const isDual = store.isLogisticsDual;
-          if (isDual) {
-            if (p.prodShipMethod === 'air' || p.prodShipMethod === 'both') shippingMethods.push({ method: 'AÉREO', price: `${c}${formatCurrency(p.airFinalPrice)}`, days: `${store.airMinDays}-${store.airMaxDays} días` });
-            if (p.prodShipMethod === 'sea' || p.prodShipMethod === 'both') shippingMethods.push({ method: 'MARÍTIMO', price: `${c}${formatCurrency(p.seaFinalPrice)}`, days: `${store.seaMinDays}-${store.seaMaxDays} días` });
-          }
-          if (!isDual || p.prodShipMethod === 'single') {
-             shippingMethods.push({ method: 'Precio Base', price: `${c}${formatCurrency(p.airFinalPrice)}`, days: 'Consultar al vendedor' });
-          }
-          if (shippingMethods.length === 0) return { price: '<div>No disponible.</div>', time: '<div>N/A</div>' };
-          const priceDisplay = shippingMethods.map(m => `<div class="font-bold text-xl flex justify-between items-center text-gray-800"><span class="${m.method.includes('AÉREO') ? 'text-blue-700' : m.method.includes('MARÍTIMO') ? 'text-green-700' : 'text-indigo-700'}">${m.method}:</span> <span>${m.price}</span></div>`).join('');
-          const timeDisplay = shippingMethods.map(m => `<div class="text-sm text-gray-600 flex justify-between"><span><i class="fas ${m.method.includes('AÉREO') ? 'fa-plane' : 'fa-ship'} mr-1"></i> ${m.method}:</span> <span class="font-semibold">${m.days}</span></div>`).join('');
-          return { price: `<div class="space-y-1">${priceDisplay}</div>`, time: `<div class="space-y-1 p-2 bg-gray-100 rounded-lg">${timeDisplay}</div>` };
-      }
-
-      function renderStoreView() {
+    function renderStoreView() {
         document.title = store.nombre || 'Tienda';
+        const storeContainer = $('store-container');
         const storeNameVal = store.nombre || 'Tienda Sin Nombre';
         const storeLogoUrl = store.logoUrl || 'https://placehold.co/80x80/e9eef6/6b7280?text=LOGO';
         
         let headerHtml = `
             <div class="text-center mb-6">
-                <img src="${store.logoUrl || 'https://placehold.co/80x80/e9eef6/6b7280?text=LOGO'}" class="w-20 h-20 rounded-full object-cover mx-auto mb-2 neumorphic-card" alt="Logo de la tienda">
+                <img src="${storeLogoUrl}" class="w-20 h-20 rounded-full object-cover mx-auto mb-2 neumorphic-card" alt="Logo de la tienda">
                 <h3 class="text-2xl font-bold text-gray-800">${escapeHTML(storeNameVal)}</h3>
                 <p class="text-sm text-gray-600 mt-1">${escapeHTML(store.descripcion)}</p>
-                ${store.whatsapp ? `<a href="https://wa.me/${store.whatsapp.replace(/\s/g, '')}" target="_blank" class="text-teal-600 text-xs font-semibold inline-flex items-center mt-2"><i class="fab fa-whatsapp mr-1"></i> WhatsApp: ${store.whatsapp}</a>` : ''}
-            </div>`;
-        
-        if (getYoutubeEmbedUrl(store.youtubeLink)) {
-            headerHtml += `<div class="mb-6 p-4 rounded-xl border border-gray-200 bg-gray-50 text-center"><button class="btn bg-red-600 text-white px-4 py-2 rounded-full font-semibold hover:bg-red-700 text-sm" data-video-link="${store.youtubeLink}" data-video-title="Video Publicitario de la Tienda"><i class="fab fa-youtube mr-2"></i> Ver Video de la Tienda</button></div>`;
-        }
+                ${store.whatsapp ? `<a href="https://wa.me/${store.whatsapp.replace(/\s+|-/g, '')}" target="_blank" class="text-teal-600 text-xs font-semibold inline-flex items-center mt-2"><i class="fab fa-whatsapp mr-1"></i> Contactar por WhatsApp</a>` : ''}
+            </div>
+        `;
 
         const productsHtml = products.map(p => {
             const id = p.idLocal;
             const tagsHtml = (p.tags || []).map(tag => `<span class="tag-item">#${escapeHTML(tag)}</span>`).join('');
             const { price: priceDisplay, time: timeDisplay } = getCustomerPriceAndDelivery(p);
             const deliveryNote = getCustomerDeliveryText(p);
-            const youtubeEmbed = getYoutubeEmbedUrl(p.youtubeLink);
-            const initialQty = shoppingCart[id] || 1;
 
             return `
                 <div class="neumorphic-card p-4 flex flex-col gap-3" data-id="${id}">
-                    <div class="flex items-start gap-4">
-                        <img src="${p.imageUrl || 'https://placehold.co/100x100/f6f8fb/6b7280?text=IMG'}" class="w-24 h-24 rounded-lg object-cover flex-shrink-0" alt="${escapeHTML(p.name)}">
-                        <div class="flex-1">
-                            <h5 class="text-lg font-bold text-gray-800">${escapeHTML(p.name || 'Producto sin nombre')}</h5>
-                            <p class="text-xs text-gray-500 line-clamp-2 mt-1">${escapeHTML(p.description || 'Sin descripción.')}</p>
-                            ${youtubeEmbed ? `<button class="btn text-red-500 text-xs font-semibold mt-1 hover:text-red-700" onclick="openVideoModal('${youtubeEmbed}', '${escapeHTML(p.name)}')"><i class="fab fa-youtube mr-1"></i> Ver Video</button>` : ''}
-                        </div>
+                    <img src="${p.imageUrl || 'https://placehold.co/400x300/f6f8fb/6b7280?text=IMG'}" class="w-full h-48 rounded-lg object-cover" alt="${escapeHTML(p.name)}">
+                    <div class="flex-1">
+                        <h5 class="text-lg font-bold text-gray-800">${escapeHTML(p.name || 'Producto sin nombre')}</h5>
+                        <p class="text-xs text-gray-500 line-clamp-2 mt-1">${escapeHTML(p.description || 'Sin descripción.')}</p>
                     </div>
-                    <div class="border-t border-gray-100 pt-3 space-y-2">${priceDisplay}<div class="text-xs text-gray-600 font-semibold pt-1">Tiempos de Entrega Estimados:</div>${timeDisplay}<div class="text-sm border-t pt-2">${deliveryNote}</div></div>
+                    <div class="border-t border-gray-100 pt-3 space-y-2">
+                        ${priceDisplay}
+                        <div class="text-xs text-gray-600 font-semibold pt-1">Tiempos de Entrega Estimados:</div>
+                        ${timeDisplay}
+                        <div class="text-sm border-t pt-2">${deliveryNote}</div>
+                    </div>
                     <div class="flex flex-wrap gap-2 pt-1 border-t border-gray-100 mb-3">${tagsHtml}</div>
-                    <div class="flex items-center justify-between mt-3 p-2 bg-gray-50 rounded-xl">
-                        <div class="quantity-input">
-                            <button class="qty-btn" onclick="handleCartAction('${id}', 'decrement', this)"><i class="fas fa-minus"></i></button>
-                            <span class="qty-display">${initialQty}</span>
-                            <button class="qty-btn" onclick="handleCartAction('${id}', 'increment', this)"><i class="fas fa-plus"></i></button>
-                        </div>
-                        <button class="btn bg-teal-500 text-white px-4 py-2 rounded-full font-semibold hover:bg-teal-600 text-sm flex items-center" onclick="handleCartAction('${id}', 'add', this)"><i class="fas fa-cart-plus mr-2"></i> Añadir al Carrito</button>
-                    </div>
-                </div>`;
+                    <button class="btn bg-teal-500 text-white px-4 py-2 rounded-full font-semibold hover:bg-teal-600 text-sm flex items-center justify-center" onclick="handleCartAction('${id}', 'add')"><i class="fas fa-cart-plus mr-2"></i> Añadir al Carrito</button>
+                </div>
+            `;
         }).join('');
 
-        $('store-container').innerHTML = `<div class="text-left">${headerHtml}<h4 class="text-xl font-bold mt-8 mb-4 border-t pt-4">Catálogo de Productos</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${productsHtml || `<div class="text-center text-gray-400 py-8">No hay productos añadidos.</div>`}</div></div>`;
+        storeContainer.innerHTML = `
+          <div class="text-left">
+            ${headerHtml}
+            <h4 class="text-xl font-bold mt-8 mb-4 border-t pt-4">Catálogo de Productos</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              ${productsHtml || `<div class="text-center text-gray-400 py-8">No hay productos añadidos.</div>`}
+            </div>
+          </div>
+        `;
+    }
+
+    function renderModals() {
+        const modalsContainer = $('modals-container');
+        modalsContainer.innerHTML = `
+            <div id="order-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay hidden">
+                <div class="neumorphic-card p-6 rounded-2xl w-full max-w-lg relative max-h-[90vh] flex flex-col">
+                    <h3 class="text-2xl font-bold mb-4">Resumen de tu Pedido</h3>
+                    <div id="cart-summary-items" class="flex-grow overflow-y-auto pr-2 space-y-3"></div>
+                    <div id="shipping-options" class="mt-4 border-t pt-4"></div>
+                    <div id="order-summary-total" class="mt-4 border-t pt-4 font-semibold"></div>
+                    <div class="mt-6 flex justify-end gap-4">
+                        <button id="close-order-modal-btn" class="btn bg-gray-200 text-gray-700 px-6 py-2 rounded-full">Cerrar</button>
+                        <button id="confirm-whatsapp-btn" class="btn bg-green-500 text-white px-6 py-2 rounded-full flex items-center gap-2"><i class="fab fa-whatsapp"></i>Confirmar y Pedir</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderCartButton() {
+        const count = Object.values(shoppingCart).reduce((sum, qty) => sum + qty, 0);
+        const container = $('cart-button-container');
+        if (count > 0) {
+            container.innerHTML = `
+                <div id="cart-button">
+                    <button id="view-cart-btn" class="btn bg-blue-500 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg text-2xl">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span id="cart-count" class="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">${count}</span>
+                    </button>
+                </div>
+            `;
+        } else {
+            container.innerHTML = '';
+        }
+    }
+
+    function openOrderModal() {
+        const itemsContainer = $('cart-summary-items');
+        const shippingContainer = $('shipping-options');
+        const totalContainer = $('order-summary-total');
+        itemsContainer.innerHTML = '<p class="text-gray-500">Tu carrito está vacío.</p>';
+
+        if (Object.keys(shoppingCart).length === 0) return;
+
+        itemsContainer.innerHTML = '';
+        let subtotal = 0;
+        let totalWeight = 0;
+        let deliveryCosts = [];
+        let hasMadeToOrder = false;
+
+        for (const [productId, quantity] of Object.entries(shoppingCart)) {
+            const product = products.find(p => p.idLocal === productId);
+            if (!product) continue;
+
+            if (product.productStockMode !== 'stock') hasMadeToOrder = true;
+
+            const price = selectedShippingMethod === 'air' ? product.airFinalPrice : product.seaFinalPrice;
+            const itemTotal = price * quantity;
+            subtotal += itemTotal;
+            totalWeight += (product.weight || 0) * quantity;
+
+            if (product.deliveryCostType === 'fixed') deliveryCosts.push(product.deliveryFixedValue || 0);
+            if (product.deliveryCostType === 'range') deliveryCosts.push(product.deliveryRangeEnd || 0);
+
+            itemsContainer.innerHTML += `
+                <div class="flex justify-between items-center text-sm border-b pb-2">
+                    <div>
+                        <p class="font-bold">${escapeHTML(product.name)} (x${quantity})</p>
+                        <p class="text-xs text-gray-500">Peso: ${(product.weight * quantity).toFixed(2)} lb</p>
+                    </div>
+                    <p class="font-semibold">${store.currency} ${itemTotal.toFixed(2)}</p>
+                </div>
+            `;
+        }
+
+        if (hasMadeToOrder && store.isLogisticsDual) {
+            shippingContainer.innerHTML = `
+                <p class="font-bold mb-2 text-sm">Método de Envío Preferido:</p>
+                <div class="flex gap-4 text-sm">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="shipping" value="air" ${selectedShippingMethod === 'air' ? 'checked' : ''}> Aéreo</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="shipping" value="sea" ${selectedShippingMethod === 'sea' ? 'checked' : ''}> Marítimo</label>
+                </div>
+            `;
+        } else {
+            shippingContainer.innerHTML = '';
+        }
+
+        const finalDeliveryCost = deliveryCosts.length > 0 ? Math.max(...deliveryCosts) : 0;
+        const grandTotal = subtotal + finalDeliveryCost;
+
+        totalContainer.innerHTML = `
+            <div class="space-y-1 text-sm">
+                <p class="flex justify-between"><span>Subtotal:</span> <span>${store.currency} ${subtotal.toFixed(2)}</span></p>
+                <p class="flex justify-between"><span>Peso Total Estimado:</span> <span>${totalWeight.toFixed(2)} lb</span></p>
+                <p class="flex justify-between"><span>Costo de Delivery (único):</span> <span>${store.currency} ${finalDeliveryCost.toFixed(2)}</span></p>
+                <p class="flex justify-between text-xl font-bold border-t pt-2 mt-2"><span>Total a Pagar (aprox):</span> <span>${store.currency} ${grandTotal.toFixed(2)}</span></p>
+            </div>
+        `;
+
+        $('order-modal').classList.remove('hidden');
+    }
+
+    // ==========================================================
+    // LÓGICA DE ACCIONES
+    // ==========================================================
+
+    function handleCartAction(productId, action) {
+        let quantity = shoppingCart[productId] || 0;
+        if (action === 'add') quantity++;
+        if (action === 'remove' && quantity > 0) quantity--;
         
-        $('store-container').querySelectorAll('[data-video-link]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const link = e.currentTarget.dataset.videoLink;
-                const title = e.currentTarget.dataset.videoTitle;
-                const embedUrl = getYoutubeEmbedUrl(link);
-                if (embedUrl) openVideoModal(embedUrl, title);
-            });
+        if (quantity === 0) delete shoppingCart[productId];
+        else shoppingCart[productId] = quantity;
+
+        renderCartButton();
+    }
+
+    function generateWhatsAppMessage() {
+        const greeting = (() => {
+            const hour = new Date().getHours();
+            if (hour < 12) return 'Buenos días';
+            if (hour < 18) return 'Buenas tardes';
+            return 'Buenas noches';
+        })();
+
+        let message = `${greeting}, quiero hacer un pedido de la tienda \"${store.nombre}\":\n\n`;
+        let subtotal = 0, totalWeight = 0, deliveryCosts = [];
+
+        for (const [productId, quantity] of Object.entries(shoppingCart)) {
+            const product = products.find(p => p.idLocal === productId);
+            if (!product) continue;
+            const price = selectedShippingMethod === 'air' ? product.airFinalPrice : product.seaFinalPrice;
+            const itemTotal = price * quantity;
+            subtotal += itemTotal;
+            totalWeight += (product.weight || 0) * quantity;
+            if (product.deliveryCostType === 'fixed') deliveryCosts.push(product.deliveryFixedValue || 0);
+            if (product.deliveryCostType === 'range') deliveryCosts.push(product.deliveryRangeEnd || 0);
+            message += `- ${product.name} (x${quantity}) - ${store.currency} ${itemTotal.toFixed(2)}\n`;
+        }
+
+        const finalDeliveryCost = deliveryCosts.length > 0 ? Math.max(...deliveryCosts) : 0;
+        const grandTotal = subtotal + finalDeliveryCost;
+
+        message += `\n*Método de Envío Preferido:* ${selectedShippingMethod === 'air' ? 'Aéreo' : 'Marítimo'}\n`;
+        message += `*Subtotal:* ${store.currency} ${subtotal.toFixed(2)}\n`;
+        message += `*Costo de Delivery (único):* ${store.currency} ${finalDeliveryCost.toFixed(2)}\n`;
+        message += `*Total a Pagar (aprox):* ${store.currency} ${grandTotal.toFixed(2)}\n`;
+        message += `*Peso Total Estimado:* ${totalWeight.toFixed(2)} lb`;
+
+        const phoneNumber = store.whatsapp.replace(/\s+|-/g, '');
+        const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank');
+    }
+
+    function attachGlobalListeners() {
+        document.body.addEventListener('click', (e) => {
+            if (e.target.closest('#view-cart-btn')) openOrderModal();
+            if (e.target.closest('#close-order-modal-btn')) $('order-modal').classList.add('hidden');
+            if (e.target.closest('#confirm-whatsapp-btn')) generateWhatsAppMessage();
         });
-      }
+        document.body.addEventListener('change', (e) => {
+            if (e.target.name === 'shipping') {
+                selectedShippingMethod = e.target.value;
+                openOrderModal();
+            }
+        });
+    }
+    
+    // ==========================================================
+    // HELPERS (se mantienen igual)
+    // ==========================================================
+    function getCustomerPriceAndDelivery(p) {
+        const c = store.currency;
+        if (p.productStockMode === 'stock') {
+            return { price: `<div class="font-bold text-3xl text-indigo-700">${c}${p.airFinalPrice.toFixed(2)}</div>`, time: `<div class="text-sm text-green-600 font-semibold"><i class="fas fa-boxes"></i> Entrega Inmediata</div>` };
+        }
+        const shippingMethods = [];
+        if (store.isLogisticsDual) {
+            if (p.prodShipMethod === 'air' || p.prodShipMethod === 'both') shippingMethods.push({ method: 'AÉREO', price: `${c}${p.airFinalPrice.toFixed(2)}`, days: `${store.airMinDays}-${store.airMaxDays} días` });
+            if (p.prodShipMethod === 'sea' || p.prodShipMethod === 'both') shippingMethods.push({ method: 'MARÍTIMO', price: `${c}${p.seaFinalPrice.toFixed(2)}`, days: `${store.seaMinDays}-${store.seaMaxDays} días` });
+        } else {
+            shippingMethods.push({ method: 'Precio Base', price: `${c}${p.airFinalPrice.toFixed(2)}`, days: 'Consultar' });
+        }
+        const priceDisplay = shippingMethods.map(m => `<div class="font-bold text-xl flex justify-between items-center text-gray-800"><span class="${m.method.includes('AÉREO') ? 'text-blue-700' : 'text-green-700'}">${m.method}:</span> <span>${m.price}</span></div>`).join('');
+        const timeDisplay = shippingMethods.map(m => `<div class="text-sm text-gray-600 flex justify-between"><span><i class="fas ${m.method.includes('AÉREO') ? 'fa-plane' : 'fa-ship'} mr-1"></i> ${m.method}:</span> <span class="font-semibold">${m.days}</span></div>`).join('');
+        return { price: `<div class="space-y-1">${priceDisplay}</div>`, time: `<div class="space-y-1 p-2 bg-gray-100 rounded-lg">${timeDisplay}</div>` };
+    }
+    function getCustomerDeliveryText(p) {
+        if (p.deliveryCostType === 'no') return `<span class="text-red-500 font-semibold"><i class="fas fa-ban"></i> Retiro en tienda.</span>`;
+        let costText = '';
+        if (p.deliveryCostType === 'included') costText = `<span class="text-green-600 font-semibold">Envío incluído.</span>`;
+        else if (p.deliveryCostType === 'fixed') costText = `Delivery Fijo: ${store.currency}${(p.deliveryFixedValue || 0).toFixed(2)}`;
+        else if (p.deliveryCostType === 'range') costText = `Delivery Aprox: ${store.currency}${(p.deliveryRangeStart || 0).toFixed(2)} - ${store.currency}${(p.deliveryRangeEnd || 0).toFixed(2)}`;
+        let noteText = p.deliveryNote ? `<span class="text-xs text-gray-500 block">(${escapeHTML(p.deliveryNote)})</span>` : '';
+        return `<span class="text-blue-600"><i class="fas fa-truck"></i> ${costText}</span>${noteText}`;
+    }
 
-      window.openVideoModal = function(embedUrl, title) {
-          $('videoContent').innerHTML = `<iframe width="100%" height="100%" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-          $('videoTitle').textContent = title;
-          $('videoModal').classList.remove('hidden');
-      };
-      $('closeVideoModal').addEventListener('click', () => {
-          $('videoContent').innerHTML = '';
-          $('videoModal').classList.add('hidden');
-      });
+    // Exponer funciones al scope global para que los botones en el HTML puedan llamarlas
+    window.handleCartAction = handleCartAction;
 
-      function showMessageModal(title, message) {
-          $('messageText').innerHTML = `<p class="font-bold text-xl mb-2">${title}</p><p>${message}</p>`;
-          $('messageModal').classList.remove('hidden');
-      }
-      $('messageOkBtn').addEventListener('click', () => $('messageModal').classList.add('hidden'));
-
-      window.handleCartAction = function(productId, action, element) {
-          let qty = shoppingCart[productId] || 1;
-          if (action === 'increment') qty++;
-          else if (action === 'decrement' && qty > 1) qty--;
-          shoppingCart[productId] = qty;
-          if (action === 'add') {
-             const productName = products.find(p => p.idLocal === productId)?.name || 'Producto';
-             showMessageModal("¡Añadido al Carrito!", `${qty} unidad(es) de ${productName} ha(n) sido añadida(s) a tu carrito de compras (simulado).`);
-             return;
-          }
-          const displayEl = element.closest('.quantity-input')?.querySelector('.qty-display');
-          if (displayEl) displayEl.textContent = qty;
-      }
-
-      renderStoreView();
-    });
   </script>
 </body>
 </html>
