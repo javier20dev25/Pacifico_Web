@@ -51,6 +51,11 @@ AVANCES REALIZADOS
     *   Se creó la carpeta `/scripts` para centralizar los scripts de mantenimiento y configuración.
     *   Se reorganizaron los archivos de la raíz a la nueva carpeta `scripts`, limpiando la estructura del proyecto.
 
+6.  **Bug Fixes y Hallazgos Clave (Oct 2025):**
+    *   **Corrección de Redirección de Administrador:** Se solucionó un bug crítico que impedía a los usuarios administradores ser redirigidos al `/admin.html` después del login.
+        *   **Causa Raíz:** Discrepancia en el nombre de la columna de rol en la base de datos (`role`) y el código que la consumía (`user.rol`).
+        *   **Solución:** Se estandarizó el acceso a `user.role` en los archivos `backend/api/auth.js` y `backend/api/user.js` para que coincida con el esquema de la base de datos.
+
 ==========================================================
 TAREAS PENDIENTES
 ==========================================================

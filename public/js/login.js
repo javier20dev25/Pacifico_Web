@@ -1,4 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Parche temporal para limpiar sesiones antiguas
+    try {
+        localStorage.removeItem('jwt_token');
+        console.log('Token de sesión antiguo eliminado.');
+    } catch (e) {
+        console.warn('No se pudo limpiar el token de sesión de localStorage:', e);
+    }
+
     // --- SELECTORES DE ELEMENTOS ---
     const loginFormContainer = document.getElementById('login-form-container');
     const registrationFormContainer = document.getElementById('complete-registration-container');
@@ -63,7 +71,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Manejar token de sesión normal
             if (data.sessionToken) {
                 localStorage.setItem('jwt_token', data.sessionToken);
-                window.location.href = '/dashboard.html';
+                
+                // Redirección basada en el rol del usuario
+                if (data.user && data.user.rol === 'admin') {
+                    window.location.href = '/admin.html';
+                } else {
+                    window.location.href = '/dashboard.html';
+                }
             
             // Manejar token de usuario temporal
             } else if (data.tempToken) {

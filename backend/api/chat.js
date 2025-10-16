@@ -33,26 +33,37 @@ router.post('/', async (req, res) => {
     if (!geminiApiKey) return res.status(500).json({ error: 'La API Key de Gemini no está configurada.' });
 
     try {
-        // Obtener o crear la sesión del usuario
-        if (!conversationHistories.has(userUuid)) {
-            conversationHistories.set(userUuid, { history: [], lastAccessed: Date.now() });
+        // Obtener o crear la sesión de historial para el usuario
+        let session = conversationHistories.get(userUuid);
+        if (!session) {
+            session = { history: [], lastAccessed: Date.now() };
+            conversationHistories.set(userUuid, session);
         }
-        const session = conversationHistories.get(userUuid);
-        session.lastAccessed = Date.now(); // Actualizar timestamp en cada interacción
+        session.lastAccessed = Date.now(); // Actualizar timestamp
 
+        // Determinar si se está enviando un prompt completo o un simple mensaje
+        const finalPrompt = req.body.prompt || `${SYSTEM_PROMPT}\n\nEl usuario dice: "${userMessage}"`;
+
+        // Inicializar el cliente y el modelo de Gemini
         const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash', systemInstruction: SYSTEM_PROMPT });
+                // Modelo especificado por Astaroth para todos los proyectos.
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
+        console.log(`[DEBUG] Enviando prompt a ${model.model}...`);
+
+        // Iniciar el chat y enviar el mensaje/prompt
         const chat = model.startChat({ history: session.history });
-        const result = await chat.sendMessage(userMessage);
+        const result = await chat.sendMessage(finalPrompt);
         const response = await result.response;
         const text = response.text();
 
-        // Actualizar el historial en la sesión
-        session.history.push({ role: 'user', parts: [{ text: userMessage }] });
-        session.history.push({ role: 'model', parts: [{ text }] });
+        // Actualizar el historial solo para chats interactivos, no para análisis puntuales
+        if (!req.body.prompt) {
+            session.history.push({ role: 'user', parts: [{ text: userMessage }] });
+            session.history.push({ role: 'model', parts: [{ text }] });
+        }
 
-        // Limitar el historial para que no crezca indefinidamente
+        // Limitar el historial
         if (session.history.length > 40) {
             session.history = session.history.slice(-40);
         }

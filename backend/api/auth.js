@@ -48,9 +48,9 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Credenciales inválidas.' });
         }
 
-        // Usuario activo, generar token de sesión
-        const sessionToken = jwt.sign({ uuid: user.uuid }, process.env.JWT_SECRET, { expiresIn: '1d' });
-        res.json({ sessionToken });
+        // Usuario activo, generar token de sesión incluyendo rol y correo
+        const sessionToken = jwt.sign({ uuid: user.uuid, rol: user.role, email: user.correo }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        res.json({ sessionToken, user: { rol: user.role, nombre: user.nombre } });
         
     } catch (error) {
         console.error('[ERROR LOGIN]', error);

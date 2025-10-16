@@ -49,7 +49,12 @@
         <div id="stores-container">
             <h2 class="text-2xl font-bold mb-6">Mi Tienda</h2>
             <div id="store-management-wrapper">
-                <!-- El contenido de la gestión de la tienda se insertará aquí dinámicamente -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="/templates/baseplantillaediciontiendas.html" class="neomorphic-btn w-full sm:w-auto text-center">✏️ Editar Tienda</a>
+                <button id="share-store-btn" class="neomorphic-btn w-full sm:w-auto">🔗 Compartir Enlace</button>
+                <button id="analyze-store-btn" class="neomorphic-btn w-full sm:w-auto text-blue-600 hover:!text-blue-800">🤖 Analizar con IA</button>
+                <button id="delete-store-btn" class="neomorphic-btn w-full sm:w-auto hover:!text-red-500">🗑️ Eliminar</button>
+            </div>
             </div>
         </div>
 
@@ -87,6 +92,17 @@
     </div>
 
     <script src="js/dashboard-v2.js" defer></script>
+
+    <!-- Modal para el análisis de IA -->
+    <div id="analysis-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay hidden" style="background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
+        <div class="neomorphic-card p-6 rounded-2xl w-full max-w-3xl relative max-h-[90vh] flex flex-col">
+            <h3 class="text-2xl font-bold mb-4 text-gray-800">Análisis de la Tienda por IA</h3>
+            <div id="analysis-content" class="flex-grow overflow-y-auto pr-2 text-gray-700 space-y-4"></div>
+            <div class="mt-6 flex justify-end">
+                <button id="close-analysis-modal-btn" class="neomorphic-btn">Cerrar</button>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>

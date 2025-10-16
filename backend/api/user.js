@@ -15,7 +15,7 @@ router.get('/profile', protect, async (req, res) => {
         // 1. Obtener datos del usuario de la tabla 'usuarios'
         const { data: userData, error: userError } = await supabaseAdmin
             .from('usuarios')
-            .select('id, uuid, nombre, correo, status')
+            .select('id, uuid, nombre, correo, status, role')
             .eq('uuid', userUuid)
             .single();
 
@@ -45,6 +45,7 @@ router.get('/profile', protect, async (req, res) => {
             nombre: userData.nombre,
             correo: userData.correo,
             status: userData.status,
+            rol: userData.role, // Asignar el rol del usuario
             plan: contractData?.plan || 'sin plan',
             fecha_expiracion: contractData?.fecha_expiracion || null,
             activo: contractData?.activo || false

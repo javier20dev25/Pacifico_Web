@@ -31,11 +31,21 @@ const protect = async (req, res, next) => {
 const isAdmin = (req, res, next) => {
   try {
     if (!req.user) return res.status(401).json({ error: 'No autenticado.' });
-    // Ajusta el campo según como lo firmes en el token (role, rol, is_admin, etc.)
-    const role = req.user.role || req.user.rol || req.user.is_admin;
-    if (role === 'admin' || role === 'ADMIN' || role === true) {
+
+    // 1. Comprobación de Super Administrador por email (desde .env)
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL;
+    if (superAdminEmail && req.user.email === superAdminEmail) {
+      console.log(`[AUTH] Acceso concedido como Super Administrador a: ${req.user.email}`);
       return next();
     }
+
+    // 2. Comprobación estándar por rol en el token
+    const role = req.user.rol;
+    if (role === 'admin') {
+      return next();
+    }
+
+    console.warn(`[AUTH] Acceso denegado para: ${req.user.email}. Rol encontrado: '${role}'`);
     return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
   } catch (e) {
     console.error('isAdmin middleware error:', e);

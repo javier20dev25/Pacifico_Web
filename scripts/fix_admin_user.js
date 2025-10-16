@@ -1,6 +1,6 @@
 
 require('dotenv').config();
-const { supabaseAdmin } = require('./backend/services/supabase');
+const { supabaseAdmin } = require('../backend/services/supabase');
 const bcrypt = require('bcryptjs');
 
 const ADMIN_EMAIL = 'admin@pacificoweb.com';
