@@ -27,18 +27,11 @@ function nombreAToken(nombre) {
 router.post('/create-temporary-user', async (req, res) => {
     console.log('[DEBUG] create-temporary-user body ->', req.body);
     try {
-        const { nombre, correo: correoEnviado, plan_nombre: raw_plan_nombre } = req.body;
+        const { nombre, correo: correoEnviado, plan_nombre } = req.body;
 
-        if (!nombre || !raw_plan_nombre) {
+        if (!nombre || !plan_nombre) {
             return res.status(400).json({ error: 'Nombre de tienda y plan son obligatorios.' });
         }
-
-        const planMap = {
-            "plan emprendedor clasico": "emprendedor",
-            "oro bisness": "oro_business",
-            "oro ejevutivo": "oro_ejecutivo"
-        };
-        const plan_nombre = planMap[raw_plan_nombre.toLowerCase()] || raw_plan_nombre.toLowerCase();
 
         let correoFinal;
         if (correoEnviado && correoEnviado.trim()) {
@@ -193,6 +186,32 @@ router.post('/suspend-user', async (req, res) => {
 });
 
 // ==========================================================
+// 4.1. REACTIVAR USUARIO
+// ==========================================================
+router.post('/reactivate-user', async (req, res) => {
+    const { userUuid } = req.body;
+
+    if (!userUuid) {
+        return res.status(400).json({ error: 'El UUID del usuario es obligatorio.' });
+    }
+
+    try {
+        const { error } = await supabaseAdmin
+            .from('usuarios')
+            .update({ status: 'active', actualizado_at: new Date() })
+            .eq('uuid', userUuid);
+
+        if (error) throw error;
+
+        res.json({ message: 'Usuario reactivado correctamente.' });
+
+    } catch (error) {
+        console.error('Error al reactivar usuario:', error);
+        res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
+    }
+});
+
+// ==========================================================
 // 5. RENOVAR CONTRATO
 // ==========================================================
 router.post('/renew-contract', async (req, res) => {
@@ -282,6 +301,25 @@ router.get('/registration-stats', async (req, res) => {
 
     } catch (error) {
         console.error('Error al obtener estadísticas de registro:', error);
+        res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
+    }
+});
+
+// ==========================================================
+// 8. OBTENER LISTA DE PLANES
+// ==========================================================
+router.get('/plans', async (req, res) => {
+    try {
+        const { data, error } = await supabaseAdmin
+            .from('planes')
+            .select('*');
+
+        if (error) throw error;
+
+        res.json(data);
+
+    } catch (error) {
+        console.error('Error al obtener los planes:', error);
         res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
     }
 });

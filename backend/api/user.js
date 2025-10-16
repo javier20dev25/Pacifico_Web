@@ -12,44 +12,17 @@ router.get('/profile', protect, async (req, res) => {
     try {
         const userUuid = req.user.uuid; 
 
-        // 1. Obtener datos del usuario de la tabla 'usuarios'
-        const { data: userData, error: userError } = await supabaseAdmin
-            .from('usuarios')
-            .select('id, uuid, nombre, correo, status, role')
-            .eq('uuid', userUuid)
+        // Usar la vista vw_usuarios_planes para obtener un perfil completo y consistente
+        const { data: userProfile, error } = await supabaseAdmin
+            .from('vw_usuarios_planes')
+            .select('*')
+            .eq('usuario_uuid', userUuid)
             .single();
 
-        if (userError || !userData) {
-            console.error('[GET /profile] Error fetching user:', userError);
+        if (error || !userProfile) {
+            console.error('[GET /profile] Error fetching user profile from view:', error);
             return res.status(404).json({ error: 'Perfil de usuario no encontrado.' });
         }
-
-        // 2. Obtener datos del contrato y plan de la tabla 'contratos'
-        const { data: contractData, error: contractError } = await supabaseAdmin
-            .from('contratos')
-            .select('plan, fecha_expiracion, activo')
-            .eq('usuario_uuid', userUuid) // CORREGIDO: Usar uuid en lugar de id numérico
-            .eq('activo', true)
-            .order('fecha_inicio', { ascending: false })
-            .limit(1)
-            .single();
-
-        // Es posible que un usuario no tenga un contrato activo, no es un error fatal.
-        if (contractError && contractError.code !== 'PGRST116') {
-            console.error('[GET /profile] Error fetching contract:', contractError);
-        }
-
-        // 3. Combinar los datos en un solo perfil
-        const userProfile = {
-            usuario_uuid: userData.uuid,
-            nombre: userData.nombre,
-            correo: userData.correo,
-            status: userData.status,
-            rol: userData.role, // Asignar el rol del usuario
-            plan: contractData?.plan || 'sin plan',
-            fecha_expiracion: contractData?.fecha_expiracion || null,
-            activo: contractData?.activo || false
-        };
 
         console.log('[DEBUG PROFILE] responseProfile ->', JSON.stringify(userProfile));
         res.json({ user: userProfile });

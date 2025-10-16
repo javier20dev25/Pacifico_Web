@@ -73,10 +73,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     const expirationDate = user.fecha_expiracion ? new Date(user.fecha_expiracion).toLocaleDateString() : 'N/A';
 
                     // Botones de acción condicionales
+                    let suspendOrReactivateBtn;
+                    if (user.status === 'suspended') {
+                        suspendOrReactivateBtn = `<button class="action-btn reactivate-btn" data-user-uuid="${user.usuario_uuid}">Reactivar</button>`;
+                    } else {
+                        suspendOrReactivateBtn = `<button class="action-btn danger-btn suspend-btn" data-user-uuid="${user.usuario_uuid}">Suspender</button>`;
+                    }
+
                     let actionButtons = `
                         <button class="action-btn renew-btn" data-user-uuid="${user.usuario_uuid}" ${user.status !== 'active' ? 'disabled' : ''}>Renovar</button>
                         <button class="action-btn reset-pass-btn" data-user-uuid="${user.usuario_uuid}">Resetear Pass</button>
-                        <button class="action-btn ${user.status === 'suspended' ? '' : 'danger-btn'} suspend-btn" data-user-uuid="${user.usuario_uuid}" ${user.status === 'suspended' ? 'disabled' : ''}>${user.status === 'suspended' ? 'Suspendido' : 'Suspender'}</button>
+                        ${suspendOrReactivateBtn}
                         <button class="action-btn danger-btn revoke-btn" data-user-uuid="${user.usuario_uuid}">Revocar</button>
                     `;
 
@@ -168,6 +175,38 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
+     * Maneja la reactivación de un usuario.
+     */
+    const handleReactivateUser = async (userUuid) => {
+        if (!confirm('¿Estás seguro de que quieres reactivar a este usuario?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/reactivate-user`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${jwtToken}`
+                },
+                body: JSON.stringify({ userUuid })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Error al reactivar el usuario.');
+            }
+
+            alert('Usuario reactivado con éxito.');
+            fetchUsers();
+
+        } catch (error) {
+            alert(error.message);
+        }
+    };
+
+    /**
      * Maneja la renovación de un contrato.
      */
     const handleRenewContract = async (userUuid) => {
@@ -228,6 +267,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             alert(error.message);
+        }
+    };
+
+    /**
+     * Obtiene los planes de la API y los carga en el menú desplegable.
+     */
+    const fetchPlansAndPopulateDropdown = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/plans`, {
+                headers: {
+                    'Authorization': `Bearer ${jwtToken}`
+                }
+            });
+            if (!response.ok) {
+                throw new Error('No se pudieron cargar los planes.');
+            }
+            const plans = await response.json();
+            const planSelect = document.getElementById('user-plan');
+            
+            // Limpiar opciones hardcodeadas (excepto la primera que es "Selecciona un plan...")
+            while (planSelect.options.length > 1) {
+                planSelect.remove(1);
+            }
+
+            // Poblar con los planes de la API
+            plans.forEach(plan => {
+                const option = document.createElement('option');
+                // Asumimos que la RPC espera el 'nombre' del plan. Si usara un id o slug, se cambiaría aquí.
+                option.value = plan.nombre; 
+                option.textContent = plan.nombre; // El nombre visible para el admin
+                planSelect.appendChild(option);
+            });
+
+        } catch (error) {
+            console.error('Error en fetchPlansAndPopulateDropdown:', error);
+            const planSelect = document.getElementById('user-plan');
+            planSelect.disabled = true;
+            const errorOption = document.createElement('option');
+            errorOption.textContent = 'Error al cargar planes';
+            planSelect.appendChild(errorOption);
         }
     };
 
@@ -299,9 +378,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- MANEJADORES DE EVENTOS ---
 
-    // Cargar usuarios y gráfica al iniciar la página
-    fetchUsers();
-    renderRegistrationChart();
+    // Cargar datos iniciales al iniciar la página
+    const initializeAdminPanel = () => {
+        fetchUsers();
+        fetchPlansAndPopulateDropdown();
+        renderRegistrationChart();
+    };
+
+    initializeAdminPanel();
 
     // Botón para refrescar la lista manualmente
     refreshButton.addEventListener('click', fetchUsers);
@@ -374,10 +458,20 @@ Si tienes alguna pregunta o necesitas ayuda, no dudes en contactarnos.
     // Delegación de eventos para los botones de acción
     usersTableBody.addEventListener('click', (e) => {
         const target = e.target;
+        const userUuid = target.dataset.userUuid;
+
+        if (!userUuid) return; // Si no hay uuid, no hacer nada
+
         if (target.classList.contains('revoke-btn')) {
-            handleRevokeUser(target.dataset.userUuid);
+            handleRevokeUser(userUuid);
         } else if (target.classList.contains('suspend-btn')) {
-            handleSuspendUser(target.dataset.userUuid);
+            handleSuspendUser(userUuid);
+        } else if (target.classList.contains('reactivate-btn')) {
+            handleReactivateUser(userUuid);
+        } else if (target.classList.contains('renew-btn')) {
+            handleRenewContract(userUuid);
+        } else if (target.classList.contains('reset-pass-btn')) {
+            handleResetPassword(userUuid);
         }
     });
 });

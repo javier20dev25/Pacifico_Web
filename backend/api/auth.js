@@ -41,6 +41,11 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Credenciales inválidas.' });
         }
 
+        // Bloquear si el usuario está suspendido
+        if (user.status === 'suspended') {
+            return res.status(403).json({ error: 'Esta cuenta ha sido suspendida. Contacta al administrador.' });
+        }
+
         // bcrypt.compare usando el nombre real de la columna
         const isMatch = await bcrypt.compare(password, user.password_hash);
 

@@ -1194,6 +1194,8 @@
                   }
               } else {
                   const data = await response.json();
+                  console.log('Data received from /api/user/store-data:', JSON.stringify(data, null, 2));
+
                   if (data) {
                       if (data.storeData && Object.keys(data.storeData).length > 0) {
                           if(data.storeData.store) Object.assign(store, data.storeData.store);
@@ -1202,6 +1204,7 @@
                       userPlan = data.plan || '';
                       store.slug = data.slug || null; // Guardar el slug
                       console.log("Datos de la tienda y plan cargados desde el backend.");
+                      console.log('State after loading from backend:', { store: JSON.parse(JSON.stringify(store)), products: JSON.parse(JSON.stringify(products)) });
                   }
               }
           } catch (error) {
