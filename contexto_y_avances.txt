@@ -56,6 +56,12 @@ AVANCES REALIZADOS
         *   **Causa Raíz:** Discrepancia en el nombre de la columna de rol en la base de datos (`role`) y el código que la consumía (`user.rol`).
         *   **Solución:** Se estandarizó el acceso a `user.role` en los archivos `backend/api/auth.js` y `backend/api/user.js` para que coincida con el esquema de la base de datos.
 
+7.  **Bug Crítico - Editor de Tienda no carga datos (Oct 2025):**
+    *   **Síntoma:** Al navegar al editor de la tienda desde el dashboard, el editor no carga los datos existentes de la tienda, mostrando en su lugar el formulario con valores por defecto.
+    *   **Diagnóstico:** Se ha confirmado que el código es lógicamente correcto. El backend puede servir datos de una tienda específica, y el frontend está diseñado para pedir y mostrar estos datos. Sin embargo, el archivo de script del editor (`/public/js/editor.js`) no se está ejecutando en el navegador del usuario por una razón desconocida.
+    *   **Causa Raíz Sospechada:** El problema parece ser específico del entorno del servidor (Express corriendo en Termux), que podría no estar sirviendo correctamente los archivos JavaScript externos (`.js`) a pesar de que la configuración de `express.static` parece correcta. El navegador solicita el archivo, pero el servidor no lo entrega, impidiendo la ejecución de cualquier lógica en la página del editor.
+    *   **Estado Actual:** El problema está bloqueado hasta que se resuelva el problema de servicio de archivos estáticos en el entorno del servidor.
+
 ==========================================================
 TAREAS PENDIENTES
 ==========================================================

@@ -204,7 +204,9 @@ router.get('/store-data', async (req, res) => {
         const userUuid = req.user && (req.user.uuid || req.user.user_uuid);
         if (!userUuid) return res.status(401).json({ error: 'No autenticado.' });
 
-        // 1. Obtener el plan del usuario desde la vista
+        const { slug } = req.query; // Leer el slug de la query
+
+        // 1. Obtener el plan del usuario
         const { data: profileData, error: profileError } = await supabaseAdmin
             .from('vw_usuarios_planes')
             .select('plan')
@@ -215,34 +217,31 @@ router.get('/store-data', async (req, res) => {
             return res.status(404).json({ error: 'No se pudo determinar el plan del usuario.' });
         }
 
-        // 2. Obtener los datos de la tienda (lógica existente)
-        const { data: userRec, error: userErr } = await supabaseAdmin
-            .from('usuarios')
-            .select('id')
-            .eq('uuid', userUuid)
-            .single();
+        // 2. Obtener los datos de la tienda
+        let storeQuery = supabaseAdmin.from('stores').select('data, slug');
+        const { data: userRec } = await supabaseAdmin.from('usuarios').select('id').eq('uuid', userUuid).single();
+        if (!userRec) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
-        if (userErr || !userRec) {
-            return res.status(404).json({ error: 'Usuario no encontrado.' });
+        if (slug) {
+            // Si se provee un slug, buscar esa tienda específica
+            storeQuery = storeQuery.eq('slug', slug).eq('usuario_id', userRec.id);
+        } else {
+            // Comportamiento original: buscar la primera tienda del usuario
+            storeQuery = storeQuery.eq('usuario_id', userRec.id).limit(1);
         }
-        const usuarioId = userRec.id;
 
-        const { data: store, error: storeError } = await supabaseAdmin
-            .from('stores')
-            .select('data, slug') // <--- MODIFICADO: pedir también el slug
-            .eq('usuario_id', usuarioId)
-            .single();
+        const { data: store, error: storeError } = await storeQuery.single();
 
-        if (storeError && storeError.code !== 'PGRST116') {
+        if (storeError && storeError.code !== 'PGRST116') { // PGRST116 = 0 filas, lo cual es ok
             console.error('Error al obtener datos de la tienda:', storeError);
             return res.status(500).json({ error: 'No se pudieron obtener los datos de la tienda.' });
         }
 
-        // 3. Devolver ambos: los datos de la tienda y el plan del usuario
+        // 3. Devolver datos de la tienda y el plan
         res.json({
             storeData: store ? store.data : {},
             plan: profileData.plan,
-            slug: store ? store.slug : null // <--- AÑADIDO: devolver el slug
+            slug: store ? store.slug : null
         });
 
     } catch (err) {

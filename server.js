@@ -27,6 +27,13 @@ app.get('/__debug/ping', (req, res) => {
   res.json({ ok: true, serverTime: new Date().toISOString() });
 });
 
+// NUEVA RUTA DE DEBUGGING PARA LOGS DEL CLIENTE
+app.post('/api/debug/log', (req, res) => {
+  const message = req.body.message || 'Mensaje de debug vacío';
+  console.log(`[CLIENT-SIDE LOG] ${message}`);
+  res.status(200).send({ status: 'logged' });
+});
+
 // Rutas de la API
 const authRoutes = require('./backend/api/auth');
 const adminRoutes = require('./backend/api/admin');
