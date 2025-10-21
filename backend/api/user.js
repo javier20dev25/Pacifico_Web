@@ -260,12 +260,15 @@ router.put('/store-data', async (req, res) => {
   });
 
   try {
-    const newStoreData = req.body;
+    // El cuerpo ahora es { storeData: {...}, launch: true/false }
+    const { storeData: newStoreData, launch } = req.body;
     console.log('[DEBUG] Intentando guardar - preview:', util.inspect(newStoreData, { depth: 2, colors: true }));
+    console.log('[DEBUG] Petición de lanzamiento:', launch);
+
 
     if (!newStoreData || typeof newStoreData !== 'object') {
       console.warn('[PUT /store-data] payload inválido o vacío');
-      return res.status(400).json({ error: 'Payload inválido o ausente.' });
+      return res.status(400).json({ error: 'Payload de tienda inválido o ausente.' });
     }
 
     if (JSON.stringify(newStoreData).includes('blob:')) {
@@ -289,9 +292,15 @@ router.put('/store-data', async (req, res) => {
 
     console.log(`[PUT /store-data] Actualizando tienda para usuario_id: ${usuarioId}`);
 
+    // Prepara el objeto de actualización
+    const updatePayload = { data: newStoreData };
+    if (launch === true) {
+        updatePayload.activa = true;
+    }
+
     const { data, error } = await supabaseAdmin
         .from('stores')
-        .update({ data: newStoreData })
+        .update(updatePayload) // Usa el nuevo payload
         .eq('usuario_id', usuarioId)
         .select();
 

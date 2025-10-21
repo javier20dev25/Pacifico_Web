@@ -158,6 +158,106 @@
             <label for="storeYoutubeLink" class="block text-sm font-medium text-gray-500 mb-1">Video Publicitario de YouTube (Opcional)</label>
             <input id="storeYoutubeLink" type="url" placeholder="Ej: https://youtu.be/..." class="input w-full p-3 rounded-lg text-sm" value=""/>
             <p class="text-xs text-gray-500 mt-1">Recomendamos crear y subir un video publicitario para mejorar la conversión.</p>
+            
+            <div class="pt-4 border-t border-gray-200 mt-4">
+                <label for="storeCurrency" class="block text-sm font-medium text-gray-500 mb-1">Moneda Principal de la Tienda</label>
+                <select id="storeCurrency" class="input w-full p-3 rounded-lg text-sm">
+                    <option value="USD">Dólares Americanos ($)</option>
+                    <option value="NIO">Córdobas Nicaragüenses (C$)</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Esta moneda se usará para todos los precios en la tienda.</p>
+            </div>
+
+            <!-- Global Delivery Settings -->
+            <div class="pt-4 border-t border-gray-200 mt-4">
+                <h4 class="font-semibold text-gray-700 mb-2">Configuración de Delivery Local</h4>
+                <div>
+                    <label for="storeDeliveryType" class="block text-sm font-medium text-gray-500 mb-1">Opción de Delivery</label>
+                    <select id="storeDeliveryType" class="input w-full p-3 rounded-lg text-sm">
+                        <option value="no">No disponible / Retiro en tienda</option>
+                        <option value="fixed">Costo Fijo (Extra)</option>
+                        <option value="range">Costo por Rango (Extra)</option>
+                        <option value="included">Incluído en el Precio Final</option>
+                    </select>
+                </div>
+                <div id="storeDeliveryInputs" class="mt-3 space-y-3">
+                    <div id="storeDeliveryFixedContainer" class="hidden">
+                        <label for="storeDeliveryFixedCost" class="block text-sm font-medium text-gray-500 mb-1">Costo Fijo de Envío</label>
+                        <input id="storeDeliveryFixedCost" type="number" step="0.01" placeholder="Ej: 5.00" class="input w-full p-3 rounded-lg text-sm" />
+                    </div>
+                    <div id="storeDeliveryRangeContainer" class="hidden grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="storeDeliveryRangeStart" class="block text-sm font-medium text-gray-500 mb-1">Rango Mínimo</label>
+                            <input id="storeDeliveryRangeStart" type="number" step="0.01" placeholder="Ej: 2.00" class="input w-full p-3 rounded-lg text-sm" />
+                        </div>
+                        <div>
+                            <label for="storeDeliveryRangeEnd" class="block text-sm font-medium text-gray-500 mb-1">Rango Máximo</label>
+                            <input id="storeDeliveryRangeEnd" type="number" step="0.01" placeholder="Ej: 8.00" class="input w-full p-3 rounded-lg text-sm" />
+                        </div>
+                    </div>
+                    <div>
+                        <label for="storeDeliveryNote" class="block text-sm font-medium text-gray-500 mb-1">Nota Adicional sobre el Delivery (Opcional)</label>
+                        <input id="storeDeliveryNote" type="text" placeholder="Ej: Costo varía por zona. Envío gratis en compras > $100." class="input w-full p-3 rounded-lg text-sm" maxlength="120"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Configuration -->
+            <div class="pt-4 border-t border-gray-200 mt-4">
+                <h4 class="font-semibold text-gray-700 mb-3">Configuración de Pagos</h4>
+                
+                <!-- Payment Methods -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 mb-2">Métodos de Pago Aceptados</label>
+                    <div id="paymentMethodsContainer" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+                        <!-- Checkboxes se generan con JS -->
+                    </div>
+                </div>
+
+                <!-- Payment Terms -->
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <label class="block text-sm font-medium text-gray-500 mb-2">Condiciones de Pago</label>
+                    <div class="space-y-3">
+                        <div class="flex items-center p-3 rounded-lg bg-gray-100 border border-gray-200">
+                            <label for="acceptsFullPayment" class="text-sm font-medium text-gray-700 flex-grow">Acepta pago completo (100%)</label>
+                            <label class="toggle-switch ml-4"><input type="checkbox" id="acceptsFullPayment" checked><span class="slider"></span></label>
+                        </div>
+                        <div class="flex items-center p-3 rounded-lg bg-gray-100 border border-gray-200">
+                            <label for="acceptsAdvancePayment" class="text-sm font-medium text-gray-700 flex-grow">Acepta anticipos</label>
+                            <label class="toggle-switch ml-4"><input type="checkbox" id="acceptsAdvancePayment"><span class="slider"></span></label>
+                        </div>
+                        <div id="advancePaymentOptions" class="hidden pl-6 space-y-2 text-sm">
+                            <label class="flex items-center"><input type="checkbox" id="advance50" class="mr-2">50% de anticipo</label>
+                            <label class="flex items-center"><input type="checkbox" id="advance25" class="mr-2">25% de anticipo</label>
+                            <label class="flex items-center"><input type="checkbox" id="advance10" class="mr-2">10% de anticipo</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Installment Plans -->
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                     <div class="flex items-center p-3 rounded-lg bg-gray-100 border border-gray-200">
+                        <label for="acceptsInstallments" class="text-sm font-medium text-gray-700 flex-grow">Acepta cuotas</label>
+                        <label class="toggle-switch ml-4"><input type="checkbox" id="acceptsInstallments"><span class="slider"></span></label>
+                    </div>
+                    <div id="installmentsOptions" class="hidden mt-3 pl-6 space-y-4 text-sm">
+                        <div>
+                            <label for="installmentType" class="block font-medium text-gray-600 mb-1">Frecuencia de Cuotas</label>
+                            <select id="installmentType" class="input w-full p-2 rounded-lg text-sm">
+                                <option value="monthly">Mensual</option>
+                                <option value="biweekly">Quincenal</option>
+                                <option value="weekly">Semanal</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="maxInstallments" class="block font-medium text-gray-600 mb-1">Número Máximo de Cuotas</label>
+                            <input type="number" id="maxInstallments" placeholder="Ej: 3" class="input w-full p-2 rounded-lg text-sm">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
           </div>
 
           <!-- LÓGICA DE NEGOCIO: STOCK vs. ENCARGO/DUAL -->
@@ -336,41 +436,7 @@
           </div>
         </div>
 
-        <!-- 5. Opciones de Delivery (Desde Tienda a Cliente) -->
-        <div class="space-y-4 p-4 border rounded-xl border-gray-200 bg-gray-50">
-          <h4 class="font-semibold text-gray-700">Costo de Delivery Local (Desde tu tienda al cliente)</h4>
-          <div>
-            <label for="prodDeliveryCostType" class="block text-sm font-medium text-gray-500 mb-1">Costo de Delivery</label>
-            <select id="prodDeliveryCostType" class="input w-full p-3 rounded-lg text-sm">
-              <option value="range">Costo por Rango (Extra)</option>
-              <option value="fixed">Costo Fijo (Extra)</option>
-              <option value="included">Incluído en el Precio Final</option>
-              <option value="no">No disponible / Retiro en tienda</option>
-            </select>
-          </div>
-          
-          <div id="deliveryCostInputs" class="space-y-4 hidden">
-            <div id="fixedCostInput" class="hidden">
-              <label for="prodDeliveryFixed" class="block text-sm font-medium text-gray-500 mb-1">Valor Fijo de Envío</label>
-              <input id="prodDeliveryFixed" type="number" step="0.01" placeholder="Ej: 5.00" class="input w-full p-3 rounded-lg text-sm" />
-            </div>
-            <div id="rangeCostInput" class="hidden grid grid-cols-2 gap-4">
-              <div>
-                <label for="prodDeliveryRangeStart" class="block text-sm font-medium text-gray-500 mb-1">Rango Mínimo</label>
-                <input id="prodDeliveryRangeStart" type="number" step="0.01" placeholder="Ej: 2.00" class="input w-full p-3 rounded-lg text-sm" />
-              </div>
-              <div>
-                <label for="prodDeliveryRangeEnd" class="block text-sm font-medium text-gray-500 mb-1">Rango Máximo</label>
-                <input id="prodDeliveryRangeEnd" type="number" step="0.01" placeholder="Ej: 8.00" class="input w-full p-3 rounded-lg text-sm" />
-              </div>
-            </div>
-            
-            <div>
-              <label for="prodDeliveryNote" class="block text-sm font-medium text-gray-500 mb-1">Nota Opcional (Máx 15 palabras)</label>
-              <input id="prodDeliveryNote" type="text" placeholder="Ej: Costo varía por zona." class="input w-full p-3 rounded-lg text-sm" maxlength="80"/>
-            </div>
-          </div>
-        </div>
+
 
         <!-- 6. Hashtags/Etiquetas -->
         <div>
@@ -382,7 +448,7 @@
         <!-- Image Input -->
         <div class="pt-4 border-t">
           <label class="block text-sm font-medium text-gray-500 mb-1">Imagen del Producto (Opcional)</label>
-          <div id="prodImageDrop" class="w-full h-24 rounded-xl bg-gray-100 flex items-center justify-center border border-dashed border-gray-300 cursor-pointer overflow-hidden relative shadow-inner mb-2">
+          <div id="prodImageDrop" class="w-full h-24 rounded-xl bg-gray-100 flex items-center justify-center border border-dashed border-gray-300 cursor-pointer overflow-hidden relative shadow-inner mb-2" onclick="document.getElementById('prodImageInput').click()">
             <div id="prodImagePlaceholder" class="flex flex-col items-center text-gray-400">
               <i class="fas fa-camera text-xl mb-1"></i>
               <div class="text-xs">Seleccionar Imagen</div>
@@ -422,6 +488,49 @@
     </div>
   </div>
 
-  <script src="../js/editor.js?v=2" defer></script>
+  <!-- Launch Confirmation Modal -->
+  <div id="launch-confirm-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden" style="background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
+    <div class="neumorphic-card p-6 rounded-2xl w-full max-w-md relative text-center">
+        <h3 class="text-2xl font-bold mb-4 text-gray-800">⚠️ ¿Estás seguro?</h3>
+        <p class="text-gray-600 mb-6">
+            Una vez que lances tu tienda, <strong>no podrás volver a editarla</strong> desde este panel. Esta acción es definitiva.
+        </p>
+        <div class="flex justify-center gap-4">
+            <button id="cancel-launch-btn" class="btn bg-gray-300 text-gray-700 px-6 py-2 rounded-full font-semibold hover:bg-gray-400">Aún no</button>
+            <button id="confirm-launch-btn" class="btn bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700">Sí, Lanzar Tienda</button>
+        </div>
+    </div>
+</div>
+
+<!-- Product Quick View Modal -->
+<div id="quickViewModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden" style="background-color: rgba(0,0,0,0.5); backdrop-filter: blur(5px);">
+    <div id="quickViewCard" class="neumorphic-card p-6 rounded-2xl w-full max-w-2xl relative animate-fade-in-up max-h-[90vh] overflow-y-auto">
+        <!-- Contenido se inyectará con JavaScript -->
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toastNotification" class="fixed top-5 right-5 bg-green-500 text-white py-3 px-6 rounded-full shadow-lg transform translate-x-[120%] transition-transform duration-300 ease-in-out z-[100]">
+    <span id="toastMessage"></span>
+</div>
+
+<!-- Floating Cart Bubble -->
+<div id="cartBubble" class="fixed bottom-8 right-8 z-40 cursor-pointer hidden">
+    <div class="relative">
+        <div class="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center shadow-xl transform hover:scale-110 transition-transform">
+            <i class="fas fa-shopping-cart text-white text-2xl"></i>
+        </div>
+        <div id="cartBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white">0</div>
+    </div>
+</div>
+
+<!-- Cart Modal/Panel -->
+<div id="cartModal" class="fixed inset-0 z-50 flex justify-end hidden" style="background-color: rgba(0,0,0,0.5); backdrop-filter: blur(5px);">
+    <div id="cartPanel" class="w-full max-w-md h-full bg-white shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out">
+        <!-- Contenido del Carrito se inyectará aquí -->
+    </div>
+</div>
+
+  <script src="../js/editor/main.js?v=1.1" type="module" defer></script>
 </body>
 </html>

@@ -68,18 +68,58 @@ function renderStoreManagement(stores, headers) {
 
     document.querySelector('#stores-container h2').textContent = storeName;
 
+    const isLaunched = store.activa === true;
+
+    let editButtonHtml;
+    if (isLaunched) {
+        editButtonHtml = `
+            <button class="neomorphic-btn w-full sm:w-auto text-center opacity-60 cursor-not-allowed" disabled title="Tu tienda ya fue lanzada y no puede ser editada.">
+                ✏️ Editar (Bloqueado)
+            </button>
+        `;
+    } else {
+        editButtonHtml = `
+            <a href="/templates/baseplantillaediciontiendas.html" class="neomorphic-btn w-full sm:w-auto text-center">
+                ✏️ Editar Tienda
+            </a>
+        `;
+    }
+
+    const viewButtonHtml = `
+        <a href="${publicUrl}" target="_blank" class="neomorphic-btn w-full sm:w-auto text-center">
+            👁️ Ver Tienda
+        </a>
+    `;
+
     wrapper.innerHTML = `
         <div class="neomorphic-card p-4">
             <div class="aspect-w-16 aspect-h-9 border-2 border-gray-200 rounded-lg overflow-hidden mb-4 bg-gray-100">
-                <iframe src="${publicUrl}" class="w-full h-full"></iframe>
+                <iframe src="${publicUrl}" class="w-full h-full" title="Vista previa de la tienda"></iframe>
             </div>
             <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a href="/templates/baseplantillaediciontiendas.html" class="neomorphic-btn w-full sm:w-auto text-center">✏️ Editar Tienda</a>
-                <button id="share-store-btn" class="neomorphic-btn w-full sm:w-auto">🔗 Compartir Enlace</button>
+                ${editButtonHtml}
+                ${viewButtonHtml}
+                <button id="share-store-btn" class="neomorphic-btn w-full sm:w-auto">🔗 Compartir</button>
                 <button id="delete-store-btn" class="neomorphic-btn w-full sm:w-auto hover:!text-red-500">🗑️ Eliminar</button>
             </div>
         </div>
     `;
+
+    const shareBtn = document.getElementById('share-store-btn');
+    if(shareBtn) {
+        shareBtn.addEventListener('click', () => {
+             if (navigator.clipboard) {
+                navigator.clipboard.writeText(publicUrl).then(() => {
+                    alert('¡Enlace de la tienda copiado al portapapeles!');
+                }).catch(err => {
+                    console.error('Error al copiar: ', err);
+                    alert('No se pudo copiar el enlace.');
+                });
+            } else {
+                alert('La función de copiar no está disponible en tu navegador.');
+            }
+        });
+    }
 }
 
 function showErrorBanner(msg){

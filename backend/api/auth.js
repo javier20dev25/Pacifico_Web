@@ -53,6 +53,18 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Credenciales inválidas.' });
         }
 
+        // Si el usuario es temporal, forzar cambio de contraseña
+        if (user.status === 'temporary') {
+            console.log(`[DEBUG LOGIN] Usuario ${correo} es temporal. Generando token para completar registro.`);
+            const tempToken = jwt.sign(
+                { uuid: user.uuid, purpose: 'complete-registration' },
+                process.env.JWT_SECRET,
+                { expiresIn: '15m' } // Token de corta duración
+            );
+            // El frontend (login.js) está preparado para recibir este tempToken
+            return res.json({ tempToken, message: 'Por favor, completa tu registro estableciendo una nueva contraseña.' });
+        }
+
         // Usuario activo, generar token de sesión incluyendo rol y correo
         const sessionToken = jwt.sign({ uuid: user.uuid, rol: user.role, email: user.correo }, process.env.JWT_SECRET, { expiresIn: '1d' });
         res.json({ sessionToken, user: { rol: user.role, nombre: user.nombre } });
