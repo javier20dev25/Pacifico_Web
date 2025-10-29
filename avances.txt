@@ -136,3 +136,11 @@ Frontend (Vista de Tienda):
 - Visor de videos de YouTube: Los videos de la tienda y productos ahora se reproducen en un modal dentro de la misma página.
 - Lightbox de imágenes: Las imágenes de producto se pueden ver en pantalla completa al hacer clic.
 - Corrección de UI: Eliminado texto redundante en tarjetas de producto y reseteo del carrito en cada vista previa para cálculos correctos.
+
+--- Mejoras de TypeScript (2025-10-29) ---
+- Se resolvieron múltiples errores de TypeScript (TS6133, TS7006, TS7031, TS2345, TS18046) en varios archivos (AdminDashboard.tsx, Login.tsx, NotFound.tsx, StoreEditor.test.tsx, StoreEditor.tsx, UserDashboard.tsx).
+- Se eliminaron importaciones innecesarias de 'React' gracias al JSX runtime automático.
+- Se añadió tipado explícito a parámetros de funciones, props de componentes, manejadores de eventos y estados de `useState` para mejorar la robustez del código.
+- Se implementó un manejo seguro de errores en los bloques `catch` utilizando `unknown` y comprobaciones `instanceof Error`.
+- Se refactorizó la interfaz `User` a un archivo compartido `src/types/user.ts` para resolver conflictos de tipos y mejorar la organización del código, siendo importada ahora por `AdminDashboard.tsx` y `UsersTable.tsx`.
+--- Fin Mejoras de TypeScript ---

@@ -1,31 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import apiClient from '@/api/axiosConfig';
-import AdminStats from '@/components/admin/AdminStats';
-import CreateUserForm from '@/components/admin/CreateUserForm';
-import UsersTable from '@/components/admin/UsersTable';
-import RegistrationChart from '@/components/admin/RegistrationChart';
+import { useState, useEffect } from 'react';
+import apiClient from '../api/axiosConfig';
+import AdminStats from '../components/admin/AdminStats';
+import CreateUserForm from '../components/admin/CreateUserForm';
+import UsersTable from '../components/admin/UsersTable';
+import RegistrationChart from '../components/admin/RegistrationChart';
+
+import type { User } from '../types/user';
 
 const AdminDashboard = () => {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState({ temp: 0, active: 0 });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     // Envolvemos la lógica en una función que podamos reutilizar
     try {
       setLoading(true);
-      const response = await apiClient.get('/admin/users');
-      const fetchedUsers = response.data || [];
-      setUsers(fetchedUsers);
-
-      let tempCount = 0;
-      let activeCount = 0;
-      fetchedUsers.forEach(user => {
-        if (user.status === 'temporary') tempCount++;
-        if (user.status === 'active') activeCount++;
-      });
-      setStats({ temp: tempCount, active: activeCount });
+                    const response = await apiClient.get('/admin/users');
+                    const fetchedUsers: User[] = response.data || [];
+                    setUsers(fetchedUsers);
+      
+                    let tempCount = 0;
+                    let activeCount = 0;
+                    fetchedUsers.forEach(user => {
+                      if (user.status === 'temporary') tempCount++;
+                      if (user.status === 'active') activeCount++;
+                    });      setStats({ temp: tempCount, active: activeCount });
 
     } catch (err) {
       setError('No se pudo cargar la lista de usuarios.');
@@ -48,12 +49,14 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Panel de Administrador</h1>
+    <div className="min-h-screen bg-neutral-100 font-sans p-4 md:p-8">
+      <div className="container mx-auto bg-white shadow-md rounded-lg p-6 md:p-10">
+        <h1 className="text-3xl font-bold text-neutral-800 mb-6">Panel de Administrador</h1>
         <AdminStats stats={stats} />
         <CreateUserForm onUserCreated={fetchUsers} />
         <UsersTable users={users} onUserAction={fetchUsers} />
         <RegistrationChart />
+      </div>
     </div>
   );
 };

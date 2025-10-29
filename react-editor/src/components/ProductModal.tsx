@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import useAppStore, { type Product } from '@/stores/store';
+import useAppStore, { type Product } from '../stores/store';
 
 // --- COMPONENTES DE FORMULARIO EXTRAÍDOS PARA ESTABILIDAD ---
 
-const FormRow = ({ label, htmlFor, children, description }) => (
+const FormRow = ({ label, htmlFor, children, description }: { label: string, htmlFor: string, children: React.ReactNode, description?: string }) => (
   <div>
     <label htmlFor={htmlFor} className="text-sm font-medium text-gray-800">{label}</label>
     <div className="flex items-start gap-4">
@@ -13,19 +13,8 @@ const FormRow = ({ label, htmlFor, children, description }) => (
   </div>
 );
 
-const ByOrderForm = ({ productData, handleFormChange, store }) => {
+const ByOrderForm = ({ productData, handleFormChange }: { productData: Product, handleFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>, field: keyof Product, isCheckbox?: boolean) => void }) => {
   const { costo_base_final, peso_lb, margen_valor, margen_tipo } = productData;
-
-  const cost = parseFloat(costo_base_final) || 0;
-  const weight = parseFloat(peso_lb) || 0;
-  const margin = parseFloat(margen_valor) || 0;
-
-  const airShippingCost = store.airRate * weight;
-  const seaShippingCost = store.seaRate * weight;
-  const airMarginAmount = margen_tipo === 'fixed' ? margin : (cost + airShippingCost) * (margin / 100);
-  const seaMarginAmount = margen_tipo === 'fixed' ? margin : (cost + seaShippingCost) * (margin / 100);
-  const finalAirPrice = cost + airShippingCost + airMarginAmount;
-  const finalSeaPrice = cost + seaShippingCost + seaMarginAmount;
 
   return (
     <>
@@ -52,7 +41,7 @@ const ByOrderForm = ({ productData, handleFormChange, store }) => {
   );
 };
 
-const InStockForm = ({ productData, handleFormChange }) => {
+const InStockForm = ({ productData, handleFormChange }: { productData: Product, handleFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>, field: keyof Product, isCheckbox?: boolean) => void }) => {
   const { precio_base, impuesto_porcentaje, impuestos_incluidos } = productData;
 
   return (
@@ -71,20 +60,22 @@ const InStockForm = ({ productData, handleFormChange }) => {
   );
 };
 
-const getInitialProductData = () => ({
+const getInitialProductData = (): Product & { imageFile: File | null } => ({
   idLocal: `product_${Date.now()}`,
   nombre: '',
   descripcion: '',
   youtubeLink: '',
   imageUrl: null,
   imageFile: null,
-  costo_base_final: '',
-  peso_lb: '',
-  margen_valor: '',
+  costo_base_final: 0,
+  peso_lb: 0,
+  margen_valor: 0,
   margen_tipo: 'fixed',
-  precio_base: '',
-  impuesto_porcentaje: '',
+  precio_base: 0,
+  impuesto_porcentaje: 0,
   impuestos_incluidos: false,
+  precio_final_aereo: 0,
+  precio_final_maritimo: 0,
 });
 
 const ProductModal = () => {
@@ -94,25 +85,19 @@ const ProductModal = () => {
     const closeModal = useAppStore((state) => state.closeProductModal);
     const addProduct = useAppStore((state) => state.addProduct);
     const updateProduct = useAppStore((state) => state.updateProduct);
-  const [productData, setProductData] = useState(() => getInitialProductData());
+  const [productData, setProductData] = useState(getInitialProductData());
 
   useEffect(() => {
     const productToEdit = editingProductId ? products.find(p => p.idLocal === editingProductId) : null;
     if (productToEdit) {
-      const formState = { ...getInitialProductData(), ...productToEdit };
-      formState.costo_base_final = String(productToEdit.costo_base_final || '');
-      formState.peso_lb = String(productToEdit.peso_lb || '');
-      formState.margen_valor = String(productToEdit.margen_valor || '');
-      formState.precio_base = String(productToEdit.precio_base || '');
-      formState.impuesto_porcentaje = String(productToEdit.impuesto_porcentaje || '');
-      setProductData(formState);
+      setProductData({ ...getInitialProductData(), ...productToEdit, imageFile: null });
     } else {
       setProductData(getInitialProductData());
     }
   }, [editingProductId, products]);
 
-  const handleFormChange = (e, field, isCheckbox = false) => {
-    const { value, checked } = e.target;
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>, field: keyof Product, isCheckbox = false) => {
+    const { value, checked } = e.target as HTMLInputElement;
     setProductData(prev => ({ ...prev, [field]: isCheckbox ? checked : value }));
   };
 
@@ -131,11 +116,11 @@ const ProductModal = () => {
 
     const dataToSave: Partial<Product> = {
       ...productData,
-      costo_base_final: parseFloat(productData.costo_base_final) || 0,
-      peso_lb: parseFloat(productData.peso_lb) || 0,
-      margen_valor: parseFloat(productData.margen_valor) || 0,
-      precio_base: parseFloat(productData.precio_base) || 0,
-      impuesto_porcentaje: parseFloat(productData.impuesto_porcentaje) || 0,
+      costo_base_final: Number(productData.costo_base_final) || 0,
+      peso_lb: Number(productData.peso_lb) || 0,
+      margen_valor: Number(productData.margen_valor) || 0,
+      precio_base: Number(productData.precio_base) || 0,
+      impuesto_porcentaje: Number(productData.impuesto_porcentaje) || 0,
     };
 
     if (store.storeType === 'by_order') {
@@ -174,7 +159,7 @@ const ProductModal = () => {
           </fieldset>
 
           {store.storeType === 'by_order' ? 
-            <ByOrderForm productData={productData} handleFormChange={handleFormChange} store={store} /> : 
+            <ByOrderForm productData={productData} handleFormChange={handleFormChange} /> : 
             <InStockForm productData={productData} handleFormChange={handleFormChange} />}
 
         </div>

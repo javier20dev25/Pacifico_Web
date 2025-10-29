@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -10,7 +10,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import apiClient from '@/api/axiosConfig';
+import apiClient from '../../api/axiosConfig';
 
 ChartJS.register(
   CategoryScale,
@@ -22,8 +22,20 @@ ChartJS.register(
   Legend
 );
 
+interface ChartData {
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    borderColor: string;
+    backgroundColor: string;
+    tension: number;
+    fill: boolean;
+  }[];
+}
+
 const RegistrationChart = () => {
-  const [chartData, setChartData] = useState(null);
+  const [chartData, setChartData] = useState<ChartData | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -32,8 +44,8 @@ const RegistrationChart = () => {
         const response = await apiClient.get('/admin/registration-stats');
         const stats = response.data || [];
 
-        const labels = stats.map(s => s.registration_date);
-        const data = stats.map(s => s.user_count);
+        const labels = stats.map((s: any) => s.registration_date);
+        const data = stats.map((s: any) => s.user_count);
 
         setChartData({
           labels,
@@ -41,9 +53,9 @@ const RegistrationChart = () => {
             {
               label: 'Usuarios Registrados',
               data: data,
-              borderColor: 'rgb(75, 192, 192)',
-              backgroundColor: 'rgba(75, 192, 192, 0.2)',
-              tension: 0.1,
+              borderColor: '#1976D2', // primary.DEFAULT
+              backgroundColor: 'rgba(25, 118, 210, 0.2)', // primary.DEFAULT with 0.2 opacity
+              tension: 0.3, // Slightly smoother line
               fill: true,
             },
           ],
@@ -60,21 +72,49 @@ const RegistrationChart = () => {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: {
+          color: '#424242', // neutral-800
+        },
+      },
+      title: {
+        display: true,
+        text: 'Histórico de Registros',
+        color: '#424242', // neutral-800
+      },
+    },
     scales: {
-      y: { beginAtZero: true },
+      x: {
+        ticks: {
+          color: '#616161', // neutral-700
+        },
+        grid: {
+          color: '#E0E0E0', // neutral-300
+        },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: '#616161', // neutral-700
+        },
+        grid: {
+          color: '#E0E0E0', // neutral-300
+        },
+      },
     },
   };
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-6">
-      <h2 className="text-xl font-bold text-gray-800 mb-4">Histórico de Registros</h2>
+    <div className="bg-white shadow-md rounded-lg p-6 mb-8"> {/* Added mb-8 for consistent spacing */}
+      <h2 className="text-2xl font-bold text-neutral-800 mb-4">Histórico de Registros</h2>
       <div className="relative h-64 md:h-80">
         {error ? (
-          <p className="text-red-500">{error}</p>
+          <p className="text-red-600 text-center py-4">{error}</p>
         ) : chartData ? (
           <Line options={options} data={chartData} />
         ) : (
-          <p>Cargando gráfica...</p>
+          <p className="text-neutral-500 text-center py-4">Cargando gráfica...</p>
         )}
       </div>
     </div>

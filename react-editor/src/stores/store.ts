@@ -49,8 +49,8 @@ export interface Product {
   precio_final_maritimo?: number;
   peso_lb?: number;
   tags?: string[];
-  imageUrl?: string;
-  imageFile?: File;
+  imageUrl?: string | null;
+  imageFile?: File | null;
 }
 
 export interface CartItem {
@@ -77,7 +77,7 @@ interface AppState {
   updateProduct: (productId: string, updates: Partial<Product>) => void;
   deleteProduct: (productId: string) => void;
   setCart: (cart: CartState) => void;
-  openProductModal: (productId?: string) => void;
+  openProductModal: (productId?: string | null) => void;
   closeProductModal: () => void;
   setStoreType: (type: 'by_order' | 'in_stock') => void;
   loadInitialData: (data: any) => void; // <--- Tipo de payload flexibilizado

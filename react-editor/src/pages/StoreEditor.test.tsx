@@ -1,11 +1,11 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StoreEditor from './StoreEditor';
-import apiClient from '@/api/axiosConfig';
-import useStore from '@/stores/store';
+import apiClient from '../api/axiosConfig';
+import useStore from '../stores/store';
 
 // Mock del apiClient (axios)
-vi.mock('@/api/axiosConfig', () => ({
+vi.mock('../api/axiosConfig', () => ({
   default: {
     put: vi.fn(),
     post: vi.fn(),
@@ -13,12 +13,12 @@ vi.mock('@/api/axiosConfig', () => ({
 }));
 
 // Mock del hook de datos iniciales
-vi.mock('@/hooks/useInitialData', () => ({
+vi.mock('../hooks/useInitialData', () => ({
   useInitialData: () => ({ isLoading: false, isError: false }),
 }));
 
 // Mock del store de Zustand (versión final autocontenida)
-vi.mock('@/stores/store', () => {
+vi.mock('../stores/store', () => {
   const setStoreDetails = vi.fn();
   const mockStoreData = {
     store: {
@@ -33,7 +33,7 @@ vi.mock('@/stores/store', () => {
     products: [],
   };
 
-  const mockUseStore = (selector) => {
+  const mockUseStore = (selector: any) => {
     const state = { ...mockStoreData, setStoreDetails };
     if (typeof selector === 'function') {
       return selector(state);

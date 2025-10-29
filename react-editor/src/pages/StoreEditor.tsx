@@ -1,14 +1,14 @@
 
 import { useState } from 'react';
-import useStore from '@/stores/store';
-import StoreInfoCard from '@/components/StoreInfoCard';
-import ProductEditor from '@/components/ProductEditor';
-import LogisticsEditor from '@/components/LogisticsEditor';
-import PaymentEditor from '@/components/PaymentEditor';
-import ProductModal from '@/components/ProductModal';
-import apiClient from '@/api/axiosConfig';
-import { useInitialData } from '@/hooks/useInitialData';
-import viewerHtml from '@/assets/viewer_template.html?raw'; // Importar como string
+import useStore from '../stores/store';
+import StoreInfoCard from '../components/StoreInfoCard';
+import ProductEditor from '../components/ProductEditor';
+import LogisticsEditor from '../components/LogisticsEditor';
+import PaymentEditor from '../components/PaymentEditor';
+import ProductModal from '../components/ProductModal';
+import apiClient from '../api/axiosConfig';
+import { useInitialData } from '../hooks/useInitialData';
+import viewerHtml from '../assets/viewer_template.html?raw'; // Importar como string
 
 // Helper para subir imágenes con progreso
 const uploadImage = async (
@@ -164,9 +164,13 @@ function StoreEditor() {
       } else {
         alert('No se pudo abrir la ventana de previsualización. Revisa si tu navegador bloquea las ventanas emergentes.');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error al generar la vista previa:', error);
-      alert(`Error al generar la vista previa: ${error.message}`);
+      if (error instanceof Error) {
+        alert(`Error al generar la vista previa: ${error.message}`);
+      } else {
+        alert(`Error al generar la vista previa: ${String(error)}`);
+      }
     }
   };
 

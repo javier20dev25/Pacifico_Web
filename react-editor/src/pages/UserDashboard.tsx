@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import apiClient from '@/api/axiosConfig';
-import UserInfo from '@/components/dashboard/UserInfo';
-import StoreManager from '@/components/dashboard/StoreManager';
-import OrderProcessor from '@/components/dashboard/OrderProcessor';
-import AiChat from '@/components/dashboard/AiChat';
+import { useState, useEffect } from 'react';
+import apiClient from '../api/axiosConfig';
+import UserInfo from '../components/dashboard/UserInfo';
+import StoreManager from '../components/dashboard/StoreManager';
+import OrderProcessor from '../components/dashboard/OrderProcessor';
+import AiChat from '../components/dashboard/AiChat';
 
 const UserDashboard = () => {
-  const [user, setUser] = useState(null);
-  const [stores, setStores] = useState([]);
+  const [user, setUser] = useState<any>(null);
+  const [stores, setStores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,11 +44,13 @@ const UserDashboard = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
+    <div className="min-h-screen bg-neutral-100 font-sans p-4 md:p-8">
+      <div className="container mx-auto bg-white shadow-md rounded-lg p-6 md:p-10">
         <UserInfo user={user} />
         <StoreManager stores={stores} />
         <OrderProcessor />
         <AiChat />
+      </div>
     </div>
   );
 };

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import apiClient from '@/api/axiosConfig';
+import apiClient from '../api/axiosConfig';
 
-const EyeIcon = ({ visible }) => (
+const EyeIcon = ({ visible }: { visible: boolean }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     {visible ? (
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -21,7 +21,7 @@ const Login = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [registrationError, setRegistrationError] = useState('');
-  const [tempToken, setTempToken] = useState(null);
+  const [tempToken, setTempToken] = useState<string | null>(null);
   const [strength, setStrength] = useState('');
 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -58,7 +58,7 @@ const Login = () => {
     }
   }, [newPassword]);
 
-  const handleLoginSubmit = async (e) => {
+  const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     if (rememberMe) {
@@ -73,7 +73,8 @@ const Login = () => {
         localStorage.setItem('sessionToken', data.sessionToken);
         if (data.user && data.user.rol === 'admin') {
           navigate('/admin');
-        } else {
+        }
+        else {
           navigate('/dashboard');
         }
       } else if (data.tempToken) {
@@ -82,13 +83,18 @@ const Login = () => {
       } else {
         throw new Error('Respuesta inesperada del servidor.');
       }
-    } catch (err) {
-      const errorMessage = err.response?.data?.error || err.message || 'Error desconocido en el login';
-      setError(errorMessage);
+    } catch (err: unknown) {
+        if (err instanceof Error) {
+            const axiosError = err as any;
+            const errorMessage = axiosError.response?.data?.error || err.message || 'Error desconocido en el login';
+            setError(errorMessage);
+        } else {
+            setError(String(err));
+        }
     }
   };
 
-  const handleRegisterSubmit = async (e) => {
+  const handleRegisterSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setRegistrationError('');
 
@@ -111,9 +117,14 @@ const Login = () => {
         } else {
             throw new Error('No se pudo completar el registro.');
         }
-    } catch (err) {
-        const errorMessage = err.response?.data?.error || err.message || 'Error desconocido';
-        setRegistrationError(errorMessage);
+    } catch (err: unknown) {
+        if (err instanceof Error) {
+            const axiosError = err as any;
+            const errorMessage = axiosError.response?.data?.error || err.message || 'Error desconocido';
+            setRegistrationError(errorMessage);
+        } else {
+            setRegistrationError(String(err));
+        }
     }
   };
 
