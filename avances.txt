@@ -113,3 +113,26 @@ Se ha realizado una profunda refactorización y adición de funcionalidades tant
 
 Es importante que realices pruebas exhaustivas para confirmar que todas las funcionalidades y correcciones se comportan como esperas, tanto en el editor como en la vista de la tienda para el cliente final.
 
+---
+Fecha: 28 de Octubre de 2025
+
+Resumen de la Sesión Actual: Mejoras UX, Nuevas Funcionalidades y Corrección de Bugs Críticos
+
+Durante esta sesión, se han implementado las siguientes mejoras y correcciones:
+
+Backend:
+- Normalización de URLs de imágenes: Las imágenes ahora se guardan con rutas relativas en la DB, reconstruyéndose en el frontend.
+- Configuración de FRONTEND_URL: El backend ahora genera URLs públicas completas para compartir la tienda.
+- Corrección crítica en POST /stores: El endpoint de creación de tiendas ahora guarda correctamente todos los datos del payload (incluyendo productos) y devuelve una respuesta consistente con el endpoint PUT, solucionando la pérdida de datos inicial.
+- Cache-Control para imágenes: Las imágenes subidas ahora incluyen cabeceras de caché para mejorar el rendimiento.
+
+Frontend (Editor):
+- Barra de progreso en subidas: Feedback visual durante el proceso de guardado y subida de imágenes.
+- Auto-guardado (borradores): El estado del editor se guarda automáticamente en localStorage para prevenir la pérdida de datos.
+- Botón "Vista Pública": Nuevo botón que abre la URL pública de la tienda, funcional para tiendas nuevas y existentes.
+
+Frontend (Vista de Tienda):
+- Flujo "Añadir al Carrito" mejorado: Implementado el flujo de dos pasos con selector de cantidad (- 1 +) y botón "Añadir" separado, con feedback visual.
+- Visor de videos de YouTube: Los videos de la tienda y productos ahora se reproducen en un modal dentro de la misma página.
+- Lightbox de imágenes: Las imágenes de producto se pueden ver en pantalla completa al hacer clic.
+- Corrección de UI: Eliminado texto redundante en tarjetas de producto y reseteo del carrito en cada vista previa para cálculos correctos.
