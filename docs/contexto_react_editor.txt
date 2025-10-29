@@ -1,0 +1,58 @@
+==========================================================
+CONTEXTO DEL PROYECTO: Editor de Tiendas (Migración a React)
+==========================================================
+
+**Objetivo Principal:** Reconstruir el editor de tiendas de JavaScript puro a React/TypeScript para mejorar la estabilidad, mantenibilidad y escalabilidad.
+
+**Rama Actual de Trabajo:** `feature/react-editor-migration`
+
+**Estado del Entorno:**
+*   **Frontend (React):**
+    *   Proyecto React/TypeScript scaffolded con Vite.
+    *   Dependencias instaladas: React, Tailwind CSS, Zustand (gestor de estado), Axios (peticiones API).
+    *   Configuración de Tailwind CSS y PostCSS manual para compatibilidad.
+    *   `App.tsx` (componente principal) configurado para:
+        *   Cargar datos iniciales de la tienda (`/api/user/store-data`).
+        *   Manejar y mostrar explícitamente los estados: "Cargando...", "Modo Creación (sin tienda)", "Modo Edición (tienda existente)", "Error".
+    *   `src/stores/store.ts`: Gestor de estado centralizado con Zustand, replicando la estructura de datos de la tienda, productos y carrito del editor antiguo.
+    *   `src/components/StoreInfoCard.tsx`: Primer componente real implementado, funcional y conectado al estado.
+    *   Componentes `ProductsCard` y `PreviewPanel` son actualmente marcadores de posición.
+*   **Backend (Node.js/Express):**
+    *   `server.js`: Configurado para servir la aplicación React en la ruta `/editor`.
+    *   `backend/api/user.js`: Corregidos los bugs de consulta a la base de datos (`uuid` vs `usuario_uuid` y el cuelgue de `.single()`) en los endpoints `/api/user/stores` y `/api/user/store-data`.
+    *   El endpoint `/api/user/store-data` ahora devuelve `storeData: {}` si no hay tienda, permitiendo al frontend entrar en "Modo Creación".
+
+**Funcionalidad Actual (Verificada):**
+*   La aplicación React carga correctamente en `/editor`.
+*   Detecta si el usuario tiene o no una tienda.
+*   Muestra mensajes claros de estado ("Cargando...", "Modo Creación").
+*   El componente `StoreInfoCard` (Información Principal) se renderiza y sus campos están conectados al estado de Zustand.
+
+**Próximos Pasos (Según Plan y Auditoría):**
+
+1.  **Implementar el Flujo "Guardar y Ver Avance":**
+    *   Añadir un botón "Guardar y Ver Avance" en el editor.
+    *   Implementar la lógica para enviar el estado actual del editor (desde Zustand) al backend.
+        *   Si es una tienda nueva (Modo Creación), usar `POST /api/user/stores` (o un nuevo endpoint `POST /api/user/store-data` que acepte el JSON completo).
+        *   Si es una tienda existente (Modo Edición), usar `PUT /api/user/store-data`.
+    *   Tras guardar, abrir automáticamente la URL pública de la tienda (`/store/:slug`) en una nueva pestaña.
+
+2.  **Implementar Componentes Restantes del Editor (en orden):**
+    *   `LogisticsCard.tsx` (Configuración de Logística DUAL).
+    *   `PaymentConfigCard.tsx` (Configuración de Pagos: métodos, cuotas, anticipos).
+    *   `ProductsCard.tsx` (Lista de productos y botón "Añadir Producto").
+    *   `ProductEditorModal.tsx` (Modal para añadir/editar detalles de un producto).
+
+3.  **Implementar Botón "Lanzar Tienda":**
+    *   Finalizar la tienda y marcarla como activa en la base de datos.
+
+4.  **Implementar Lógica de Negocio Adicional:**
+    *   Límites de productos según el plan del usuario.
+    *   Bloqueo de edición si la tienda ya está lanzada.
+
+5.  **Mejoras de Auditoría (a futuro):**
+    *   Implementar validación de entradas en el backend (ej. `express-validator`).
+    *   Auditar y añadir índices a la base de datos.
+    *   Limpieza de archivos antiguos del frontend.
+
+---

@@ -5,7 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "lint": "eslint . --ext .js",
+    "format": "prettier --write \"./**/*.js\"",
+    "test": "jest --forceExit"
   },
   "author": "Astaroth & Gemini",
   "license": "ISC",
@@ -13,11 +16,24 @@
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.39.0",
     "bcryptjs": "^2.4.3",
-    "dotenv": "^16.3.1",
+    "dotenv": "^16.6.1",
     "express": "^4.18.2",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
-    "nodemailer": "^6.10.1"
+    "nodemailer": "^7.0.10"
+  },
+  "devDependencies": {
+    "eslint": "^9.38.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "jest": "^30.2.0",
+    "prettier": "^3.6.2",
+    "supertest": "^7.1.4"
+  },
+  "jest": {
+    "testEnvironment": "node"
   }
 }

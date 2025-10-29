@@ -1,0 +1,134 @@
+import React, { useState, useRef } from 'react';
+import html2canvas from 'html2canvas';
+import apiClient from '@/api/axiosConfig';
+
+// Lógica de parseo portada directamente del script original
+function parseOrderText(text) {
+  const order = { products: [], raw_message: text };
+  const headerRegex = /^ \[(\d{1,2}\/\d{1,2}\/\d{2,4}), (\d{1,2}:\d{2}:\d{2})\] ([^:]+):/m;
+  const headerMatch = text.match(headerRegex);
+  order.order_date = headerMatch ? new Date(`${headerMatch[1].split('/').reverse().join('-')}T${headerMatch[2]}`) : new Date();
+  order.customer_name = headerMatch ? headerMatch[3] : 'Desconocido';
+
+  const productRegex = /- (.+?) \(x(\d+)\) - [A-Z]{3} (\d+\.\d{2})/g;
+  let productMatch;
+  while ((productMatch = productRegex.exec(text)) !== null) {
+    order.products.push({
+      name: productMatch[1].trim(),
+      quantity: parseInt(productMatch[2], 10),
+      price: parseFloat(productMatch[3]),
+    });
+  }
+
+  const totalRegex = /\*Total a Pagar:\* [A-Z]{3} (\d+\.\d{2})/;
+  const totalMatch = text.match(totalRegex);
+  order.total_price = totalMatch ? parseFloat(totalMatch[1]) : 0;
+
+  if (order.products.length === 0) {
+    throw new Error('No se encontraron productos con el formato esperado.');
+  }
+  return order;
+}
+
+const OrderProcessor = () => {
+  const [orderText, setOrderText] = useState('');
+  const [processedOrder, setProcessedOrder] = useState(null);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const invoiceRef = useRef(null);
+
+  const handleProcessOrder = async () => {
+    if (!orderText) {
+      setError('Por favor, pega el texto del pedido de WhatsApp.');
+      return;
+    }
+    setError('');
+    setIsLoading(true);
+    try {
+      const parsedOrder = parseOrderText(orderText);
+      setProcessedOrder(parsedOrder);
+      await apiClient.post('/user/orders', parsedOrder);
+      alert('¡Pedido procesado y guardado con éxito!');
+    } catch (err) {
+      const errorMessage = err.message || 'Error al procesar el pedido.';
+      setError(errorMessage);
+      setProcessedOrder(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    if (!invoiceRef.current) return;
+    try {
+      const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true });
+      const imageURL = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.href = imageURL;
+      downloadLink.download = `factura_${processedOrder?.customer_name || 'cliente'}_${Date.now()}.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    } catch (err) {
+      setError('Hubo un error al generar la imagen.');
+    }
+  };
+
+  return (
+    <div className="mt-12">
+      <h2 className="text-2xl font-bold mb-6">Gestor de Pedidos</h2>
+      <div className="bg-white shadow-md rounded-lg p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 className="font-semibold mb-2">Pega aquí tu pedido de WhatsApp:</h3>
+            <textarea
+              className="w-full h-64 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              placeholder="Pega el texto completo del mensaje de WhatsApp aquí..."
+              value={orderText}
+              onChange={(e) => setOrderText(e.target.value)}
+            />
+            <button onClick={handleProcessOrder} disabled={isLoading} className="mt-4 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
+              {isLoading ? 'Procesando...' : 'Procesar Pedido'}
+            </button>
+          </div>
+          <div>
+            <h3 className="font-semibold mb-2">Pedido Procesado:</h3>
+            {error && <p className="text-red-500">{error}</p>}
+            {processedOrder && (
+              <div>
+                <div ref={invoiceRef} className="p-4 bg-white border rounded-lg">
+                  <h4 className="font-bold text-lg mb-4">Factura de Pedido</h4>
+                  <p><b>Cliente:</b> {processedOrder.customer_name}</p>
+                  <p><b>Fecha:</b> {new Date(processedOrder.order_date).toLocaleString()}</p>
+                  <table className="w-full mt-4 text-sm text-left">
+                    <thead className="bg-gray-100"><tr><th className="p-2">Producto</th><th className="p-2">Cant.</th><th className="p-2">Precio</th></tr></thead>
+                    <tbody>
+                      {processedOrder.products.map((p, index) => (
+                        <tr key={index}>
+                          <td className="p-2 border-t">{p.name}</td>
+                          <td className="p-2 border-t">{p.quantity}</td>
+                          <td className="p-2 border-t">C${p.price.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="font-bold">
+                      <tr className="border-t-2">
+                        <td className="p-2" colSpan="2">Total</td>
+                        <td className="p-2">C${processedOrder.total_price.toFixed(2)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <button onClick={handleDownloadInvoice} className="mt-4 bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600">
+                  Descargar como Imagen
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default OrderProcessor;

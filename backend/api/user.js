@@ -8,29 +8,35 @@ const { protect } = require('../middleware/auth');
 // 1. OBTENER PERFIL DE USUARIO
 // ==========================================================
 router.get('/profile', protect, async (req, res) => {
-    console.log('[DEBUG] Entrando a /api/user/profile, req.user =', req.user);
-    try {
-        const userUuid = req.user.uuid; 
+  console.log('[DEBUG] Entrando a /api/user/profile, req.user =', req.user);
+  try {
+    const userUuid = req.user.uuid;
 
-        // Usar la vista vw_usuarios_planes para obtener un perfil completo y consistente
-        const { data: userProfile, error } = await supabaseAdmin
-            .from('vw_usuarios_planes')
-            .select('*')
-            .eq('usuario_uuid', userUuid)
-            .single();
+    const { data: userProfile, error } = await supabaseAdmin
+      .from('vw_usuarios_planes')
+      .select('*')
+      .eq('usuario_uuid', userUuid)
+      .single();
 
-        if (error || !userProfile) {
-            console.error('[GET /profile] Error fetching user profile from view:', error);
-            return res.status(404).json({ error: 'Perfil de usuario no encontrado.' });
-        }
-
-        console.log('[DEBUG PROFILE] responseProfile ->', JSON.stringify(userProfile));
-        res.json({ user: userProfile });
-
-    } catch (error) {
-        console.error('Error al obtener el perfil del usuario:', error);
-        res.status(500).json({ error: 'Error interno del servidor.' });
+    if (error || !userProfile) {
+      console.error(
+        '[GET /profile] Error fetching user profile from view:',
+        error
+      );
+      return res
+        .status(404)
+        .json({ error: 'Perfil de usuario no encontrado.' });
     }
+
+    console.log(
+      '[DEBUG PROFILE] responseProfile ->',
+      JSON.stringify(userProfile)
+    );
+    res.json({ user: userProfile });
+  } catch (error) {
+    console.error('Error al obtener el perfil del usuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
 });
 
 // ==========================================================
@@ -40,33 +46,34 @@ router.get('/profile', protect, async (req, res) => {
 // GET /api/user/stores
 router.get('/stores', async (req, res) => {
   try {
-    // Obtén la uuid del usuario del token (establecido por el middleware protect)
     const userUuid = req.user && (req.user.uuid || req.user.user_uuid);
     if (!userUuid) return res.status(401).json({ error: 'No autenticado.' });
 
-    // 1) Resuelve el id numérico del usuario a partir de su uuid
-    const { data: userRec, error: userErr } = await supabaseAdmin
-      .from('usuarios')
-      .select('id')
-      .eq('uuid', userUuid)
+    // 1) Resuelve el id numérico del usuario usando la vista que sí funciona.
+    const { data: profile, error: userErr } = await supabaseAdmin
+      .from('vw_usuarios_planes')
+      .select('usuario_id')
+      .eq('usuario_uuid', userUuid)
       .single();
 
-    if (userErr) {
-      console.error('Error buscando usuario por uuid:', userErr);
+    if (userErr || !profile) {
+      console.error('Error buscando usuario por uuid en la vista:', userErr);
       return res.status(500).json({ error: 'No se pudo resolver el usuario.' });
     }
-    const usuarioId = userRec.id;
+    const usuarioId = profile.usuario_id;
 
-    // 2) Consulta tiendas por usuario_id (bigint)
     const { data: stores, error } = await supabaseAdmin
       .from('stores')
-      // selecciona los campos que necesites mostrar al frontend
-      .select('id, nombre, descripcion, usuario_id, logo_url, activa, created_at, slug')
+      .select(
+        'id, nombre, descripcion, usuario_id, logo_url, activa, created_at, slug'
+      )
       .eq('usuario_id', usuarioId);
 
     if (error) {
       console.error('Error al obtener stores:', error);
-      return res.status(500).json({ error: 'No se pudieron obtener las tiendas.' });
+      return res
+        .status(500)
+        .json({ error: 'No se pudieron obtener las tiendas.' });
     }
 
     return res.json(stores || []);
@@ -76,40 +83,41 @@ router.get('/stores', async (req, res) => {
   }
 });
 
-// POST /api/user/stores
+// POST /api/user/stores (Refactorizado para consistencia y corrección de bug)
 router.post('/stores', async (req, res) => {
   try {
     const userUuid = req.user && (req.user.uuid || req.user.user_uuid);
     if (!userUuid) return res.status(401).json({ error: 'No autenticado.' });
 
-    const { nombre, descripcion, logo_url, direccion, telefono } = req.body;
+    const { storeData } = req.body;
+    if (!storeData || !storeData.store) {
+      return res.status(400).json({ error: 'Payload de tienda inválido.' });
+    }
 
-    // Resuelve usuario_id desde uuid
     const { data: userRec, error: userErr } = await supabaseAdmin
       .from('usuarios')
       .select('id')
       .eq('uuid', userUuid)
       .single();
 
-    if (userErr) {
-      console.error('Error buscando usuario por uuid (POST /stores):', userErr);
+    if (userErr || !userRec) {
       return res.status(500).json({ error: 'No se pudo resolver el usuario.' });
     }
     const usuarioId = userRec.id;
 
-    // Inserta la tienda con usuario_id (bigint)
+    // Limpiar y preparar el payload principal
+    const cleanedData = cleanStoreDataUrls(storeData);
+
     const { data: created, error } = await supabaseAdmin
       .from('stores')
       .insert({
         usuario_id: usuarioId,
-        nombre: nombre || 'Mi Tienda',
-        descripcion: descripcion || '',
-        logo_url: logo_url || null,
-        direccion: direccion || null,
-        telefono: telefono || null,
-        activa: true
+        nombre: cleanedData.store.nombre, // Extraer nombre para la columna principal
+        descripcion: cleanedData.store.descripcion, // Extraer descripción
+        data: cleanedData, // Guardar el objeto completo en la columna JSONB
+        activa: false, // Las tiendas nuevas empiezan inactivas por defecto
       })
-      .select()
+      .select('slug, data')
       .single();
 
     if (error) {
@@ -117,7 +125,15 @@ router.post('/stores', async (req, res) => {
       return res.status(500).json({ error: 'No se pudo crear la tienda.' });
     }
 
-    return res.status(201).json(created);
+    const slug = created.slug;
+    const frontendUrl = process.env.FRONTEND_URL || '';
+    const shareableUrl = slug ? `${frontendUrl}/store/${slug}` : null;
+
+    return res.status(201).json({
+      message: 'Tienda creada con éxito.',
+      data: [created], // Envolver en array para consistencia
+      shareableUrl,
+    });
   } catch (err) {
     console.error('Error en POST /stores:', err);
     return res.status(500).json({ error: 'Ocurrió un error inesperado.' });
@@ -132,10 +148,13 @@ router.delete('/stores/:id', async (req, res) => {
 
     const { id } = req.params;
 
-    // Verificar que la tienda pertenece al usuario antes de borrar
     const { data: userRec, error: userErr } = await supabaseAdmin
-      .from('usuarios').select('id').eq('uuid', userUuid).single();
-    if (userErr) return res.status(500).json({ error: 'Error al verificar usuario.' });
+      .from('usuarios')
+      .select('id')
+      .eq('uuid', userUuid)
+      .single(); // CORREGIDO DE VUELTA A 'uuid'
+    if (userErr || !userRec)
+      return res.status(500).json({ error: 'Error al verificar usuario.' });
     const usuarioId = userRec.id;
 
     const { error } = await supabaseAdmin
@@ -149,7 +168,6 @@ router.delete('/stores/:id', async (req, res) => {
     }
 
     res.status(200).json({ message: 'Tienda eliminada correctamente.' });
-
   } catch (err) {
     console.error('Error en DELETE /stores/:id:', err);
     return res.status(500).json({ error: 'Ocurrió un error inesperado.' });
@@ -160,39 +178,50 @@ router.delete('/stores/:id', async (req, res) => {
 // 3. GUARDAR UN NUEVO PEDIDO
 // ==========================================================
 router.post('/orders', protect, async (req, res) => {
-    try {
-        const userUuid = req.user.uuid;
-        const { customer_name, order_date, products, total_price, total_weight, raw_message } = req.body;
+  try {
+    const userUuid = req.user.uuid;
+    const {
+      customer_name,
+      order_date,
+      products,
+      total_price,
+      total_weight,
+      raw_message,
+    } = req.body;
 
-        // Validación básica
-        if (!customer_name || !order_date || !products || !raw_message) {
-            return res.status(400).json({ error: 'Faltan datos requeridos para guardar el pedido.' });
-        }
-
-        const { data, error } = await supabaseAdmin
-            .from('pedidos') // Usando la tabla 'pedidos' que definimos
-            .insert([{
-                user_id: userUuid,
-                customer_name,
-                order_date,
-                products,
-                total_price,
-                total_weight,
-                raw_message
-            }])
-            .select();
-
-        if (error) { throw error; }
-
-        res.status(201).json(data);
-
-    } catch (error) {
-        console.error('Error al guardar el pedido:', error);
-        res.status(500).json({ error: 'Error interno del servidor al guardar el pedido.' });
+    if (!customer_name || !order_date || !products || !raw_message) {
+      return res
+        .status(400)
+        .json({ error: 'Faltan datos requeridos para guardar el pedido.' });
     }
+
+    const { data, error } = await supabaseAdmin
+      .from('pedidos')
+      .insert([
+        {
+          user_id: userUuid,
+          customer_name,
+          order_date,
+          products,
+          total_price,
+          total_weight,
+          raw_message,
+        },
+      ])
+      .select();
+
+    if (error) {
+      throw error;
+    }
+
+    res.status(201).json(data);
+  } catch (error) {
+    console.error('Error al guardar el pedido:', error);
+    res
+      .status(500)
+      .json({ error: 'Error interno del servidor al guardar el pedido.' });
+  }
 });
-
-
 
 // ==========================================================
 // 4. OBTENER Y ACTUALIZAR DATOS JSON DE LA TIENDA
@@ -200,123 +229,162 @@ router.post('/orders', protect, async (req, res) => {
 
 // GET /api/user/store-data
 router.get('/store-data', async (req, res) => {
-    try {
-        const userUuid = req.user && (req.user.uuid || req.user.user_uuid);
-        if (!userUuid) return res.status(401).json({ error: 'No autenticado.' });
-
-        const { slug } = req.query; // Leer el slug de la query
-
-        // 1. Obtener el plan del usuario
-        const { data: profileData, error: profileError } = await supabaseAdmin
-            .from('vw_usuarios_planes')
-            .select('plan')
-            .eq('usuario_uuid', userUuid)
-            .single();
-
-        if (profileError || !profileData) {
-            return res.status(404).json({ error: 'No se pudo determinar el plan del usuario.' });
-        }
-
-        // 2. Obtener los datos de la tienda
-        let storeQuery = supabaseAdmin.from('stores').select('data, slug');
-        const { data: userRec } = await supabaseAdmin.from('usuarios').select('id').eq('uuid', userUuid).single();
-        if (!userRec) return res.status(404).json({ error: 'Usuario no encontrado.' });
-
-        if (slug) {
-            // Si se provee un slug, buscar esa tienda específica
-            storeQuery = storeQuery.eq('slug', slug).eq('usuario_id', userRec.id);
-        } else {
-            // Comportamiento original: buscar la primera tienda del usuario
-            storeQuery = storeQuery.eq('usuario_id', userRec.id).limit(1);
-        }
-
-        const { data: store, error: storeError } = await storeQuery.single();
-
-        if (storeError && storeError.code !== 'PGRST116') { // PGRST116 = 0 filas, lo cual es ok
-            console.error('Error al obtener datos de la tienda:', storeError);
-            return res.status(500).json({ error: 'No se pudieron obtener los datos de la tienda.' });
-        }
-
-        // 3. Devolver datos de la tienda y el plan
-        res.json({
-            storeData: store ? store.data : {},
-            plan: profileData.plan,
-            slug: store ? store.slug : null
-        });
-
-    } catch (err) {
-        console.error('Error en GET /store-data:', err);
-        res.status(500).json({ error: 'Ocurrió un error inesperado.' });
+  console.log('--- [DEBUG /store-data] Endpoint INVOCADO ---');
+  try {
+    const userUuid = req.user && (req.user.uuid || req.user.user_uuid);
+    if (!userUuid) {
+      console.log('[DEBUG /store-data] Fallo: No hay userUuid en el token.');
+      return res.status(401).json({ error: 'No autenticado.' });
     }
+    console.log(`[DEBUG /store-data] Buscando perfil para UUID: ${userUuid}`);
+
+    const { data: userProfile, error: userErr } = await supabaseAdmin
+      .from('vw_usuarios_planes')
+      .select('usuario_id, plan')
+      .eq('usuario_uuid', userUuid)
+      .single();
+
+    console.log('[DEBUG /store-data] Resultado de búsqueda de perfil:', {
+      userProfile,
+      userErr,
+    });
+
+    if (userErr || !userProfile) {
+      console.log(
+        '[DEBUG /store-data] Fallo: Error de perfil o no se encontró perfil.'
+      );
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+    const usuarioId = userProfile.usuario_id;
+    console.log(`[DEBUG /store-data] ID de usuario resuelto: ${usuarioId}`);
+
+    let storeQuery = supabaseAdmin.from('stores').select('data, slug');
+    storeQuery = storeQuery.eq('usuario_id', usuarioId).limit(1);
+
+    console.log('[DEBUG /store-data] Ejecutando consulta de tienda...');
+    const { data: stores, error: storeError } = await storeQuery;
+    console.log('[DEBUG /store-data] Resultado de consulta de tienda:', {
+      stores,
+      storeError,
+    });
+
+    if (storeError) {
+      console.log('[DEBUG /store-data] Fallo: Error en la consulta de tienda.');
+      return res
+        .status(500)
+        .json({ error: 'No se pudieron obtener los datos de la tienda.' });
+    }
+
+    const store = stores && stores.length > 0 ? stores[0] : null;
+    console.log('[DEBUG /store-data] Tienda encontrada:', !!store);
+
+    const slug = store ? store.slug : null;
+    const frontendUrl = process.env.FRONTEND_URL || ''; // Fallback a ruta relativa
+    const shareableUrl = slug ? `${frontendUrl}/store/${slug}` : null;
+
+    res.json({
+      storeData: store ? store.data : {},
+      plan: userProfile.plan,
+      slug: slug,
+      shareableUrl: shareableUrl,
+    });
+  } catch (err) {
+    console.error('Error fatal en GET /store-data:', err);
+    res.status(500).json({ error: 'Ocurrió un error inesperado.' });
+  }
 });
 
-// PUT /api/user/store-data (Versión de Depuración Avanzada)
-router.put('/store-data', async (req, res) => {
-  console.log('\n--- [PUT /store-data] Petición Recibida ---');
-  console.log('[PUT /store-data] headers:', {
-    'content-type': req.headers['content-type'],
-    'content-length': req.headers['content-length'],
-    'authorization': !!req.headers['authorization']
-  });
+const BUCKET_NAME = process.env.STORAGE_BUCKET || 'imagenes';
+const STORAGE_URL_PART = `/storage/v1/object/public/${BUCKET_NAME}/`;
 
-  try {
-    // El cuerpo ahora es { storeData: {...}, launch: true/false }
-    const { storeData: newStoreData, launch } = req.body;
-    console.log('[DEBUG] Intentando guardar - preview:', util.inspect(newStoreData, { depth: 2, colors: true }));
-    console.log('[DEBUG] Petición de lanzamiento:', launch);
+function normalizeSupabaseUrl(url) {
+  if (typeof url !== 'string') return url;
+  const urlIndex = url.indexOf(STORAGE_URL_PART);
+  if (urlIndex > -1) {
+    return url.substring(urlIndex + STORAGE_URL_PART.length);
+  }
+  return url;
+}
 
+function cleanStoreDataUrls(data) {
+  if (typeof data !== 'object' || data === null) {
+    return data;
+  }
 
-    if (!newStoreData || typeof newStoreData !== 'object') {
-      console.warn('[PUT /store-data] payload inválido o vacío');
-      return res.status(400).json({ error: 'Payload de tienda inválido o ausente.' });
+  if (Array.isArray(data)) {
+    return data.map(item => cleanStoreDataUrls(item));
+  }
+
+  return Object.keys(data).reduce((acc, key) => {
+    const value = data[key];
+    if (typeof value === 'string' && (key.endsWith('Url') || key.endsWith('_url'))) {
+      acc[key] = normalizeSupabaseUrl(value);
+    } else {
+      acc[key] = cleanStoreDataUrls(value); // Recurse on nested objects
     }
+    return acc;
+  }, {});
+}
 
-    if (JSON.stringify(newStoreData).includes('blob:')) {
-      console.warn('[PUT /store-data] Alerta: El payload contiene URLs de tipo \"blob:\". Estas son referencias locales del navegador y no se pueden guardar. Deberían ser eliminadas antes de enviar.');
+
+// PUT /api/user/store-data
+router.put('/store-data', async (req, res) => {
+  try {
+    const { storeData: newStoreData, launch } = req.body;
+    if (!newStoreData || typeof newStoreData !== 'object') {
+      return res
+        .status(400)
+        .json({ error: 'Payload de tienda inválido o ausente.' });
     }
 
     const userUuid = req.user && (req.user.uuid || req.user.user_uuid);
     if (!userUuid) return res.status(401).json({ error: 'No autenticado.' });
 
     const { data: userRec, error: userErr } = await supabaseAdmin
-        .from('usuarios')
-        .select('id')
-        .eq('uuid', userUuid)
-        .single();
+      .from('usuarios')
+      .select('id')
+      .eq('uuid', userUuid)
+      .single();
 
     if (userErr || !userRec) {
-        console.error('[PUT /store-data] Usuario no encontrado o error:', userErr);
-        return res.status(401).json({ error: 'Usuario de sesión no válido.' });
+      return res.status(401).json({ error: 'Usuario de sesión no válido.' });
     }
     const usuarioId = userRec.id;
 
-    console.log(`[PUT /store-data] Actualizando tienda para usuario_id: ${usuarioId}`);
+    const cleanedData = cleanStoreDataUrls(newStoreData);
 
-    // Prepara el objeto de actualización
-    const updatePayload = { data: newStoreData };
+    const updatePayload = { data: cleanedData };
     if (launch === true) {
-        updatePayload.activa = true;
+      updatePayload.activa = true;
     }
 
     const { data, error } = await supabaseAdmin
-        .from('stores')
-        .update(updatePayload) // Usa el nuevo payload
-        .eq('usuario_id', usuarioId)
-        .select();
-
-    console.log('[PUT /store-data] Respuesta de Supabase (data):', util.inspect(data, { depth: 2, colors: true }));
-    console.log('[PUT /store-data] Respuesta de Supabase (error):', util.inspect(error, { depth: 2, colors: true }));
+      .from('stores')
+      .update(updatePayload)
+      .eq('usuario_id', usuarioId)
+      .select('slug, data'); // Pedir el slug y la data de vuelta
 
     if (error) {
-      console.error('[PUT /store-data] Error final al actualizar:', error);
-      return res.status(500).json({ error: 'Error de base de datos al actualizar la tienda.' });
+      return res
+        .status(500)
+        .json({ error: 'Error de base de datos al actualizar la tienda.' });
     }
 
-    return res.json({ message: 'Datos de la tienda actualizados con éxito.', data });
+    // Construir la URL compartible con los datos de respuesta
+    const slug = data && data.length > 0 ? data[0].slug : null;
+    const frontendUrl = process.env.FRONTEND_URL || '';
+    const shareableUrl = slug ? `${frontendUrl}/store/${slug}` : null;
 
+    return res.json({
+      message: 'Datos de la tienda actualizados con éxito.',
+      data,
+      shareableUrl, // Devolver la URL al frontend
+    });
   } catch (err) {
     console.error('[ERROR GENERAL PUT /store-data]', err.stack || err);
-    return res.status(500).json({ error: 'Error interno fatal en el servidor.' });
+    return res
+      .status(500)
+      .json({ error: 'Error interno fatal en el servidor.' });
   }
 });
 

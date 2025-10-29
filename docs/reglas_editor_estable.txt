@@ -1,0 +1,37 @@
+# Arquitectura y Reglas de Oro para el Editor de Tiendas (Versión Estable v1.0.0)
+
+Este documento describe la arquitectura del sistema de previsualización en tiempo real y establece las reglas fundamentales para futuras implementaciones, con el fin de mantener la estabilidad del código.
+
+---
+## Concepto Clave: Un Único Estado Central
+
+El sistema funciona con un objeto JavaScript central (`state.storeState`) que actúa como la "única fuente de verdad". Cualquier cambio en la interfaz de edición modifica este objeto, y la previsualización se regenera a partir de él.
+
+**El Flujo Reactivo:**
+1.  **Acción del Usuario** (ej: cambiar un texto en un input).
+2.  **Evento (events.js)**: Un "escuchador" detecta la acción.
+3.  **Actualización del Estado (state.js)**: El escuchador modifica la propiedad correspondiente en `state.storeState`.
+4.  **Llamada a Renderizar**: El escuchador invoca la función `renderAll()`.
+5.  **Redibujado (render.js)**: La función `renderAll()` reconstruye el HTML de la previsualización leyendo los datos actualizados del `state.storeState`.
+
+---
+## Reglas de Oro para Futuras Mejoras
+
+Para garantizar la estabilidad y evitar errores, es IMPERATIVO seguir estas cuatro reglas:
+
+**Regla 1: NUNCA modifiques la previsualización directamente.**
+- **NO HACER:** `document.getElementById('preview-title').innerText = 'Nuevo Título';`
+- **HACER:** Modificar el estado (`state.storeState.store.nombre = 'Nuevo Título';`) y luego llamar a `renderAll()`. El sistema de renderizado se encargará de la actualización visual.
+
+**Regla 2: CUALQUIER dato que deba ser visible en la previsualización DEBE existir en `state.storeState`**.
+- Si necesitas un nuevo campo (ej: "Horario de la tienda"), primero debes añadirlo al objeto `store` dentro de `state.storeState`. La previsualización solo puede mostrar lo que existe en el estado central.
+
+**Regla 3: Después de cada cambio de estado, LLAMA a `renderAll()`**.
+- Si un evento modifica el `state.storeState` pero no invoca a `renderAll()`, los datos y la vista estarán desincronizados. El usuario no verá el cambio que acaba de hacer.
+
+**Regla 4: Las funciones para botones (`onclick`) DEBEN ser globales.**
+- Si creas una función (ej: `miNuevaFuncion()`) en cualquier módulo y la usas en un `onclick` dentro del HTML generado dinámicamente, debes "exportarla" al mundo exterior.
+- **HACER:** Importa tu función en `main.js` y adjúntala al objeto `window`. Ejemplo: `window.miNuevaFuncion = miNuevaFuncion;`. Si omites este paso, el navegador dará un error de "función no definida" al hacer clic en el botón.
+
+---
+**Conclusión:** Respetar este patrón de "Estado Centralizado y Flujo Unidireccional de Datos" (Estado -> Renderizado) es la clave para mantener y escalar el editor de forma segura.
