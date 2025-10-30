@@ -76,6 +76,7 @@ const getInitialProductData = (): Product & { imageFile: File | null } => ({
   impuestos_incluidos: false,
   precio_final_aereo: 0,
   precio_final_maritimo: 0,
+  precio_final_stock: 0, // Inicializar el nuevo campo
 });
 
 const ProductModal = () => {
@@ -130,9 +131,17 @@ const ProductModal = () => {
       const airShippingCost = store.airRate * weight;
       const seaShippingCost = store.seaRate * weight;
       dataToSave.precio_final_aereo = cost + airShippingCost + (dataToSave.margen_tipo === 'fixed' ? margin : (cost + airShippingCost) * (margin / 100));
-      dataToSave.precio_final_maritimo = cost + seaShippingCost + (dataToSave.margen_tipo === 'fixed' ? margin : (cost + seaShippingCost) * (margin / 100));
-    }
-
+                  dataToSave.precio_final_maritimo = cost + seaShippingCost + (dataToSave.margen_tipo === 'fixed' ? margin : (cost + seaShippingCost) * (margin / 100));
+                } else if (store.storeType === 'in_stock') {
+                  const basePrice = dataToSave.precio_base || 0;
+                  const taxRate = (dataToSave.impuesto_porcentaje || 0) / 100;
+      
+                  if (dataToSave.impuestos_incluidos) {
+                    dataToSave.precio_final_stock = basePrice; // Impuestos ya incluidos en el precio base
+                  } else {
+                    dataToSave.precio_final_stock = basePrice * (1 + taxRate); // Añadir impuestos al precio base
+                  }
+                }
     if (editingProductId) {
       updateProduct(editingProductId, dataToSave);
     }

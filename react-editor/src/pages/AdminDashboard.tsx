@@ -11,7 +11,7 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState({ temp: 0, active: 0 });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string>('');
 
   const fetchUsers = async () => {
     // Envolvemos la lógica en una función que podamos reutilizar

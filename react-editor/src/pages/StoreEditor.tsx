@@ -157,11 +157,10 @@ function StoreEditor() {
       const injectedScript = `<script>\n        window.STORE_DATA = ${JSON.stringify(previewData)};\n        window.SUPABASE_CONFIG = ${JSON.stringify(supabaseConfig)};\n      </script>`;
       finalHtml = finalHtml.replace('<!-- SERVER_DATA_INJECTION -->', injectedScript);
 
-      const previewWindow = window.open('', '_blank');
-      if (previewWindow) {
-        previewWindow.document.write(finalHtml);
-        previewWindow.document.close();
-      } else {
+      const blob = new Blob([finalHtml], { type: 'text/html' });
+      const blobUrl = URL.createObjectURL(blob);
+      const previewWindow = window.open(blobUrl, '_blank');
+      if (!previewWindow) {
         alert('No se pudo abrir la ventana de previsualización. Revisa si tu navegador bloquea las ventanas emergentes.');
       }
     } catch (error: unknown) {

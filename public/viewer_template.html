@@ -4,28 +4,54 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Tienda</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS será inyectado por Vite en modo de desarrollo o incluido en el build -->
+  <link rel="stylesheet" href="/src/index.css"> <!-- Se asume que Vite/Rollup generará este archivo -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
-    :root { --bg: #e9eef6; --card: #f6f8fb; --muted: #6b7280; --accent: #7ea1ff; }
     html, body { scroll-behavior: smooth; }
-    body { background: linear-gradient(180deg, #e9eef6, #dfe8f8); font-family: 'Inter', sans-serif; color: #1a202c; }
-    .neumorphic-card { background: var(--card); border-radius: 14px; box-shadow: 8px 8px 20px rgba(170, 187, 204, 0.18), -8px -8px 20px rgba(255, 255, 255, 0.9); }
-    .btn { transition: transform 0.12s ease-in-out, box-shadow 0.12s ease-in-out; }
-    .btn:active { transform: translateY(1px); box-shadow: none; }
+    body { font-family: 'Inter', sans-serif; color: #1a202c; background-color: #e0e0e0; } /* Fondo base neomórfico */
+    .btn {
+      transition: all 0.2s ease-in-out;
+      box-shadow: 6px 6px 12px #a7a7a7, -6px -6px 12px #ffffff; /* Sombra neomórfica por defecto */
+      background-color: #e0e0e0; /* Color de fondo neomórfico */
+      border-radius: 14px;
+    }
+    .btn:hover {
+      box-shadow: 3px 3px 6px #a7a7a7, -3px -3px 6px #ffffff; /* Ligero hundimiento al pasar el ratón */
+    }
+    .btn:active {
+      box-shadow: inset 2px 2px 5px #a7a7a7, inset -2px -2px 5px #ffffff; /* Efecto hundido al hacer clic */
+    }
     .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px); }
-    .tag-item { background-color: var(--accent); color: white; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; }
+    .tag-item { background-color: #f0f0f0; color: #4a4a4a; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; border: 1px solid #d0d0d0; }
     #cart-button-container { position: fixed; bottom: 20px; right: 20px; z-index: 40; }
     #cart-count { position: absolute; top: -5px; right: -5px; background-color: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+
+    /* Estilos para el iframe de YouTube responsivo */
+    .video-responsive {
+      overflow: hidden;
+      padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+      position: relative;
+      height: 0;
+    }
+    .video-responsive iframe {
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 100%;
+      position: absolute;
+    }
   </style>
 </head>
-<body class="flex flex-col min-h-screen">
+<body class="flex flex-col min-h-screen bg-neumoBg text-gray-800">
 
   <!-- Inyección de datos del servidor -->
   <!-- SERVER_DATA_INJECTION -->
 
   <!-- Contenedor principal de la tienda -->
-  <div id="store-container" class="container mx-auto p-4 md:p-6 lg:p-8"></div>
+  <div id="store-container" class="container mx-auto p-4 md:p-6 lg:p-8">
+
+  </div>
 
   <!-- Botón del carrito flotante -->
   <div id="cart-button-container"></div>
@@ -43,7 +69,17 @@
     let selectedShippingMethod = 'air'; // 'air' o 'sea'
 
     const $ = id => document.getElementById(id);
-    const escapeHTML = (s) => (s || '').replace(/[&<>""]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    const escapeHTML = (s) => (s || '').replace(/[&<"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+    // ==========================================================
+    // HELPERS
+    // ==========================================================
+    function getYouTubeEmbedUrl(url) {
+      if (!url) return null;
+      const regExp = /^(?:https?:\/\/)?(?:www\.)?(?:m\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=|embed\/|v\/|)([^\&\?]*)/;
+      const match = url.match(regExp);
+      return match && match[1] ? `https://www.youtube.com/embed/${match[1]}` : null;
+    }
 
     // ==========================================================
     // INICIALIZACIÓN
@@ -70,14 +106,14 @@
         document.title = store.nombre || 'Tienda';
         const storeContainer = $('store-container');
         const storeNameVal = store.nombre || 'Tienda Sin Nombre';
-        const storeLogoUrl = store.logoUrl || 'https://placehold.co/80x80/e9eef6/6b7280?text=LOGO';
+        const storeLogoUrl = store.logoUrl || 'https://placehold.co/80x80/e0e0e0/a7a7a7?text=LOGO';
         
         let headerHtml = `
             <div class="text-center mb-6">
-                <img src="${storeLogoUrl}" class="w-20 h-20 rounded-full object-cover mx-auto mb-2 neumorphic-card" alt="Logo de la tienda">
-                <h3 class="text-2xl font-bold text-gray-800">${escapeHTML(storeNameVal)}</h3>
-                <p class="text-sm text-gray-600 mt-1">${escapeHTML(store.descripcion)}</p>
-                ${store.whatsapp ? `<a href="https://wa.me/${store.whatsapp.replace(/\s+|-/g, '')}" target="_blank" class="text-teal-600 text-xs font-semibold inline-flex items-center mt-2"><i class="fab fa-whatsapp mr-1"></i> Contactar por WhatsApp</a>` : ''}
+                <img src="${storeLogoUrl}" class="w-24 h-24 rounded-full object-cover mx-auto mb-4 shadow-neumo" alt="Logo de la tienda">
+                <h3 class="text-3xl font-bold text-gray-800">${escapeHTML(storeNameVal)}</h3>
+                ${store.descripcion ? `<p class="text-lg text-gray-600 mt-2">${escapeHTML(store.descripcion)}</p>` : ''}
+                ${store.whatsapp ? `<a href="https://wa.me/${store.whatsapp.replace(/\s+|-/g, '')}" target="_blank" class="text-emerald-600 text-base font-semibold inline-flex items-center mt-3 btn shadow-neumo-sm hover:shadow-neumo-md active:shadow-neumo-inset p-3 rounded-full"><i class="fab fa-whatsapp text-lg mr-2"></i> Contactar por WhatsApp</a>` : ''}
             </div>
         `;
 
@@ -86,22 +122,24 @@
             const tagsHtml = (p.tags || []).map(tag => `<span class="tag-item">#${escapeHTML(tag)}</span>`).join('');
             const { price: priceDisplay, time: timeDisplay } = getCustomerPriceAndDelivery(p);
             const deliveryNote = getCustomerDeliveryText(p);
+            const youtubeEmbedUrl = getYouTubeEmbedUrl(p.youtubeLink);
 
             return `
-                <div class="neumorphic-card p-4 flex flex-col gap-3" data-id="${id}">
-                    <img src="${p.imageUrl || 'https://placehold.co/400x300/f6f8fb/6b7280?text=IMG'}" class="w-full h-48 rounded-lg object-cover" alt="${escapeHTML(p.name)}">
+                <div class="shadow-neomoc bg-neumoBg p-4 flex flex-col gap-3 rounded-xl" data-id="${id}">
+                    <img src="${p.imageUrl || 'https://placehold.co/400x300/e0e0e0/a7a7a7?text=IMG'}" class="w-full h-48 rounded-lg object-cover shadow-inner-neumo mb-2" alt="${escapeHTML(p.name)}">
+                    ${youtubeEmbedUrl ? `<div class="video-responsive mt-2 mb-4 rounded-lg overflow-hidden shadow-inner-neumo"><iframe src="${youtubeEmbedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ''}
                     <div class="flex-1">
-                        <h5 class="text-lg font-bold text-gray-800">${escapeHTML(p.name || 'Producto sin nombre')}</h5>
-                        <p class="text-xs text-gray-500 line-clamp-2 mt-1">${escapeHTML(p.description || 'Sin descripción.')}</p>
+                        <h5 class="text-xl font-bold text-gray-800">${escapeHTML(p.name || 'Producto sin nombre')}</h5>
+                        <p class="text-sm text-gray-600 line-clamp-2 mt-1">${escapeHTML(p.descripcion || 'Sin descripción.')}</p>
                     </div>
-                    <div class="border-t border-gray-100 pt-3 space-y-2">
+                    <div class="border-t border-gray-200 pt-3 space-y-2 mt-2">
                         ${priceDisplay}
-                        <div class="text-xs text-gray-600 font-semibold pt-1">Tiempos de Entrega Estimados:</div>
+                        <div class="text-xs text-gray-700 font-semibold pt-1">Tiempos de Entrega Estimados:</div>
                         ${timeDisplay}
-                        <div class="text-sm border-t pt-2">${deliveryNote}</div>
+                        <div class="text-sm border-t border-gray-200 pt-2 mt-2">${deliveryNote}</div>
                     </div>
-                    <div class="flex flex-wrap gap-2 pt-1 border-t border-gray-100 mb-3">${tagsHtml}</div>
-                    <button class="btn bg-teal-500 text-white px-4 py-2 rounded-full font-semibold hover:bg-teal-600 text-sm flex items-center justify-center" onclick="handleCartAction('${id}', 'add')"><i class="fas fa-cart-plus mr-2"></i> Añadir al Carrito</button>
+                    <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-200">${tagsHtml}</div>
+                    <button class="btn bg-blue-500 text-white px-4 py-3 rounded-full font-semibold text-base flex items-center justify-center mt-3 shadow-neumo hover:shadow-neumo-active active:shadow-neumo-inset" onclick="handleCartAction('${id}', 'add')"><i class="fas fa-cart-plus text-lg mr-2"></i> Añadir al Carrito</button>
                 </div>
             `;
         }).join('');
@@ -109,9 +147,9 @@
         storeContainer.innerHTML = `
           <div class="text-left">
             ${headerHtml}
-            <h4 class="text-xl font-bold mt-8 mb-4 border-t pt-4">Catálogo de Productos</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              ${productsHtml || `<div class="text-center text-gray-400 py-8">No hay productos añadidos.</div>`}
+            <h4 class="text-2xl font-bold mt-10 mb-6 pb-2 border-b-2 border-gray-300">Catálogo de Productos</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              ${productsHtml || `<div class="text-center text-gray-500 py-10 shadow-neumo bg-neumoBg rounded-xl">No hay productos añadidos.</div>`}
             </div>
           </div>
         `;
@@ -121,14 +159,14 @@
         const modalsContainer = $('modals-container');
         modalsContainer.innerHTML = `
             <div id="order-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay hidden">
-                <div class="neumorphic-card p-6 rounded-2xl w-full max-w-lg relative max-h-[90vh] flex flex-col">
-                    <h3 class="text-2xl font-bold mb-4">Resumen de tu Pedido</h3>
-                    <div id="cart-summary-items" class="flex-grow overflow-y-auto pr-2 space-y-3"></div>
-                    <div id="shipping-options" class="mt-4 border-t pt-4"></div>
-                    <div id="order-summary-total" class="mt-4 border-t pt-4 font-semibold"></div>
-                    <div class="mt-6 flex justify-end gap-4">
-                        <button id="close-order-modal-btn" class="btn bg-gray-200 text-gray-700 px-6 py-2 rounded-full">Cerrar</button>
-                        <button id="confirm-whatsapp-btn" class="btn bg-green-500 text-white px-6 py-2 rounded-full flex items-center gap-2"><i class="fab fa-whatsapp"></i>Confirmar y Pedir</button>
+                <div class="bg-neumoBg p-8 rounded-2xl w-full max-w-lg relative max-h-[90vh] flex flex-col shadow-neumo">
+                    <h3 class="text-3xl font-bold text-gray-800 mb-6">Resumen de tu Pedido</h3>
+                    <div id="cart-summary-items" class="flex-grow overflow-y-auto pr-2 space-y-4 text-gray-700"></div>
+                    <div id="shipping-options" class="mt-6 pt-4 border-t border-gray-200"></div>
+                    <div id="order-summary-total" class="mt-6 pt-4 border-t border-gray-300 font-semibold text-lg"></div>
+                    <div class="mt-8 flex justify-end gap-4">
+                        <button id="close-order-modal-btn" class="btn px-6 py-3 bg-gray-300 text-gray-800 rounded-full shadow-neumo hover:shadow-neumo-active active:shadow-neumo-inset">Cerrar</button>
+                        <button id="confirm-whatsapp-btn" class="btn bg-emerald-500 text-white px-6 py-3 rounded-full flex items-center gap-2 shadow-neumo hover:shadow-neumo-active active:shadow-neumo-inset"><i class="fab fa-whatsapp text-xl"></i> Confirmar por WhatsApp</button>
                     </div>
                 </div>
             </div>
@@ -141,9 +179,9 @@
         if (count > 0) {
             container.innerHTML = `
                 <div id="cart-button">
-                    <button id="view-cart-btn" class="btn bg-blue-500 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg text-2xl">
+                    <button id="view-cart-btn" class="btn bg-neumoBg text-blue-600 rounded-full w-20 h-20 flex items-center justify-center text-3xl shadow-neumo hover:shadow-neumo-active active:shadow-neumo-inset">
                         <i class="fas fa-shopping-cart"></i>
-                        <span id="cart-count" class="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">${count}</span>
+                        <span id="cart-count" class="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full h-7 w-7 flex items-center justify-center shadow-neumo-sm">${count}</span>
                     </button>
                 </div>
             `;
@@ -156,9 +194,6 @@
         const itemsContainer = $('cart-summary-items');
         const shippingContainer = $('shipping-options');
         const totalContainer = $('order-summary-total');
-        itemsContainer.innerHTML = '<p class="text-gray-500">Tu carrito está vacío.</p>';
-
-        if (Object.keys(shoppingCart).length === 0) return;
 
         itemsContainer.innerHTML = '';
         let subtotal = 0;
@@ -166,52 +201,73 @@
         let deliveryCosts = [];
         let hasMadeToOrder = false;
 
+        if (Object.keys(shoppingCart).length === 0) {
+          itemsContainer.innerHTML = '<p class="text-gray-500 text-center py-4 rounded-lg bg-gray-100 shadow-inner-neumo">Tu carrito está vacío. Añade productos para continuar.</p>';
+          totalContainer.innerHTML = ''; // Clear total if cart is empty
+          shippingContainer.innerHTML = ''; // Clear shipping if cart is empty
+          $('order-modal').classList.remove('hidden');
+          return;
+        }
+
         for (const [productId, quantity] of Object.entries(shoppingCart)) {
             const product = products.find(p => p.idLocal === productId);
             if (!product) continue;
 
-            if (product.productStockMode !== 'stock') hasMadeToOrder = true;
+            // Aseguramos que product.productStockMode exista y sea válido
+            const productStockMode = product.productStockMode || 'stock'; 
+            if (productStockMode === 'by_order') hasMadeToOrder = true; // Asumo 'by_order' para productos que no son 'stock'
 
-            const price = selectedShippingMethod === 'air' ? product.airFinalPrice : product.seaFinalPrice;
+            // Uso de precios finales calculados en el store
+            const price = store.storeType === 'by_order' 
+                ? (selectedShippingMethod === 'air' ? product.precio_final_aereo : product.precio_final_maritimo) || 0
+                : product.precio_base || 0;
+
             const itemTotal = price * quantity;
             subtotal += itemTotal;
-            totalWeight += (product.weight || 0) * quantity;
+            totalWeight += (product.peso_lb || 0) * quantity;
 
-            if (product.deliveryCostType === 'fixed') deliveryCosts.push(product.deliveryFixedValue || 0);
-            if (product.deliveryCostType === 'range') deliveryCosts.push(product.deliveryRangeEnd || 0);
+            // Cálculo de delivery basado en el producto (si aplica)
+            if (product.delivery_type === 'fixed') deliveryCosts.push(product.delivery_fixed_cost || 0);
+            if (product.delivery_type === 'range') deliveryCosts.push(product.delivery_range_end || 0);
 
             itemsContainer.innerHTML += `
-                <div class="flex justify-between items-center text-sm border-b pb-2">
+                <div class="neumorphic-card p-3 flex justify-between items-center text-sm rounded-lg shadow-neumo-sm border border-gray-200">
                     <div>
-                        <p class="font-bold">${escapeHTML(product.name)} (x${quantity})</p>
-                        <p class="text-xs text-gray-500">Peso: ${(product.weight * quantity).toFixed(2)} lb</p>
+                        <p class="font-bold text-gray-800">${escapeHTML(product.nombre)} (x${quantity})</p>
+                        <p class="text-xs text-gray-500">Peso: ${((product.peso_lb || 0) * quantity).toFixed(2)} lb</p>
                     </div>
-                    <p class="font-semibold">${store.currency} ${itemTotal.toFixed(2)}</p>
+                    <p class="font-semibold text-gray-700">${store.currency} ${itemTotal.toFixed(2)}</p>
                 </div>
             `;
         }
 
         if (hasMadeToOrder && store.isLogisticsDual) {
             shippingContainer.innerHTML = `
-                <p class="font-bold mb-2 text-sm">Método de Envío Preferido:</p>
-                <div class="flex gap-4 text-sm">
-                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="shipping" value="air" ${selectedShippingMethod === 'air' ? 'checked' : ''}> Aéreo</label>
-                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="shipping" value="sea" ${selectedShippingMethod === 'sea' ? 'checked' : ''}> Marítimo</label>
+                <p class="font-bold mb-3 text-sm text-gray-700">Método de Envío Preferido:</p>
+                <div class="flex flex-wrap gap-4 text-sm">
+                    <label class="neumo-radio-label">
+                      <input type="radio" name="shipping" value="air" ${selectedShippingMethod === 'air' ? 'checked' : ''} class="neumo-radio-input">
+                      <span class="neumo-radio-btn">✈️ Aéreo</span>
+                    </label>
+                    <label class="neumo-radio-label">
+                      <input type="radio" name="shipping" value="sea" ${selectedShippingMethod === 'sea' ? 'checked' : ''} class="neumo-radio-input">
+                      <span class="neumo-radio-btn">🚢 Marítimo</span>
+                    </label>
                 </div>
             `;
         } else {
             shippingContainer.innerHTML = '';
         }
 
-        const finalDeliveryCost = deliveryCosts.length > 0 ? Math.max(...deliveryCosts) : 0;
-        const grandTotal = subtotal + finalDeliveryCost;
+        const finalDeliveryCost = deliveryCosts.length > 0 ? Math.max(...deliveryCosts) : (store.delivery_type === 'fixed' ? store.delivery_fixed_cost : 0);
+        const grandTotal = subtotal + finalDeliveryCost; // Ajustado: el delivery es total, no por producto
 
         totalContainer.innerHTML = `
-            <div class="space-y-1 text-sm">
-                <p class="flex justify-between"><span>Subtotal:</span> <span>${store.currency} ${subtotal.toFixed(2)}</span></p>
-                <p class="flex justify-between"><span>Peso Total Estimado:</span> <span>${totalWeight.toFixed(2)} lb</span></p>
-                <p class="flex justify-between"><span>Costo de Delivery (único):</span> <span>${store.currency} ${finalDeliveryCost.toFixed(2)}</span></p>
-                <p class="flex justify-between text-xl font-bold border-t pt-2 mt-2"><span>Total a Pagar (aprox):</span> <span>${store.currency} ${grandTotal.toFixed(2)}</span></p>
+            <div class="space-y-2 text-base">
+                <p class="flex justify-between text-gray-700"><span>Subtotal:</span> <span class="font-semibold">${store.currency} ${subtotal.toFixed(2)}</span></p>
+                <p class="flex justify-between text-gray-700"><span>Peso Total Estimado:</span> <span class="font-semibold">${totalWeight.toFixed(2)} lb</span></p>
+                ${finalDeliveryCost > 0 ? `<p class="flex justify-between text-gray-700"><span>Costo de Delivery:</span> <span class="font-semibold">${store.currency} ${finalDeliveryCost.toFixed(2)}</span></p>` : ''}
+                <p class="flex justify-between text-xl font-bold border-t-2 border-gray-300 pt-3 mt-3 text-gray-800"><span>Total a Pagar (aprox):</span> <span>${store.currency} ${grandTotal.toFixed(2)}</span></p>
             </div>
         `;
 
@@ -231,6 +287,10 @@
         else shoppingCart[productId] = quantity;
 
         renderCartButton();
+        // Si el Modal está abierto,actualizarlo. Mejora UX.
+        if (!$('order-modal').classList.contains('hidden')) {
+          openOrderModal();
+        }
     }
 
     function generateWhatsAppMessage() {
@@ -241,31 +301,36 @@
             return 'Buenas noches';
         })();
 
-        let message = `${greeting}, quiero hacer un pedido de la tienda \"${store.nombre}\":\n\n`;
+        let message = `${greeting}, quiero hacer un pedido de la tienda "${store.nombre}":\n\n`;
         let subtotal = 0, totalWeight = 0, deliveryCosts = [];
 
         for (const [productId, quantity] of Object.entries(shoppingCart)) {
             const product = products.find(p => p.idLocal === productId);
             if (!product) continue;
-            const price = selectedShippingMethod === 'air' ? product.airFinalPrice : product.seaFinalPrice;
+            // Uso de precios finales calculados en el store
+            const price = store.storeType === 'by_order' 
+                ? (selectedShippingMethod === 'air' ? product.precio_final_aereo : product.precio_final_maritimo) || 0
+                : product.precio_base || 0;
+
             const itemTotal = price * quantity;
             subtotal += itemTotal;
-            totalWeight += (product.weight || 0) * quantity;
-            if (product.deliveryCostType === 'fixed') deliveryCosts.push(product.deliveryFixedValue || 0);
-            if (product.deliveryCostType === 'range') deliveryCosts.push(product.deliveryRangeEnd || 0);
-            message += `- ${product.name} (x${quantity}) - ${store.currency} ${itemTotal.toFixed(2)}\n`;
+            totalWeight += (product.peso_lb || 0) * quantity;
+
+            if (product.delivery_type === 'fixed') deliveryCosts.push(product.delivery_fixed_cost || 0);
+            if (product.delivery_type === 'range') deliveryCosts.push(product.delivery_range_end || 0);
+            message += `- ${product.nombre} (x${quantity}) - ${store.currency} ${itemTotal.toFixed(2)}\n`;
         }
 
-        const finalDeliveryCost = deliveryCosts.length > 0 ? Math.max(...deliveryCosts) : 0;
+        const finalDeliveryCost = deliveryCosts.length > 0 ? Math.max(...deliveryCosts) : (store.delivery_type === 'fixed' ? store.delivery_fixed_cost : 0);
         const grandTotal = subtotal + finalDeliveryCost;
 
         message += `\n*Método de Envío Preferido:* ${selectedShippingMethod === 'air' ? 'Aéreo' : 'Marítimo'}\n`;
         message += `*Subtotal:* ${store.currency} ${subtotal.toFixed(2)}\n`;
-        message += `*Costo de Delivery (único):* ${store.currency} ${finalDeliveryCost.toFixed(2)}\n`;
+        message += `*Costo de Delivery:* ${store.currency} ${finalDeliveryCost.toFixed(2)}\n`;
         message += `*Total a Pagar (aprox):* ${store.currency} ${grandTotal.toFixed(2)}\n`;
         message += `*Peso Total Estimado:* ${totalWeight.toFixed(2)} lb`;
 
-        const phoneNumber = store.whatsapp.replace(/\s+|-/g, '');
+        const phoneNumber = store.whatsapp?.replace(/\s+|-/g, '') || '';
         const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
         window.open(url, '_blank');
     }

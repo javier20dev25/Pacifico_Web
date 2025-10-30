@@ -47,6 +47,7 @@ export interface Product {
   margen_tipo?: 'fixed' | 'percent';
   precio_final_aereo?: number;
   precio_final_maritimo?: number;
+  precio_final_stock?: number; // Nuevo campo para el precio final de productos en stock
   peso_lb?: number;
   tags?: string[];
   imageUrl?: string | null;

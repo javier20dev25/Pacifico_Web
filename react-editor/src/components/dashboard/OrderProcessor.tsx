@@ -91,19 +91,19 @@ const OrderProcessor = () => {
 
   return (
     <div className="mb-8"> {/* Consistent spacing */}
-      <h2 className="text-2xl font-bold text-neutral-800 mb-6">Gestor de Pedidos</h2>
-      <div className="bg-white shadow-md rounded-lg p-6"> {/* Consistent card styling */}
+      <h2 className="text-2xl font-bold text-googleBlue mb-6">Gestor de Pedidos</h2>
+      <div className="bg-googleBlue-50 shadow-lg rounded-lg border-t-4 border-googleBlue p-6"> {/* Consistent card styling */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h3 className="font-semibold text-neutral-700 mb-2">Pega aquí tu pedido de WhatsApp:</h3>
             <textarea
-              className="w-full h-64 p-3 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-light focus:border-primary-light outline-none transition duration-200"
+              className="w-full h-64 p-3 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-googleBlue focus:border-googleBlue outline-none transition duration-200"
               placeholder="Pega el texto completo del mensaje de WhatsApp aquí..."
               value={orderText}
               onChange={(e) => setOrderText(e.target.value)}
             />
             <button onClick={handleProcessOrder} disabled={isLoading} 
-              className="mt-4 w-full md:w-auto inline-flex items-center justify-center bg-primary-DEFAULT text-white font-semibold py-2 px-4 rounded-lg hover:bg-primary-dark disabled:bg-neutral-300 disabled:text-neutral-500 transition duration-300"
+              className="mt-4 w-full md:w-auto inline-flex items-center justify-center bg-googleBlue text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-googleBlue disabled:bg-neutral-300 disabled:text-neutral-500 transition duration-300"
             >
               {isLoading ? (
                 'Procesando...'
@@ -114,11 +114,11 @@ const OrderProcessor = () => {
           </div>
           <div>
             <h3 className="font-semibold text-neutral-700 mb-2">Pedido Procesado:</h3>
-            {error && <p className="text-red-600">{error}</p>}
+            {error && <p className="text-googleRed">Error: {error}</p>}
             {processedOrder && (
               <div>
-                <div ref={invoiceRef} className="p-4 bg-neutral-50 border border-neutral-200 rounded-lg">
-                  <h4 className="font-bold text-lg mb-4 text-neutral-800">Factura de Pedido</h4>
+                <div ref={invoiceRef} className="p-4 bg-neutral-50 border border-googleBlue rounded-lg">
+                  <h4 className="font-bold text-lg mb-4 text-googleBlue">Factura de Pedido</h4>
                   <p className="text-neutral-700"><b>Cliente:</b> {processedOrder.customer_name}</p>
                   <p className="text-neutral-700"><b>Fecha:</b> {new Date(processedOrder.order_date).toLocaleString()}</p>
                   <table className="w-full mt-4 text-sm text-left border-collapse">
@@ -138,7 +138,7 @@ const OrderProcessor = () => {
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="font-bold text-neutral-800">
+                    <tfoot className="font-bold text-googleBlue">
                       <tr className="border-t-2 border-neutral-300">
                         <td className="p-2" colSpan={2}>Total</td>
                         <td className="p-2">C${processedOrder.total_price.toFixed(2)}</td>
@@ -147,7 +147,7 @@ const OrderProcessor = () => {
                   </table>
                 </div>
                 <button onClick={handleDownloadInvoice} 
-                  className="mt-4 w-full md:w-auto inline-flex items-center justify-center bg-secondary-DEFAULT text-white font-semibold py-2 px-4 rounded-lg hover:bg-secondary-dark transition duration-300"
+                  className="mt-4 w-full md:w-auto inline-flex items-center justify-center bg-googleGreen text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-googleGreen transition duration-300"
                 >
                   <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
                   Descargar como Imagen

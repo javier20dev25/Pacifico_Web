@@ -49,8 +49,8 @@ const AiChat = () => {
 
   return (
     <div className="mb-8"> {/* Consistent spacing */}
-      <h2 className="text-2xl font-bold text-neutral-800 mb-6">Asistente de IA</h2>
-      <div className="bg-white shadow-md rounded-lg p-6">
+      <h2 className="text-2xl font-bold text-googleBlue mb-6">Asistente de IA</h2>
+      <div className="bg-googleBlue-50 shadow-lg rounded-lg border-t-4 border-googleBlue p-6">
         <div className="h-64 overflow-y-auto mb-4 p-4 border border-neutral-200 rounded-lg bg-neutral-50">
           {messages.length === 0 && !isTyping && (
             <div className="text-neutral-500 text-center">Inicia la conversación con tu asistente.</div>
@@ -90,7 +90,7 @@ const AiChat = () => {
             disabled={isTyping}
           />
           <button onClick={handleSendMessage} disabled={isTyping} 
-            className="inline-flex items-center justify-center bg-primary-DEFAULT text-white font-semibold py-2 px-4 rounded-lg hover:bg-primary-dark disabled:bg-neutral-300 disabled:text-neutral-500 transition duration-300"
+            className="inline-flex items-center justify-center bg-googleBlue text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-googleBlue disabled:bg-neutral-300 disabled:text-neutral-500 transition duration-300"
           >
             <PaperAirplaneIcon className="h-5 w-5" />
           </button>

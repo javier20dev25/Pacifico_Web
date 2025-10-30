@@ -22,7 +22,7 @@ const UserDashboard = () => {
 
         const profilePayload = profileResponse.data;
         setUser(profilePayload.user || profilePayload);
-        setStores(storesResponse.data);
+        setStores(storesResponse.data || []);
 
       } catch (err) {
         setError('No se pudieron cargar los datos del dashboard. Intenta iniciar sesión de nuevo.');
@@ -43,16 +43,16 @@ const UserDashboard = () => {
     return <div className="flex justify-center items-center h-screen"><p className="text-red-500">{error}</p></div>;
   }
 
-  return (
-    <div className="min-h-screen bg-neutral-100 font-sans p-4 md:p-8">
-      <div className="container mx-auto bg-white shadow-md rounded-lg p-6 md:p-10">
-        <UserInfo user={user} />
-        <StoreManager stores={stores} />
-        <OrderProcessor />
-        <AiChat />
-      </div>
-    </div>
-  );
-};
+            return (
+              <div className="min-h-screen bg-neutral-100 font-sans p-4 md:p-8">
+                <h1 className="text-3xl font-bold text-googleBlue mb-6 text-center">Panel de Control</h1>
+                <div className="container mx-auto bg-googleBlue-50 shadow-lg rounded-lg border-t-4 border-googleBlue p-6 md:p-10">
+                  <UserInfo user={user} />
+                  <StoreManager stores={stores} />
+                  <OrderProcessor />
+                  <AiChat />
+                </div>
+              </div>
+            );};
 
 export default UserDashboard;
