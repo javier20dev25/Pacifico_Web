@@ -350,6 +350,50 @@ router.get('/registration-stats', async (req, res) => {
 });
 
 // ==========================================================
+// 7.1. OBTENER ESTADÍSTICAS DEMOGRÁFICAS
+// ==========================================================
+router.get('/demographics-stats', async (req, res) => {
+  try {
+    // Contar usuarios por género
+    const { data: genderStats, error: genderError } = await supabaseAdmin
+      .from('usuarios')
+      .select('gender, count')
+      .not('gender', 'is', null)
+      .group('gender');
+
+    if (genderError) throw genderError;
+
+    // Calcular edad promedio (ignorando nulos)
+    const { data: ageStats, error: ageError } = await supabaseAdmin
+      .from('usuarios')
+      .select('age')
+      .not('age', 'is', null);
+
+    if (ageError) throw ageError;
+
+    let totalAge = 0;
+    let ageCount = 0;
+    ageStats.forEach(user => {
+      if (user.age) {
+        totalAge += user.age;
+        ageCount++;
+      }
+    });
+    const averageAge = ageCount > 0 ? (totalAge / ageCount).toFixed(1) : null;
+
+    res.json({
+      genderDistribution: genderStats,
+      averageAge: averageAge,
+    });
+  } catch (error) {
+    console.error('Error al obtener estadísticas demográficas:', error);
+    res
+      .status(500)
+      .json({ error: 'Ocurrió un error inesperado en el servidor.' });
+  }
+});
+
+// ==========================================================
 // 8. OBTENER LISTA DE PLANES
 // ==========================================================
 router.get('/plans', async (req, res) => {

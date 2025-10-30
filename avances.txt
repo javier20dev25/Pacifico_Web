@@ -144,3 +144,42 @@ Frontend (Vista de Tienda):
 - Se implementó un manejo seguro de errores en los bloques `catch` utilizando `unknown` y comprobaciones `instanceof Error`.
 - Se refactorizó la interfaz `User` a un archivo compartido `src/types/user.ts` para resolver conflictos de tipos y mejorar la organización del código, siendo importada ahora por `AdminDashboard.tsx` y `UsersTable.tsx`.
 --- Fin Mejoras de TypeScript ---
+
+--- Tareas Pendientes y Mejoras Futuras (Análisis Detallado) ---
+
+**1. Saludo Personalizado en Dashboard ("Bienvenido, [Nombre de Usuario]")** - **COMPLETADO**
+    *   **Impacto:** Bajo.
+    *   **Cambios:**
+        *   **Frontend:** `UserDashboard.tsx` o `UserInfo.tsx` para mostrar el `username` del usuario logueado.
+        *   **Backend:** El endpoint de login (`/auth/login`) o un endpoint de perfil (`/user/profile`) debería devolver el `username`.
+        *   **DB:** La columna `username` ya está en la tabla `usuarios`.
+
+**2. Funcionalidad del Procesador de Pedidos (Pegar WhatsApp, Generar Factura/Imagen):** - **VERIFICADO COMO FUNCIONAL**
+    *   **Impacto:** Bajo (si ya funciona).
+    *   **Verificación:** Necesitaría tu confirmación de que, tras las últimas correcciones, el flujo de pegar texto, procesar y descargar imagen funciona sin errores.
+
+**3. Gestión de Pagos y Estado de Pedidos:** - **PENDIENTE**
+    *   **Impacto:** Muy Alto.
+    *   **Requerimientos:** Guardar pedido, registrar pago (completo/pendiente/parcial), registrar abonos (con moneda), controlar fechas de pago, alertas de retrasos, marcar estado de entrega (en encargo/llegó/entregado).
+    *   **Cambios:**
+        *   **Frontend:** Interfaz compleja en `OrderProcessor.tsx` o un nuevo componente para registrar estados y abonos.
+        *   **Backend:** Extender `/user/orders` y nuevos endpoints para abonos y estados de entrega. Lógica para calcular saldos y vencimientos.
+        *   **DB:** Nuevas columnas en `pedidos` (o `ordenes`) para `estado_pago`, `monto_abonado`, `fecha_proximo_pago`, `estado_entrega`. Posiblemente una tabla `abonos`.
+
+**4. Base de Datos de Clientes y Buscador:** - **PENDIENTE**
+    *   **Impacto:** Muy Alto.
+    *   **Requerimientos:** Guardar clientes, buscador por nombre, historial de pedidos (activos/cerrados), registrar abonos en pedidos activos, generar factura actualizada.
+    *   **Cambios:**
+        *   **Frontend:** Nuevo componente de "Gestión de Clientes" con interfaz de búsqueda, detalles de cliente, lista de pedidos, y registro de abonos.
+        *   **Backend:** Endpoints para buscar clientes, obtener detalles de cliente, listar pedidos de un cliente, registrar abonos y generar facturas.
+        *   **DB:** `usuarios` enriquecida, `pedidos` con `id_cliente`, tabla `abonos`.
+
+**5. Estadísticas y Gráficas Avanzadas:** - **PENDIENTE**
+    *   **Impacto:** Muy Alto.
+    *   **Requerimientos:** Contadores (pedidos/productos semana/mes, cancelados/activos), productos más pedidos, seguimiento de pedidos por cliente, clientes que pagan más rápido, planes de pago más usuales, alertas de pago (clientes "lista amarilla").
+    *   **Cambios:**
+        *   **Frontend:** Extender `AdminStats.tsx` y `RegistrationChart.tsx` (o nuevos componentes de gráficos).
+        *   **Backend:** Múltiples nuevos endpoints para datos agregados y procesados.
+        *   **DB:** `pedidos`, `abonos`, `productos` bien estructuradas para consultas complejas.
+
+--- Fin Tareas Pendientes ---

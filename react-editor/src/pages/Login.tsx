@@ -19,6 +19,9 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [username, setUsername] = useState(''); // New
+  const [age, setAge] = useState('');           // New
+  const [gender, setGender] = useState('prefiero_no_decirlo'); // New, default value
   const [error, setError] = useState('');
   const [registrationError, setRegistrationError] = useState('');
   const [tempToken, setTempToken] = useState<string | null>(null);
@@ -108,7 +111,13 @@ const Login = () => {
     }
 
     try {
-        const response = await apiClient.post('/auth/complete-registration', { tempToken, password: newPassword });
+        const response = await apiClient.post('/auth/complete-registration', {
+      tempToken,
+      password: newPassword,
+      username,
+      age: Number(age), // Convert age to number
+      gender,
+    });
         const data = response.data;
 
         if (data.status === 'registration_complete' && data.token) {
@@ -155,13 +164,13 @@ const Login = () => {
 
   const renderRegisterForm = () => (
     <div>
-      <h2 className="text-center text-2xl font-bold text-gray-800 mb-4">Crea tu Contraseña</h2>
-      <p className="text-center text-gray-600 mb-6">Por seguridad, debes establecer una nueva contraseña para activar tu cuenta.</p>
+      <h2 className="text-center text-2xl font-bold text-gray-800 mb-4">Crea tu Contraseña y Perfil</h2>
+      <p className="text-center text-gray-600 mb-6">Por seguridad, debes establecer una nueva contraseña permanente.</p>
       <form onSubmit={handleRegisterSubmit}>
         <div className="mb-4">
           <label htmlFor="new-password" className="block font-semibold text-gray-700 mb-2">Nueva Contraseña</label>
           <div className="relative">
-            <input type={isNewPasswordVisible ? 'text' : 'password'} id="new-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+            <input type={isNewPasswordVisible ? 'text' : 'password'} id="new-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-googleBlue" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
             <button type="button" className="absolute inset-y-0 right-0 px-3 flex items-center" onClick={() => setIsNewPasswordVisible(!isNewPasswordVisible)}><EyeIcon visible={!isNewPasswordVisible} /></button>
           </div>
           {strength && <div className="text-sm text-gray-500 mt-2 min-h-[18px]" dangerouslySetInnerHTML={{ __html: strength }} />}
@@ -169,12 +178,33 @@ const Login = () => {
         <div className="mb-6">
           <label htmlFor="confirm-password" className="block font-semibold text-gray-700 mb-2">Confirmar Contraseña</label>
           <div className="relative">
-            <input type={isConfirmPasswordVisible ? 'text' : 'password'} id="confirm-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+            <input type={isConfirmPasswordVisible ? 'text' : 'password'} id="confirm-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-googleBlue" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
             <button type="button" className="absolute inset-y-0 right-0 px-3 flex items-center" onClick={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}><EyeIcon visible={!isConfirmPasswordVisible} /></button>
           </div>
         </div>
+
+        {/* New fields for onboarding */}
+        <h3 className="text-lg font-bold text-gray-800 mb-4">Completa tu Perfil</h3>
+        <div className="mb-4">
+          <label htmlFor="username" className="block font-semibold text-gray-700 mb-2">Nombre de Usuario</label>
+          <input type="text" id="username" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-googleBlue" value={username} onChange={(e) => setUsername(e.target.value)} required />
+        </div>
+        <div className="mb-4">
+          <label htmlFor="age" className="block font-semibold text-gray-700 mb-2">Edad</label>
+          <input type="number" id="age" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-googleBlue" value={age} onChange={(e) => setAge(e.target.value)} required />
+        </div>
+        <div className="mb-6">
+          <label htmlFor="gender" className="block font-semibold text-gray-700 mb-2">Género</label>
+          <select id="gender" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-googleBlue bg-white pr-8" value={gender} onChange={(e) => setGender(e.target.value)} required>
+            <option value="hombre">Hombre</option>
+            <option value="mujer">Mujer</option>
+            <option value="otro">Otro</option>
+            <option value="prefiero_no_decirlo">Prefiero no decirlo</option>
+          </select>
+        </div>
+
         {registrationError && <div className="text-red-500 text-sm min-h-[20px] mb-4">{registrationError}</div>}
-        <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">Guardar y Continuar</button>
+        <button type="submit" className="w-full bg-googleBlue text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-googleBlue focus:outline-none focus:ring-2 focus:ring-googleBlue focus:ring-opacity-75">Guardar y Continuar</button>
       </form>
     </div>
   );

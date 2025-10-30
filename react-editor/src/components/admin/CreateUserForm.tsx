@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import apiClient from '../../api/axiosConfig';
-import { UserPlusIcon, ClipboardDocumentIcon, CheckCircleIcon } from '@heroicons/react/24/outline'; // Import Heroicons
+import { UserPlusIcon } from '@heroicons/react/24/outline'; // Import Heroicons
 
 interface Plan {
   id: number;
@@ -16,7 +16,7 @@ interface Result {
 }
 
 interface CreateUserFormProps {
-  onUserCreated: () => void;
+  onUserCreated: (credentials: Result | null) => void;
 }
 
 const CreateUserForm: React.FC<CreateUserFormProps> = ({ onUserCreated }) => {
@@ -26,7 +26,7 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onUserCreated }) => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [result, setResult] = useState<Result | null>(null);
+  // const [result, setResult] = useState<Result | null>(null); // Moved to parent
 
   // Cargar los planes disponibles al montar el componente
   useEffect(() => {
@@ -48,7 +48,7 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onUserCreated }) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    setResult(null);
+
 
     try {
       const response = await apiClient.post('/admin/create-temporary-user', {
@@ -73,8 +73,8 @@ Instrucciones:
 
 Tu plan contratado es: ${planNombre}.`;
 
-      setResult({ ...response.data, clientMessage });
-      onUserCreated(); // Notificar al padre para que refresque la lista de usuarios
+      const generatedResult = { ...response.data, clientMessage };
+      onUserCreated(generatedResult); // Notificar al padre y pasar las credenciales
       // Limpiar formulario
       setNombre('');
       setCorreo('');
@@ -86,13 +86,6 @@ Tu plan contratado es: ${planNombre}.`;
     }
   };
 
-  const copyToClipboard = () => {
-    if (result?.clientMessage) {
-      navigator.clipboard.writeText(result.clientMessage)
-        .then(() => alert('Mensaje copiado al portapapeles!'))
-        .catch(() => alert('Error al copiar el mensaje.'));
-    }
-  };
 
   return (
     <div className="bg-white shadow-md rounded-lg p-6 mb-8">
@@ -125,7 +118,7 @@ Tu plan contratado es: ${planNombre}.`;
           </div>
         </div>
         <button type="submit" disabled={isLoading} 
-          className="w-full inline-flex items-center justify-center bg-primary-DEFAULT text-white font-bold py-2 px-4 rounded-lg hover:bg-primary-dark disabled:bg-neutral-300 disabled:text-neutral-500 transition duration-300"
+          className="w-full inline-flex items-center justify-center bg-googleBlue text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-googleBlue disabled:bg-neutral-300 disabled:text-neutral-500 transition duration-300"
         >
           {isLoading ? (
             'Generando...'
@@ -136,25 +129,8 @@ Tu plan contratado es: ${planNombre}.`;
         {error && <p className="text-red-600 mt-2">{error}</p>}
       </form>
 
-      {result && (
-        <div className="mt-6 p-4 bg-primary-50 border border-primary-200 rounded-lg">
-          <h3 className="font-bold text-primary-700 inline-flex items-center mb-2"><CheckCircleIcon className="h-5 w-5 mr-2" /> Usuario Creado - Comparte estas credenciales:</h3>
-          <p className="text-neutral-700"><strong>Email:</strong> {result.credentials.correo}</p>
-          <p className="text-neutral-700"><strong>Contraseña Temporal:</strong> {result.credentials.password}</p>
-          <hr className="my-2 border-neutral-200" />
-          <h4 className="font-semibold text-neutral-800">Mensaje para el Cliente:</h4>
-          <textarea readOnly value={result.clientMessage} 
-            className="w-full h-48 p-3 mt-2 border border-neutral-300 rounded-lg bg-neutral-50 text-neutral-800 outline-none"
-          />
-          <button onClick={copyToClipboard} 
-            className="mt-2 inline-flex items-center justify-center bg-neutral-200 text-neutral-800 font-semibold py-1 px-3 rounded-lg hover:bg-neutral-300 transition duration-300"
-          >
-            <ClipboardDocumentIcon className="h-5 w-5 mr-2" /> Copiar Mensaje
-          </button>
-        </div>
-      )}
-    </div>
-  );
+            </div>
+          );
 };
 
 export default CreateUserForm;

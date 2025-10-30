@@ -45,19 +45,21 @@ const UsersTable: React.FC<UsersTableProps> = ({ users, onUserAction }) => {
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left border-collapse">
-          <thead className="bg-neutral-100">
-            <tr>
-              {['Correo', 'Nombre', 'Plan', 'Estado', 'Creado', 'Expira', 'Acciones'].map(h => <th key={h} className="p-3 border-b border-neutral-300 text-neutral-700">{h}</th>)}
-            </tr>
-          </thead>
-          <tbody>
+                        <thead className="bg-neutral-100">
+                          <tr>
+                            {['Correo', 'Nombre', 'Usuario', 'Edad', 'Género', 'Plan', 'Estado', 'Creado', 'Expira', 'Acciones'].map(h => <th key={h} className="p-3 border-b border-neutral-300 text-neutral-700">{h}</th>)}
+                          </tr>
+                        </thead>          <tbody>
             {users.length === 0 ? (
-              <tr><td colSpan={7} className="p-4 text-center text-neutral-500">No hay usuarios en el sistema.</td></tr>
+              <tr><td colSpan={10} className="p-4 text-center text-neutral-500">No hay usuarios en el sistema.</td></tr>
             ) : (
               users.map((user: User) => (
                 <tr key={user.usuario_uuid} className="border-b border-neutral-200 hover:bg-neutral-50 transition duration-150">
                   <td className="p-3 text-neutral-800">{user.correo}</td>
                   <td className="p-3 text-neutral-700">{user.nombre || 'N/A'}</td>
+                  <td className="p-3 text-neutral-700">{user.username || 'N/A'}</td>
+                  <td className="p-3 text-neutral-700">{user.age || 'N/A'}</td>
+                  <td className="p-3 text-neutral-700">{user.gender || 'N/A'}</td>
                   <td className="p-3 text-neutral-700">{user.plan || 'N/A'}</td>
                   <td className="p-3 text-neutral-700">{user.status}</td>
                   <td className="p-3 text-neutral-700">{new Date(user.creado_at).toLocaleDateString()}</td>

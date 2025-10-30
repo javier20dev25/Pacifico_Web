@@ -78,7 +78,7 @@ router.post('/login', async (req, res) => {
 
     // Usuario activo, generar token de sesión incluyendo rol y correo
     const sessionToken = jwt.sign(
-      { uuid: user.uuid, rol: user.role, email: user.correo },
+      { uuid: user.uuid, rol: user.role, email: user.correo, username: user.username }, // Add username
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
@@ -87,7 +87,7 @@ router.post('/login', async (req, res) => {
     const responsePayload = {
       success: true,
       sessionToken,
-      user: { rol: user.role, nombre: user.nombre },
+      user: { rol: user.role, nombre: user.nombre, username: user.username }, // Add username
     };
     console.log(
       '[DEBUG /login] Payload de respuesta enviado:',
@@ -104,11 +104,17 @@ router.post('/login', async (req, res) => {
 // 2. COMPLETAR REGISTRO (ACTUALIZAR CONTRASEÑA)
 // ==========================================================
 router.post('/complete-registration', async (req, res) => {
-  const { tempToken, password } = req.body;
-  if (!tempToken || !password) {
+  const { tempToken, password, username, age, gender } = req.body; // Add new fields
+  if (!tempToken || !password || !username || !age || !gender) { // Basic validation
     return res
       .status(400)
-      .json({ error: 'Token y nueva contraseña son requeridos.' });
+      .json({ error: 'Token, nueva contraseña, nombre de usuario, edad y género son requeridos.' });
+  }
+
+  // Validate gender
+  const allowedGenders = ['hombre', 'mujer', 'otro', 'prefiero_no_decirlo'];
+  if (!allowedGenders.includes(gender)) {
+    return res.status(400).json({ error: 'Género no válido.' });
   }
 
   if (!isPasswordStrong(password)) {
@@ -135,10 +141,13 @@ router.post('/complete-registration', async (req, res) => {
       .update({
         password_hash: new_password_hash,
         status: 'active',
+        username: username, // Add username
+        age: age,           // Add age
+        gender: gender,     // Add gender
         actualizado_at: new Date(),
       })
       .eq('uuid', user_uuid)
-      .select('uuid, status, nombre, correo') // Seleccionar nombre y correo para el correo de notificación
+      .select('uuid, status, nombre, correo, username') // Seleccionar nombre y correo para el correo de notificación
       .single();
 
     if (updateError) throw updateError;
@@ -154,7 +163,7 @@ router.post('/complete-registration', async (req, res) => {
 
     // Generar un token de sesión normal y duradero
     const sessionToken = jwt.sign(
-      { uuid: updatedUser.uuid, status: updatedUser.status },
+      { uuid: updatedUser.uuid, status: updatedUser.status, username: updatedUser.username }, // Add username
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -163,6 +172,7 @@ router.post('/complete-registration', async (req, res) => {
       status: 'registration_complete',
       message: 'Registro completado. ¡Bienvenido!',
       token: sessionToken,
+      user: { username: updatedUser.username }, // Add username to response
     });
   } catch (error) {
     console.error('Error completando el registro:', error);

@@ -6,4 +6,7 @@ export interface User {
   status: string;
   creado_at: string;
   fecha_expiracion: string | null;
+  username: string | null;
+  age: number | null;
+  gender: 'hombre' | 'mujer' | 'otro' | 'prefiero_no_decirlo' | null;
 }
