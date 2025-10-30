@@ -147,6 +147,9 @@ Frontend (Vista de Tienda):
 
 --- Tareas Pendientes y Mejoras Futuras (Análisis Detallado) ---
 
+**¡RECORDATORIO IMPORTANTE!**
+Para que las funcionalidades de onboarding de usuario (`username`, `age`, `gender`) y las estadísticas demográficas funcionen correctamente, **DEBES APLICAR MANUALMENTE LA MIGRACIÓN SQL** `db/migrations/add_user_profile_fields.sql` a tu base de datos de Supabase.
+
 **1. Saludo Personalizado en Dashboard ("Bienvenido, [Nombre de Usuario]")** - **COMPLETADO**
     *   **Impacto:** Bajo.
     *   **Cambios:**
