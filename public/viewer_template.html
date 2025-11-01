@@ -34,15 +34,26 @@
       position: relative;
       height: 0;
     }
-    .video-responsive iframe {
-      left: 0;
-      top: 0;
-      height: 100%;
-      width: 100%;
-      position: absolute;
-    }
-  </style>
-</head>
+            .video-responsive iframe {
+              left: 0;
+              top: 0;
+              height: 100%;
+              width: 100%;
+              position: absolute;
+            }
+    
+            /* Estilos Chatbot */
+            #chatbot-trigger { position: fixed; bottom: 20px; left: 20px; z-index: 40; }
+            .chat-message { padding: 8px 12px; border-radius: 18px; margin-bottom: 8px; max-width: 80%; line-break: anywhere; }
+            .chat-message.user { background-color: #3b82f6; color: white; align-self: flex-end; margin-left: auto; }
+            .chat-message.assistant { background-color: #f3f4f6; color: #1a202c; align-self: flex-start; box-shadow: inset 2px 2px 5px #a7a7a7, inset -2px -2px 5px #ffffff; }
+            .chat-message.loading { align-self: flex-start; }
+            .dot-flashing { position: relative; width: 10px; height: 10px; border-radius: 5px; background-color: #9880ff; color: #9880ff; animation: dotFlashing 1s infinite linear alternate; animation-delay: .5s; }
+            .dot-flashing::before, .dot-flashing::after { content: ''; display: inline-block; position: absolute; top: 0; }
+            .dot-flashing::before { left: -15px; width: 10px; height: 10px; border-radius: 5px; background-color: #9880ff; color: #9880ff; animation: dotFlashing 1s infinite alternate; animation-delay: 0s; }
+            .dot-flashing::after { left: 15px; width: 10px; height: 10px; border-radius: 5px; background-color: #9880ff; color: #9880ff; animation: dotFlashing 1s infinite alternate; animation-delay: 1s; }
+            @keyframes dotFlashing { 0% { background-color: #9880ff; } 50%, 100% { background-color: rgba(152, 128, 255, 0.2); } }
+          </style></head>
 <body class="flex flex-col min-h-screen bg-neumoBg text-gray-800">
 
   <!-- Inyección de datos del servidor -->
@@ -58,6 +69,27 @@
 
   <!-- Modales -->
   <div id="modals-container"></div>
+
+  <!-- Chatbot de IA -->
+  <div id="chatbot-trigger" class="hidden">
+    <button class="btn bg-blue-600 text-white rounded-full w-20 h-20 flex items-center justify-center text-3xl shadow-neumo hover:shadow-neumo-active active:shadow-neumo-inset">
+      <i class="fas fa-robot"></i>
+    </button>
+  </div>
+
+  <div id="chat-widget" class="fixed bottom-[110px] left-5 z-50 w-[350px] max-w-[90vw] h-[500px] max-h-[70vh] rounded-2xl bg-neumoBg shadow-neumo flex-col hidden">
+    <div class="flex justify-between items-center p-4 bg-gray-200 rounded-t-2xl">
+      <h4 class="font-bold text-gray-800">Asistente de Ventas</h4>
+      <button id="close-chat-btn" class="text-gray-600 hover:text-gray-900"><i class="fas fa-times text-xl"></i></button>
+    </div>
+    <div id="chat-messages" class="flex-grow p-4 overflow-y-auto flex flex-col gap-3"></div>
+    <div class="p-4 border-t border-gray-200">
+      <div class="flex gap-2">
+        <input type="text" id="chat-input" class="flex-grow p-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Escribe tu duda...">
+        <button id="chat-send-btn" class="btn bg-blue-500 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+  </div>
 
   <script type="module">
     // ==========================================================
@@ -85,16 +117,17 @@
     // INICIALIZACIÓN
     // ==========================================================
     document.addEventListener('DOMContentLoaded', () => {
-      if (typeof window.STORE_DATA === 'undefined' || !window.STORE_DATA.store || !window.STORE_DATA.products) {
+      if (typeof window.PAGE_DATA === 'undefined' || !window.PAGE_DATA.store) {
         $('store-container').innerHTML = '<h1 class="text-center text-2xl font-bold text-red-500">Error: No se pudieron cargar los datos de la tienda.</h1>';
         return;
       }
-      store = window.STORE_DATA.store;
-      products = window.STORE_DATA.products;
+      store = window.PAGE_DATA.store.store;
+      products = window.PAGE_DATA.store.products || [];
       
       renderStoreView();
       renderModals();
       renderCartButton();
+      renderChatbot(); // <-- AÑADIDO
       attachGlobalListeners();
     });
 
@@ -348,6 +381,86 @@
             }
         });
     }
+
+    // ==========================================================
+    // LÓGICA DEL CHATBOT DE IA
+    // ==========================================================
+    let chatHistory = [];
+
+    function renderChatbot() {
+      if (!window.PAGE_DATA || !window.PAGE_DATA.chatbot_enabled) return;
+
+      const trigger = $('chatbot-trigger');
+      const widget = $('chat-widget');
+      const closeBtn = $('close-chat-btn');
+      const sendBtn = $('chat-send-btn');
+      const input = $('chat-input');
+
+      trigger.classList.remove('hidden');
+
+      trigger.addEventListener('click', () => widget.classList.toggle('hidden'));
+      closeBtn.addEventListener('click', () => widget.classList.add('hidden'));
+      sendBtn.addEventListener('click', handleSendMessage);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSendMessage();
+      });
+    }
+
+    function addMessageToChat(sender, text) {
+      const messagesContainer = $('chat-messages');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `chat-message ${sender}`;
+      messageDiv.textContent = text; // Usar textContent para evitar renderizado de HTML
+      messagesContainer.appendChild(messageDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      if (sender === 'user') {
+        chatHistory.push({ role: 'user', parts: [{ text }] });
+      } else if (sender === 'assistant') {
+        chatHistory.push({ role: 'model', parts: [{ text }] });
+      }
+    }
+
+    async function handleSendMessage() {
+      const input = $('chat-input');
+      const message = input.value.trim();
+      if (!message) return;
+
+      addMessageToChat('user', escapeHTML(message));
+      input.value = '';
+
+      // Mostrar indicador de "escribiendo..."
+      const loadingIndicator = document.createElement('div');
+      loadingIndicator.className = 'chat-message loading';
+      loadingIndicator.innerHTML = '<div class="dot-flashing"></div>';
+      $('chat-messages').appendChild(loadingIndicator);
+      $('chat-messages').scrollTop = $('chat-messages').scrollHeight;
+
+      try {
+        const response = await fetch('/api/public/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            store_slug: window.PAGE_DATA.store.store.slug,
+            history: chatHistory.slice(0, -1) // Enviar historial sin el último mensaje del usuario
+          })
+        });
+
+        loadingIndicator.remove();
+
+        if (!response.ok) {
+          throw new Error('La respuesta del servidor no fue exitosa.');
+        }
+
+        const data = await response.json();
+        addMessageToChat('assistant', data.reply);
+
+      } catch (error) {
+        console.error('Error al contactar al asistente de IA:', error);
+        loadingIndicator.remove();
+        addMessageToChat('assistant', 'Lo siento, estoy teniendo problemas para conectarme. Por favor, intenta de nuevo más tarde.');
+      }
+    }
+
     
     // ==========================================================
     // HELPERS (se mantienen igual)

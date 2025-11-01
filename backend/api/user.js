@@ -251,14 +251,23 @@ router.get('/store-data', async (req, res) => {
 
     if (userErr || !userProfile) {
       console.log(
-        '[DEBUG /store-data] Fallo: Error de perfil o no se encontró perfil.'
+        '[DEBUG /store-data] User profile not found or error, returning default empty store.',
+        userErr
       );
-      return res.status(404).json({ error: 'Usuario no encontrado.' });
+      // For a new user, it's valid to not have a store.
+      // Return a 200 OK with an empty object so the frontend shows the 'create' view.
+      return res.json({
+        storeData: {},
+        plan: null,
+        slug: null,
+        shareableUrl: null,
+        chatbot_enabled: false,
+      });
     }
     const usuarioId = userProfile.usuario_id;
     console.log(`[DEBUG /store-data] ID de usuario resuelto: ${usuarioId}`);
 
-    let storeQuery = supabaseAdmin.from('stores').select('data, slug');
+    let storeQuery = supabaseAdmin.from('stores').select('data, slug, chatbot_enabled');
     storeQuery = storeQuery.eq('usuario_id', usuarioId).limit(1);
 
     console.log('[DEBUG /store-data] Ejecutando consulta de tienda...');
@@ -287,6 +296,7 @@ router.get('/store-data', async (req, res) => {
       plan: userProfile.plan,
       slug: slug,
       shareableUrl: shareableUrl,
+      chatbot_enabled: store ? store.chatbot_enabled : false,
     });
   } catch (err) {
     console.error('Error fatal en GET /store-data:', err);
@@ -330,7 +340,7 @@ function cleanStoreDataUrls(data) {
 // PUT /api/user/store-data
 router.put('/store-data', async (req, res) => {
   try {
-    const { storeData: newStoreData, launch } = req.body;
+    const { storeData: newStoreData, launch, chatbot_enabled } = req.body;
     if (!newStoreData || typeof newStoreData !== 'object') {
       return res
         .status(400)
@@ -356,6 +366,9 @@ router.put('/store-data', async (req, res) => {
     const updatePayload = { data: cleanedData };
     if (launch === true) {
       updatePayload.activa = true;
+    }
+    if (chatbot_enabled !== undefined) {
+      updatePayload.chatbot_enabled = chatbot_enabled;
     }
 
     const { data, error } = await supabaseAdmin

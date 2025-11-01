@@ -32,6 +32,7 @@ export interface StoreDetails {
   installment_options: { type: string, max: number }[];
   slug?: string;
   shareableUrl?: string; // <--- AÑADIDO
+  chatbot_enabled?: boolean;
 }
 
 export interface Product {
@@ -82,6 +83,7 @@ interface AppState {
   closeProductModal: () => void;
   setStoreType: (type: 'by_order' | 'in_stock') => void;
   loadInitialData: (data: any) => void; // <--- Tipo de payload flexibilizado
+  setChatbotEnabled: (enabled: boolean) => void;
 }
 
 export const availablePaymentMethods: Record<string, string> = {
@@ -124,6 +126,7 @@ const useAppStore = create<AppState>()(
         advance_options: { '50': false, '25': false, '10': false },
         accepts_installments: false,
         installment_options: [],
+        chatbot_enabled: false,
       },
       products: [],
       cart: {
@@ -149,15 +152,22 @@ const useAppStore = create<AppState>()(
       openProductModal: (productId = null) => set({ isProductModalOpen: true, editingProductId: productId }),
       closeProductModal: () => set({ isProductModalOpen: false, editingProductId: null }),
       setStoreType: (type) => set((state) => ({ store: { ...state.store, storeType: type } })), 
+      setChatbotEnabled: (enabled) => set((state) => ({ store: { ...state.store, chatbot_enabled: enabled } })), 
 
       // Lógica de carga de datos actualizada
       loadInitialData: (data) => set((state) => {
         const storeData = data.storeData?.store || {};
         const productsData = data.storeData?.products || [];
         const shareableUrl = data.shareableUrl; // <--- Extraer URL
+        const chatbot_enabled = data.chatbot_enabled; // Extraer el nuevo flag
         
         return {
-            store: { ...state.store, ...storeData, shareableUrl: shareableUrl }, // <--- Guardar URL
+            store: { 
+              ...state.store, 
+              ...storeData, 
+              shareableUrl: shareableUrl,
+              chatbot_enabled: chatbot_enabled, // Guardar el flag en el estado
+            },
             products: productsData
         }
       })

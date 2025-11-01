@@ -1,10 +1,13 @@
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import StoreEditor from './pages/StoreEditor';
 import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
-import UserDashboard from './pages/UserDashboard';
 import NotFound from './pages/NotFound';
 import { useAuth, useLogout } from './hooks/useAuth';
+
+// Lazy load heavy components for code splitting
+const StoreEditor = React.lazy(() => import('./pages/StoreEditor'));
+const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
+const UserDashboard = React.lazy(() => import('./pages/UserDashboard'));
 
 // Componente de Navegación Dinámica
 const Navigation = () => {
@@ -42,14 +45,16 @@ function App() {
   return (
     <BrowserRouter>
       <Navigation />
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/dashboard" element={<UserDashboard />} />
-        <Route path="/editor" element={<StoreEditor />} />
-        <Route path="/" element={<Login />} /> 
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={<div className="w-full text-center p-8">Cargando página...</div>}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/dashboard" element={<UserDashboard />} />
+          <Route path="/editor" element={<StoreEditor />} />
+          <Route path="/" element={<Login />} /> 
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

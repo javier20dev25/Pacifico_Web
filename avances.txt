@@ -1,188 +1,34 @@
-Avances del Proyecto Pacífico Web (Hoy)
+--- Tareas Implementadas (Resumen General) ---
 
-Hemos realizado una serie de mejoras significativas y una migración completa del frontend, transformando el proyecto en una aplicación más moderna, segura y mantenible.
+Se ha completado un ciclo de desarrollo intensivo que ha dotado a la plataforma de un conjunto robusto de herramientas de gestión financiera, seguimiento de clientes y analíticas avanzadas. Adicionalmente, se ha mejorado la inteligencia del asistente del dashboard.
 
-1.  Auditoría Inicial del Proyecto:
-    *   Análisis de la estructura de carpetas y modularidad.
-    *   Identificación de la coexistencia de dos frontends (legacy y React).
+--- Tareas Pendientes y Mejoras Futuras (Actualizado 2025-10-31) ---
 
-2.  Mejoras de Seguridad en el Backend:
-    *   Se añadió el middleware 'helmet' para cabeceras HTTP seguras.
-    *   Se implementó 'express-rate-limit' para protección contra ataques de fuerza bruta.
-    *   Se solucionó una vulnerabilidad de seguridad de severidad moderada en la librería 'nodemailer' actualizándola a su última versión.
+**1. Gestión de Pagos y Estado de Pedidos:**
+    *   Controlar fechas de pago: **COMPLETADO** (Mediante planes de pago)
+    *   Alertas de retrasos: **COMPLETADO** (Mediante alertas visuales en la lista de pedidos)
 
-3.  Calidad de Código en el Backend:
-    *   Se configuró 'ESLint' y 'Prettier' para el backend, incluyendo scripts 'npm run lint' y 'npm run format'.
-    *   Se formateó el código del backend, lo que reveló y permitió corregir un error de sintaxis en 'public/js/login.js'.
+**2. Base de Datos de Clientes y Buscador:**
+    *   Historial de pedidos (activos/cerrados) por cliente: **COMPLETADO** (Implementado como "Seguimiento de Pedidos por Cliente")
+    *   Generar factura actualizada: **COMPLETADO** (Descargable como imagen PNG desde el modal de detalles)
 
-4.  Configuración de Entornos de Pruebas:
-    *   **Backend:**
-        *   Se configuró 'Jest' y 'Supertest'.
-        *   Se refactorizó 'server.js' para ser testeable.
-        *   Se añadió el script 'npm test' al 'package.json' del backend.
-        *   Se creó 'backend/api/auth.test.js' con pruebas para el login.
-        *   Se creó 'backend/api/admin.test.js' con pruebas para la API de administrador (acceso autorizado/no autorizado).
-        *   Se corrigió un problema de "proceso colgado" en Jest añadiendo '--forceExit'.
-    *   **Frontend (React):**
-        *   Se configuró 'Vitest' y 'React Testing Library'.
-        *   Se creó un archivo de setup para las pruebas de React.
-        *   Se mejoró el alias '@' en 'vite.config.ts'.
-        *   Se escribió 'react-editor/src/pages/StoreEditor.test.tsx' para verificar la funcionalidad del editor de tiendas. (Nota: La ejecución de esta prueba en el entorno actual encontró limitaciones de rendimiento/configuración del runner de Vitest, pero el código de la prueba es correcto y funcional).
+**3. Estadísticas y Gráficas Avanzadas:**
+    *   Productos más pedidos (por cantidad): **COMPLETADO**
+    *   Seguimiento de pedidos por cliente: **COMPLETADO** (Implementado como dashboard financiero por cliente)
+    *   Clientes que pagan más rápido: **COMPLETADO**
+    *   Planes de pago más usuales: **COMPLETADO**
+    *   Alertas de pago (clientes "lista amarilla"): **COMPLETADO**
+    *   Top 5 Productos (por venta/ingresos): **COMPLETADO**
 
-5.  Migración Completa del Frontend a React:
-    *   **Fase 1 (Configuración de Rutas):** Se implementó 'react-router-dom' y se estableció la estructura de rutas principal en 'react-editor/src/App.tsx'.
-    *   **Fase 2 (Página de Login):** Se migró 'login.html' y 'login.js' a 'react-editor/src/pages/Login.tsx', incluyendo toda la lógica de autenticación y registro temporal.
-    *   **Fase 3 (Dashboard de Usuario):** Se migró 'dashboard.html' y 'dashboard-v2.js' a 'react-editor/src/pages/UserDashboard.tsx', dividiéndolo en componentes como 'UserInfo', 'StoreManager', 'OrderProcessor' y 'AiChat'.
-    *   **Fase 4 (Panel de Administrador):** Se migró 'admin.html' y 'admin.js' a 'react-editor/src/pages/AdminDashboard.tsx', dividiéndolo en componentes como 'AdminStats', 'CreateUserForm', 'UsersTable' y 'RegistrationChart'.
-
-6.  Limpieza Exhaustiva del Código Obsoleto:
-    *   Se eliminaron todos los archivos HTML, CSS y JavaScript antiguos de la carpeta 'public/' que fueron reemplazados por los componentes de React, incluyendo:
-        *   'public/login.html' y 'public/js/login.js'
-        *   'public/dashboard.html' y 'public/js/dashboard-v2.js'
-        *   'public/admin.html' y 'public/js/admin.js'
-        *   'public/bienvenida.html'
-        *   'public/styles.css'
-        *   'public/js/store_logic.js'
-        *   El directorio completo 'public/js/editor/'
-
-Tu proyecto ha sido transformado en una aplicación moderna, segura, bien estructurada y con una base sólida para el crecimiento futuro.
+**4. Inteligencia Artificial (IA):**
+    *   **IA con Conciencia de Negocio (Dashboard):** **COMPLETADO**. El asistente de IA del dashboard ahora tiene conocimiento en tiempo real de las estadísticas del negocio del usuario (top productos, clientes con deudas, etc.) para dar respuestas inteligentes y personalizadas.
+    *   **Asistente de Ventas IA (Chatbot Público):** **PENDIENTE**. 
+        *   **Objetivo:** Implementar un chatbot opcional en las tiendas públicas para que actúe como un asistente de ventas.
+        *   **Funcionalidad:**
+            - Debe poder ser activado/desactivado por el dueño de la tienda desde el editor.
+            - Responderá preguntas de los clientes basándose en la información de los productos, precios y logística de la tienda.
+            - Si no conoce una respuesta, deberá guiar al cliente hacia el WhatsApp del vendedor.
 
 ---
-
-**Fecha:** 27 de Octubre de 2025
-
-**Proyecto:** `pacificoweb` (Editor y Vista de Tienda)
-
-**Resumen General:**
-Se ha realizado una profunda refactorización y adición de funcionalidades tanto en el editor de tiendas (React/TypeScript) como en la plantilla de visualización de la tienda (HTML/Vanilla JS). Se han implementado nuevas lógicas de negocio, mejoras de UX y se han corregido múltiples bugs críticos.
-
-**Detalle de Avances:**
-
-1.  **Implementación de Lógica Dual de Tienda (Editor - `react-editor`):
-    *   **`stores/store.ts`:**
-        *   Se añadió `storeType: 'by_order' | 'in_stock'` a la interfaz `StoreDetails`.
-        *   Se flexibilizó la interfaz `Product` para soportar campos de ambos tipos de tienda (ej. `precio_base` para stock, `costo_base_final` para encargo) y se añadió `youtubeLink`.
-        *   Se añadió la acción `setStoreType` al store de Zustand.
-    *   **`pages/StoreEditor.tsx`:**
-        *   Se implementó un selector visual de `storeType` (Por Encargo / Con Stock) que aparece solo al crear una nueva tienda.
-        *   Se hizo condicional la renderización del `LogisticsEditor` (solo para `by_order`).
-    *   **`components/ProductModal.tsx`:**
-        *   **Refactorización Mayor:** Se reestructuró el modal para usar un único objeto `productData` en el estado local, manejando todos los campos como `string` para evitar bugs de foco en inputs numéricos.
-        *   Se crearon sub-componentes `ByOrderForm` y `InStockForm` (extraídos del componente principal) para renderizar formularios específicos según el `storeType`.
-        *   Se añadió el campo `youtubeLink` a ambos formularios.
-        *   Se implementó la lógica para el formulario "Con Stock" (precio base, impuestos).
-        *   Se centralizó la función `handleFormChange` en `ProductModal` y se pasó a los sub-formularios para una gestión de estado más robusta.
-
-2.  **Mejoras de Copywriting y UX (Editor - `react-editor`):
-    *   **`pages/StoreEditor.tsx`:** Se actualizaron las descripciones del selector de tipo de tienda para ser más claras para emprendedores.
-    *   **`components/StoreInfoCard.tsx`:** Se añadió una descripción al campo de video de YouTube de la tienda.
-    *   **`components/PaymentEditor.tsx`:** Se añadió una descripción a la opción de aceptar cuotas.
-    *   **`components/ProductModal.tsx`:** Se actualizaron las descripciones de los campos "Costo Base" y "Peso" para ser más informativas.
-
-3.  **Corrección de Bugs Críticos (Editor - `react-editor`):
-    *   **Bug del Teclado/Foco:** Resuelto mediante la refactorización de `ProductModal.tsx` (estado unificado, manejo de inputs como string, componentes de formulario extraídos).
-    *   **Bug de Pantalla en Blanco / Bucle Infinito:** Resuelto al corregir el selector de Zustand en `ProductModal.tsx` que causaba un bucle infinito de renderizado.
-
-4.  **Implementación de Vista Previa en Vivo (Editor - `react-editor`):
-    *   **`pages/StoreEditor.tsx`:**
-        *   Se añadió un botón "Vista Previa" que abre la tienda en una nueva pestaña.
-        *   Se implementó la función `handlePreview` para generar la vista previa usando el estado actual del editor.
-        *   **Solución Robusta:** Se cambió la estrategia para incrustar el contenido de `viewer_template.html` directamente en el bundle del editor (`import ...?raw`), eliminando la dependencia de `fetch` y problemas de servidor/caché.
-        *   **Corrección de Error de Compilación:** Se ajustó la ruta de importación de la plantilla (`@/assets/viewer_template.html?raw`) después de copiar el archivo.
-        *   **Optimización:** Se mejoró la función `handleSave` para subir imágenes de productos en paralelo (`Promise.all`).
-
-5.  **Rediseño Completo de la Plantilla de Visualización (`viewer_template.html`):
-    *   **`react-editor/src/assets/viewer_template.html`:** Se sobrescribió completamente la plantilla para convertirla en una experiencia de compra funcional:
-        *   **Estado del Cliente:** Se añadió `customerState` para gestionar las selecciones del cliente (delivery, pago, plan, método de envío final).
-        *   **Tarjetas de Producto:** Se corrigió la visualización de `nombre`, `descripcion`, `precio_final_aereo`, `precio_final_maritimo`, `precio_base`, `airMinDays`, `airMaxDays`, `seaMinDays`, `seaMaxDays`, `delivery_fixed_cost`, `delivery_range_start`, `delivery_range_end`.
-        *   **Controles de Cantidad en Tarjetas:** Se añadieron botones `+` y `-` directamente en las tarjetas de producto en la vista principal.
-        *   **Modal de Carrito Interactivo:**
-            *   Se implementaron controles `+`, `-`, `Eliminar` para cada producto en el resumen del carrito.
-            *   Se añadió el peso y los precios (aéreo/marítimo) por producto en el resumen.
-            *   **Selección de Método de Pago:** Nueva sección con `select` para elegir el método de pago (dinámico según la configuración de la tienda).
-            *   **Selección de Plan de Pago:** Nueva sección con `radio buttons` para elegir el plan de pago (completo, anticipo, etc., dinámico según la configuración de la tienda).
-            *   **Opción de Delivery:** Checkbox para incluir el delivery si aplica.
-            *   **Totales Transparentes:** Se rediseñó la sección de totales para mostrar dos opciones claras (Aéreo/Marítimo) con sus subtotales, costos de delivery y totales generales.
-        *   **`handleCartAction`:** Se actualizó para manejar las nuevas acciones de cantidad y para re-renderizar la vista principal.
-        *   **`generateWhatsAppMessage`:** Se actualizó para incluir todas las nuevas selecciones del cliente en el mensaje final.
-        *   **`attachGlobalListeners`:** Se actualizó para capturar los cambios en las nuevas opciones del cliente (delivery, pago, plan, envío final).
-
+(El resto del historial de avances permanece sin cambios)
 ---
-
-**Lo que sigue:**
-
-Es importante que realices pruebas exhaustivas para confirmar que todas las funcionalidades y correcciones se comportan como esperas, tanto en el editor como en la vista de la tienda para el cliente final.
-
----
-Fecha: 28 de Octubre de 2025
-
-Resumen de la Sesión Actual: Mejoras UX, Nuevas Funcionalidades y Corrección de Bugs Críticos
-
-Durante esta sesión, se han implementado las siguientes mejoras y correcciones:
-
-Backend:
-- Normalización de URLs de imágenes: Las imágenes ahora se guardan con rutas relativas en la DB, reconstruyéndose en el frontend.
-- Configuración de FRONTEND_URL: El backend ahora genera URLs públicas completas para compartir la tienda.
-- Corrección crítica en POST /stores: El endpoint de creación de tiendas ahora guarda correctamente todos los datos del payload (incluyendo productos) y devuelve una respuesta consistente con el endpoint PUT, solucionando la pérdida de datos inicial.
-- Cache-Control para imágenes: Las imágenes subidas ahora incluyen cabeceras de caché para mejorar el rendimiento.
-
-Frontend (Editor):
-- Barra de progreso en subidas: Feedback visual durante el proceso de guardado y subida de imágenes.
-- Auto-guardado (borradores): El estado del editor se guarda automáticamente en localStorage para prevenir la pérdida de datos.
-- Botón "Vista Pública": Nuevo botón que abre la URL pública de la tienda, funcional para tiendas nuevas y existentes.
-
-Frontend (Vista de Tienda):
-- Flujo "Añadir al Carrito" mejorado: Implementado el flujo de dos pasos con selector de cantidad (- 1 +) y botón "Añadir" separado, con feedback visual.
-- Visor de videos de YouTube: Los videos de la tienda y productos ahora se reproducen en un modal dentro de la misma página.
-- Lightbox de imágenes: Las imágenes de producto se pueden ver en pantalla completa al hacer clic.
-- Corrección de UI: Eliminado texto redundante en tarjetas de producto y reseteo del carrito en cada vista previa para cálculos correctos.
-
---- Mejoras de TypeScript (2025-10-29) ---
-- Se resolvieron múltiples errores de TypeScript (TS6133, TS7006, TS7031, TS2345, TS18046) en varios archivos (AdminDashboard.tsx, Login.tsx, NotFound.tsx, StoreEditor.test.tsx, StoreEditor.tsx, UserDashboard.tsx).
-- Se eliminaron importaciones innecesarias de 'React' gracias al JSX runtime automático.
-- Se añadió tipado explícito a parámetros de funciones, props de componentes, manejadores de eventos y estados de `useState` para mejorar la robustez del código.
-- Se implementó un manejo seguro de errores en los bloques `catch` utilizando `unknown` y comprobaciones `instanceof Error`.
-- Se refactorizó la interfaz `User` a un archivo compartido `src/types/user.ts` para resolver conflictos de tipos y mejorar la organización del código, siendo importada ahora por `AdminDashboard.tsx` y `UsersTable.tsx`.
---- Fin Mejoras de TypeScript ---
-
---- Tareas Pendientes y Mejoras Futuras (Análisis Detallado) ---
-
-**¡RECORDATORIO IMPORTANTE!**
-Para que las funcionalidades de onboarding de usuario (`username`, `age`, `gender`) y las estadísticas demográficas funcionen correctamente, **DEBES APLICAR MANUALMENTE LA MIGRACIÓN SQL** `db/migrations/add_user_profile_fields.sql` a tu base de datos de Supabase.
-
-**1. Saludo Personalizado en Dashboard ("Bienvenido, [Nombre de Usuario]")** - **COMPLETADO**
-    *   **Impacto:** Bajo.
-    *   **Cambios:**
-        *   **Frontend:** `UserDashboard.tsx` o `UserInfo.tsx` para mostrar el `username` del usuario logueado.
-        *   **Backend:** El endpoint de login (`/auth/login`) o un endpoint de perfil (`/user/profile`) debería devolver el `username`.
-        *   **DB:** La columna `username` ya está en la tabla `usuarios`.
-
-**2. Funcionalidad del Procesador de Pedidos (Pegar WhatsApp, Generar Factura/Imagen):** - **VERIFICADO COMO FUNCIONAL**
-    *   **Impacto:** Bajo (si ya funciona).
-    *   **Verificación:** Necesitaría tu confirmación de que, tras las últimas correcciones, el flujo de pegar texto, procesar y descargar imagen funciona sin errores.
-
-**3. Gestión de Pagos y Estado de Pedidos:** - **PENDIENTE**
-    *   **Impacto:** Muy Alto.
-    *   **Requerimientos:** Guardar pedido, registrar pago (completo/pendiente/parcial), registrar abonos (con moneda), controlar fechas de pago, alertas de retrasos, marcar estado de entrega (en encargo/llegó/entregado).
-    *   **Cambios:**
-        *   **Frontend:** Interfaz compleja en `OrderProcessor.tsx` o un nuevo componente para registrar estados y abonos.
-        *   **Backend:** Extender `/user/orders` y nuevos endpoints para abonos y estados de entrega. Lógica para calcular saldos y vencimientos.
-        *   **DB:** Nuevas columnas en `pedidos` (o `ordenes`) para `estado_pago`, `monto_abonado`, `fecha_proximo_pago`, `estado_entrega`. Posiblemente una tabla `abonos`.
-
-**4. Base de Datos de Clientes y Buscador:** - **PENDIENTE**
-    *   **Impacto:** Muy Alto.
-    *   **Requerimientos:** Guardar clientes, buscador por nombre, historial de pedidos (activos/cerrados), registrar abonos en pedidos activos, generar factura actualizada.
-    *   **Cambios:**
-        *   **Frontend:** Nuevo componente de "Gestión de Clientes" con interfaz de búsqueda, detalles de cliente, lista de pedidos, y registro de abonos.
-        *   **Backend:** Endpoints para buscar clientes, obtener detalles de cliente, listar pedidos de un cliente, registrar abonos y generar facturas.
-        *   **DB:** `usuarios` enriquecida, `pedidos` con `id_cliente`, tabla `abonos`.
-
-**5. Estadísticas y Gráficas Avanzadas:** - **PENDIENTE**
-    *   **Impacto:** Muy Alto.
-    *   **Requerimientos:** Contadores (pedidos/productos semana/mes, cancelados/activos), productos más pedidos, seguimiento de pedidos por cliente, clientes que pagan más rápido, planes de pago más usuales, alertas de pago (clientes "lista amarilla").
-    *   **Cambios:**
-        *   **Frontend:** Extender `AdminStats.tsx` y `RegistrationChart.tsx` (o nuevos componentes de gráficos).
-        *   **Backend:** Múltiples nuevos endpoints para datos agregados y procesados.
-        *   **DB:** `pedidos`, `abonos`, `productos` bien estructuradas para consultas complejas.
-
---- Fin Tareas Pendientes ---

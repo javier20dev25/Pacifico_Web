@@ -50,12 +50,18 @@ const adminRoutes = require('./backend/api/admin');
 const userRoutes = require('./backend/api/user');
 const chatRoutes = require('./backend/api/chat');
 const uploadRoutes = require('./backend/api/uploads');
+const ordersRoutes = require('./backend/api/orders');
+const customersRoutes = require('./backend/api/customers');
+const statisticsRoutes = require('./backend/api/statistics');
 const { protect, isAdmin } = require('./backend/middleware/auth');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', protect, isAdmin, adminRoutes);
 app.use('/api/user', protect, userRoutes);
-app.use('/api/chat', protect, chatRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/orders', protect, ordersRoutes);
+app.use('/api/customers', protect, customersRoutes);
+app.use('/api/stats', protect, statisticsRoutes);
 app.use('/api', protect, uploadRoutes);
 
 // ==========================================================
@@ -65,13 +71,13 @@ app.get('/store/:slug', async (req, res) => {
   const storeSlug = req.params.slug;
   try {
     // Buscar la tienda por slug en Supabase
-    const { data: storeData, error } = await supabaseAdmin
+    const { data: store, error } = await supabaseAdmin
       .from('stores')
-      .select('id, data')
+      .select('id, data, chatbot_enabled') // <-- Modificado
       .eq('slug', storeSlug)
       .single();
 
-    if (error || !storeData) {
+    if (error || !store) {
       console.error(`Tienda no encontrada para slug: ${storeSlug}`, error);
       // Aún podemos necesitar un 404.html del directorio public
       const notFoundPath = path.join(__dirname, 'public', '404.html');
@@ -87,8 +93,14 @@ app.get('/store/:slug', async (req, res) => {
       'utf8'
     );
 
+    // Objeto que se inyectará en el frontend
+    const pageData = {
+      store: store.data,
+      chatbot_enabled: store.chatbot_enabled
+    };
+
     // Inyectar los datos de la tienda en la plantilla
-    const injectedData = `<script>window.STORE_DATA = ${JSON.stringify(storeData.data)};</script>`;
+    const injectedData = `<script>window.PAGE_DATA = ${JSON.stringify(pageData)};</script>`; // <-- Modificado
     viewerHtml = viewerHtml.replace(
       '<!-- SERVER_DATA_INJECTION -->',
       injectedData

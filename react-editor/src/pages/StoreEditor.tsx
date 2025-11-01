@@ -47,6 +47,8 @@ function StoreEditor() {
   const setStoreType = useStore((state) => state.setStoreType);
   const products = useStore((state) => state.products);
   const setStoreDetails = useStore((state) => state.setStoreDetails);
+  const chatbotEnabled = useStore((state) => state.store.chatbot_enabled);
+  const setChatbotEnabled = useStore((state) => state.setChatbotEnabled);
   const isProductModalOpen = useStore((state) => state.isProductModalOpen);
   const { isLoading, isError } = useInitialData();
 
@@ -112,7 +114,10 @@ function StoreEditor() {
       setUploadProgress(100); // Simular fin de subida
 
       const response = store.uuid
-        ? await apiClient.put(`/user/store-data`, { storeData: finalPayload })
+        ? await apiClient.put(`/user/store-data`, { 
+            storeData: finalPayload,
+            chatbot_enabled: chatbotEnabled 
+          })
         : await apiClient.post(`/stores`, { storeData: finalPayload }); // <--- CORREGIDO
 
       alert('¡Tienda guardada con éxito!');
@@ -143,18 +148,23 @@ function StoreEditor() {
 
   const handlePreview = () => {
     try {
+      const currentState = useStore.getState(); // <-- Re-add the missing line
       let finalHtml = viewerHtml;
-      const currentState = useStore.getState();
-      const previewData = {
-        store: currentState.store,
-        products: currentState.products,
+      // Re-estructurar los datos para que coincidan con lo que la plantilla pública espera de `PAGE_DATA`
+      const pageData = {
+        store: {
+          store: currentState.store,
+          products: currentState.products,
+        },
+        chatbot_enabled: currentState.store.chatbot_enabled,
       };
       const supabaseConfig = {
         url: import.meta.env.VITE_SUPABASE_URL,
         anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
         bucket: import.meta.env.VITE_STORAGE_BUCKET || 'imagenes',
       };
-      const injectedScript = `<script>\n        window.STORE_DATA = ${JSON.stringify(previewData)};\n        window.SUPABASE_CONFIG = ${JSON.stringify(supabaseConfig)};\n      </script>`;
+      // Inyectar PAGE_DATA, no STORE_DATA
+      const injectedScript = `<script>\n        window.PAGE_DATA = ${JSON.stringify(pageData)};\n        window.SUPABASE_CONFIG = ${JSON.stringify(supabaseConfig)};\n      </script>`;
       finalHtml = finalHtml.replace('<!-- SERVER_DATA_INJECTION -->', injectedScript);
 
       const blob = new Blob([finalHtml], { type: 'text/html' });
@@ -227,6 +237,28 @@ function StoreEditor() {
         <StoreInfoCard />
         {store.storeType === 'by_order' && <LogisticsEditor />}
         <PaymentEditor />
+
+        {/* Sección para el Asistente IA */}
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">Asistente de Ventas IA (Chatbot)</h3>
+          <div className="bg-gray-50 p-4 rounded-lg flex items-center justify-between">
+            <div>
+              <p className="font-medium text-gray-800">Activar chatbot en tu tienda pública</p>
+              <p className="text-sm text-gray-500">Permite que un asistente de IA responda preguntas de tus clientes y les ayude a comprar.</p>
+            </div>
+            <label htmlFor="chatbot-toggle" className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                id="chatbot-toggle" 
+                className="sr-only peer"
+                checked={chatbotEnabled || false}
+                onChange={(e) => setChatbotEnabled(e.target.checked)}
+              />
+              <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+        </div>
+
         <ProductEditor />
         <div className="mt-8 flex flex-col sm:flex-row gap-4">
           <button
