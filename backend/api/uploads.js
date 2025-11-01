@@ -22,11 +22,15 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     const userId = (req.user && (req.user.uuid || req.user.id)) || 'anon';
-    const subfolder = req.body.folder ? sanitizeFilename(req.body.folder) : 'uploads';
-    
+    const subfolder = req.body.folder
+      ? sanitizeFilename(req.body.folder)
+      : 'uploads';
+
     // Usar un ID predecible para el nombre del archivo, o 'logo' por defecto
     const fileId = req.body.fileId ? sanitizeFilename(req.body.fileId) : 'logo';
-    const ext = req.file.originalname.includes('.') ? req.file.originalname.slice(req.file.originalname.lastIndexOf('.')) : '';
+    const ext = req.file.originalname.includes('.')
+      ? req.file.originalname.slice(req.file.originalname.lastIndexOf('.'))
+      : '';
     const filename = `${fileId}${ext}`;
 
     const path = `${subfolder}/${userId}/${filename}`;
@@ -35,23 +39,32 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
       .from(BUCKET)
       .upload(path, req.file.buffer, {
         contentType: req.file.mimetype,
-        upsert: true // <--- ¡IMPORTANTE! Habilitar la sobrescritura
+        upsert: true, // <--- ¡IMPORTANTE! Habilitar la sobrescritura
+        cacheControl: '3600', // Añadido para cachear la imagen por 1 hora
       });
 
     if (uploadError) {
       console.error('[upload-image] supabase upload error:', uploadError);
-      return res.status(500).json({ error: 'Error subiendo archivo a storage', details: uploadError });
+      return res.status(500).json({
+        error: 'Error subiendo archivo a storage',
+        details: uploadError,
+      });
     }
 
-    const { data: publicData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(uploadData.path);
+    const { data: publicData } = supabaseAdmin.storage
+      .from(BUCKET)
+      .getPublicUrl(uploadData.path);
     const publicUrl = publicData?.publicUrl || publicData?.publicURL || null;
 
     return res.json({
       path: uploadData.path,
-      publicUrl
+      publicUrl,
     });
   } catch (err) {
-    console.error('[upload-image] exception:', err && err.stack ? err.stack : err);
+    console.error(
+      '[upload-image] exception:',
+      err && err.stack ? err.stack : err
+    );
     return res.status(500).json({ error: 'Error interno al subir archivo.' });
   }
 });

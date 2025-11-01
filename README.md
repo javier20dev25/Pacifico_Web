@@ -30,16 +30,24 @@ Una plataforma web integral diseñada para la gestión de tiendas, procesamiento
 
 ## Tecnologías Utilizadas
 
-**Frontend:**
--   HTML5, CSS3 (Tailwind CSS)
--   JavaScript (Vanilla JS)
--   SweetAlert2 para alertas y notificaciones.
+**Frontend (Moderno):**
+-   React 19
+-   TypeScript
+-   Vite
+-   Tailwind CSS
+-   React Router DOM (para navegación)
+-   Zustand (para manejo de estado)
 
 **Backend:**
 -   Node.js
 -   Express.js
 -   Supabase (Base de datos, Autenticación)
--   JWT para autenticación.
+-   JWT para autenticación
+-   Helmet, Express-Rate-Limit (Seguridad)
+
+**Calidad de Código:**
+-   ESLint
+-   Prettier
 
 ## Instalación
 
@@ -51,66 +59,70 @@ Sigue estos pasos para configurar el proyecto localmente:
     cd Pacífico_Web/pacificoweb
     ```
 
-2.  **Instalar dependencias del backend:**
+2.  **Configurar variables de entorno:**
+    Crea un archivo `.env` en la raíz con las claves de Supabase y JWT. Consulta `.env.example`.
+
+3.  **Instalar dependencias del Backend:**
     ```bash
     npm install
     ```
 
-3.  **Configurar variables de entorno:**
-    Crea un archivo `.env` en la raíz del directorio `pacificoweb` con las siguientes variables:
-    ```
-    SUPABASE_URL=tu_url_supabase
-    SUPABASE_KEY=tu_clave_anon_supabase
-    JWT_SECRET=una_clave_secreta_fuerte_para_jwt
-    ```
-    Puedes obtener `SUPABASE_URL` y `SUPABASE_KEY` desde tu proyecto Supabase. `JWT_SECRET` debe ser una cadena de texto larga y aleatoria.
-
-4.  **Configurar Supabase (si es necesario):**
-    Asegúrate de que tu base de datos Supabase esté configurada con las tablas necesarias para usuarios, tiendas y pedidos. Puedes usar el script `setup_supabase.js` como referencia o ejecutarlo si es necesario (asegúrate de entender lo que hace antes de ejecutarlo en producción).
-
-5.  **Iniciar el servidor:**
+4.  **Instalar dependencias del Frontend:**
     ```bash
-    npm start
+    cd react-editor
+    npm install
+    cd .. 
     ```
-    El servidor se ejecutará en `http://localhost:3000` (o el puerto configurado).
 
-## Uso
+## Flujo de Desarrollo
 
-1.  **Acceder al Dashboard:** Abre tu navegador y ve a `http://localhost:3000/login.html` para iniciar sesión o registrarte.
-2.  **Gestionar Tiendas:** Desde el dashboard, puedes crear nuevas tiendas, editarlas o eliminarlas. Cada tienda tendrá un enlace público basado en su "slug".
-3.  **Procesar Pedidos:** Utiliza la sección de "Gestor de Pedidos" para pegar mensajes de WhatsApp y procesarlos automáticamente.
-4.  **Asistente de IA:** Interactúa con el asistente de IA para obtener ayuda o automatizar tareas.
+Para trabajar en el proyecto, necesitas dos terminales abiertas.
+
+1.  **Terminal 1: Iniciar el Backend**
+    En la raíz del proyecto (`/pacificoweb`), ejecuta:
+    ```bash
+    npm run dev
+    ```
+    El servidor del backend se iniciará en `http://localhost:3000`.
+
+2.  **Terminal 2: Iniciar el Frontend**
+    En el directorio del frontend (`/pacificoweb/react-editor`), ejecuta:
+    ```bash
+    npm run dev
+    ```
+    Vite te proporcionará una URL local (generalmente `http://localhost:5173`). **Debes usar esta URL para acceder a la aplicación.**
 
 ## Estructura del Proyecto
 
+La arquitectura del proyecto está dividida en un backend de Node.js y un frontend moderno de React.
+
 ```
 .
-├── backend/
-│   ├── api/             # Endpoints de la API (admin, auth, chat, user)
-│   ├── middleware/      # Middleware de Express
-│   └── services/        # Servicios (ej. email)
-├── public/
-│   ├── css/             # Archivos CSS
-│   ├── js/              # Archivos JavaScript del frontend
-│   ├── admin.html       # Página de administración
-│   ├── dashboard.html   # Dashboard principal del usuario
-│   ├── login.html       # Página de login
-│   ├── styles.css       # Estilos globales
-│   └── viewer_template.html # Plantilla para la vista pública de tiendas
-├── templates/           # Plantillas HTML (si se usan con un motor de plantillas)
-├── .env                 # Variables de entorno
-├── package.json         # Dependencias y scripts del proyecto
-├── server.js            # Archivo principal del servidor Express
-├── check_table.js       # Script para verificar tablas (ej. Supabase)
-├── setup_supabase.js    # Script para configurar Supabase
-└── README.md            # Este archivo
+├── backend/         # Lógica del servidor (API, middleware, servicios)
+├── react-editor/    # Aplicación Frontend en React (Vite, TypeScript)
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/     # Componentes de página (Login, Dashboard, etc.)
+│   │   └── App.tsx    # Router principal de la aplicación
+├── public/          # Archivos estáticos legacy (en proceso de migración)
+├── server.js        # Archivo principal del servidor Express
+├── package.json     # Dependencias y scripts del Backend
+└── README.md
 ```
 
 ## Scripts Disponibles
 
--   `npm start`: Inicia el servidor Express.
--   `npm run dev`: (Si existe un script de desarrollo, por ejemplo con nodemon)
--   `node setup_supabase.js`: Ejecuta el script de configuración de Supabase (usar con precaución).
+### Backend (en la raíz)
+-   `npm start`: Inicia el servidor para producción.
+-   `npm run dev`: Inicia el servidor en modo desarrollo con recarga automática.
+-   `npm run format`: Formatea todo el código del backend con Prettier.
+-   `npm run lint`: Analiza el código del backend con ESLint.
+
+### Frontend (`/react-editor`)
+-   `npm run dev`: Inicia el servidor de desarrollo de Vite.
+-   `npm run build`: Compila la aplicación de React para producción.
+-   `npm run lint`: Analiza el código del frontend con ESLint.
+-   `npm run preview`: Sirve la carpeta `dist` de producción localmente.
 
 ## Variables de Entorno
 

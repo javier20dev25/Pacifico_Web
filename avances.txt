@@ -1,0 +1,34 @@
+--- Tareas Implementadas (Resumen General) ---
+
+Se ha completado un ciclo de desarrollo intensivo que ha dotado a la plataforma de un conjunto robusto de herramientas de gestión financiera, seguimiento de clientes y analíticas avanzadas. Adicionalmente, se ha mejorado la inteligencia del asistente del dashboard.
+
+--- Tareas Pendientes y Mejoras Futuras (Actualizado 2025-10-31) ---
+
+**1. Gestión de Pagos y Estado de Pedidos:**
+    *   Controlar fechas de pago: **COMPLETADO** (Mediante planes de pago)
+    *   Alertas de retrasos: **COMPLETADO** (Mediante alertas visuales en la lista de pedidos)
+
+**2. Base de Datos de Clientes y Buscador:**
+    *   Historial de pedidos (activos/cerrados) por cliente: **COMPLETADO** (Implementado como "Seguimiento de Pedidos por Cliente")
+    *   Generar factura actualizada: **COMPLETADO** (Descargable como imagen PNG desde el modal de detalles)
+
+**3. Estadísticas y Gráficas Avanzadas:**
+    *   Productos más pedidos (por cantidad): **COMPLETADO**
+    *   Seguimiento de pedidos por cliente: **COMPLETADO** (Implementado como dashboard financiero por cliente)
+    *   Clientes que pagan más rápido: **COMPLETADO**
+    *   Planes de pago más usuales: **COMPLETADO**
+    *   Alertas de pago (clientes "lista amarilla"): **COMPLETADO**
+    *   Top 5 Productos (por venta/ingresos): **COMPLETADO**
+
+**4. Inteligencia Artificial (IA):**
+    *   **IA con Conciencia de Negocio (Dashboard):** **COMPLETADO**. El asistente de IA del dashboard ahora tiene conocimiento en tiempo real de las estadísticas del negocio del usuario (top productos, clientes con deudas, etc.) para dar respuestas inteligentes y personalizadas.
+    *   **Asistente de Ventas IA (Chatbot Público):** **PENDIENTE**. 
+        *   **Objetivo:** Implementar un chatbot opcional en las tiendas públicas para que actúe como un asistente de ventas.
+        *   **Funcionalidad:**
+            - Debe poder ser activado/desactivado por el dueño de la tienda desde el editor.
+            - Responderá preguntas de los clientes basándose en la información de los productos, precios y logística de la tienda.
+            - Si no conoce una respuesta, deberá guiar al cliente hacia el WhatsApp del vendedor.
+
+---
+(El resto del historial de avances permanece sin cambios)
+---

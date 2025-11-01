@@ -1,0 +1,48 @@
+
+name: CI PacificoWeb
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install Backend Dependencies
+      run: npm install
+
+    - name: Run Backend Lint
+      run: npm run lint
+
+    - name: Run Backend Tests
+      run: npm test
+
+    - name: Install Frontend Dependencies
+      run: npm install --prefix react-editor
+
+    - name: Run Frontend Lint
+      run: npm run lint --prefix react-editor
+
+    - name: Build Frontend
+      run: npm run build --prefix react-editor
+      
+    - name: Run Frontend Tests
+      run: npm run test --prefix react-editor
+
