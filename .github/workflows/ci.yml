@@ -33,6 +33,10 @@ jobs:
 
     - name: Run Backend Tests
       run: npm test
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
     - name: Install Frontend Dependencies
       run: npm install --prefix react-editor
