@@ -16,7 +16,7 @@ vi.mock('@/stores/store', async (importOriginal) => {
   const actual = await importOriginal(); // Importar el módulo original
 
   const setStoreDetails = vi.fn();
-  const mockStoreData = {
+  const mockStoreData: Partial<useStore.AppState> = {
     store: {
       uuid: '123-abc',
       nombre: 'Mi Tienda de Prueba',
@@ -25,7 +25,7 @@ vi.mock('@/stores/store', async (importOriginal) => {
       whatsapp: '',
       youtubeLink: '',
       currency: 'USD',
-      storeType: 'by_order',
+      storeType: 'by_order' as const,
       isLogisticsDual: false,
       airRate: 0, airMinDays: 0, airMaxDays: 0,
       seaRate: 0, seaMinDays: 0, seaMaxDays: 0,
@@ -33,7 +33,7 @@ vi.mock('@/stores/store', async (importOriginal) => {
       payment_methods: {}, accepts_full_payment: false, accepts_advance_payment: false, advance_options: {}, accepts_installments: false, installment_options: [],
       logoUrl: null, // Added for StoreDetails
       shareableUrl: null, // Added for StoreDetails
-    },
+    } as Partial<useStore.StoreDetails>, // Explicitly type the store object
     products: [],
   };
 
