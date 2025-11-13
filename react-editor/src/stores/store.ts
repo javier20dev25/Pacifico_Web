@@ -6,7 +6,7 @@ export interface StoreDetails {
   storeType: 'by_order' | 'in_stock';
   nombre: string;
   descripcion: string;
-  logoUrl?: string;
+  logoUrl: string | null;
   logoFile?: File | null;
   whatsapp?: string;
   youtubeLink?: string;
@@ -29,8 +29,7 @@ export interface StoreDetails {
   advance_options: Record<string, boolean>;
   accepts_installments: boolean;
   installment_options: { type: string, max: number }[];
-  slug?: string;
-  shareableUrl?: string;
+  shareableUrl: string | null;
 }
 
 export interface Product {
@@ -48,7 +47,7 @@ export interface Product {
   precio_final_maritimo?: number;
   peso_lb?: number;
   tags?: string[];
-  imageUrl?: string;
+  imageUrl: string | null;
   imageFile?: File | null;
   distributorLink?: string;
 }
@@ -107,28 +106,6 @@ export const availablePaymentMethods: Record<string, string> = {
     'efectivo': 'Efectivo'
 };
 
-function sanitizeProductForRuntime(p: Product): Product {
-  return {
-    idLocal: p.idLocal,
-    nombre: p.nombre,
-    descripcion: p.descripcion,
-    youtubeLink: p.youtubeLink ?? undefined,
-    precio_base: p.precio_base,
-    impuesto_porcentaje: p.impuesto_porcentaje,
-    impuestos_incluidos: p.impuestos_incluidos,
-    costo_base_final: p.costo_base_final,
-    margen_valor: p.margen_valor,
-    margen_tipo: p.margen_tipo,
-    precio_final_aereo: p.precio_final_aereo,
-    precio_final_maritimo: p.precio_final_maritimo,
-    peso_lb: p.peso_lb,
-    tags: p.tags,
-    imageUrl: p.imageUrl ?? undefined,
-    imageFile: null,
-    distributorLink: p.distributorLink ?? undefined
-  };
-}
-
 const useAppStore = create<AppState>()(
   persist(
     (set) => ({
@@ -136,6 +113,8 @@ const useAppStore = create<AppState>()(
         storeType: 'by_order',
         nombre: 'Mi Tienda',
         descripcion: '',
+        logoUrl: null,
+        logoFile: null,
         currency: 'USD',
         isLogisticsDual: true,
         airRate: 5.5,
@@ -166,7 +145,11 @@ const useAppStore = create<AppState>()(
       setStore: (store) => set({ store }),
       setLogoFile: (file) => set((state) => ({ store: { ...state.store, logoFile: file } })),
       clearProductImageFiles: () => set((state) => ({
-        products: state.products.map((p) => sanitizeProductForRuntime(p))
+        products: state.products.map(p => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { imageFile, ...rest } = p;
+          return rest;
+        })
       })),
       setStoreDetails: (details) => set((state) => ({ store: { ...state.store, ...details } })),
       setProducts: (products) => set({ products }),
@@ -197,17 +180,18 @@ const useAppStore = create<AppState>()(
       name: 'pacificoweb-draft',
       version: 1,
       storage: createJSONStorage(() => localStorage),
-      onRehydrateStorage: () => {
-        return (hydratedState, error) => {
-          if (error) {
-            console.log('An error happened during hydration', error);
-          } else if (hydratedState?.products) {
-            hydratedState.products = hydratedState.products.map((p: Product) =>
-              sanitizeProductForRuntime(p)
-            );
-          }
-        };
-      }
+      partialize: (state) => ({
+        ...state,
+        store: {
+          ...state.store,
+          logoFile: undefined,
+        },
+        products: state.products.map(p => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { imageFile, ...rest } = p;
+          return rest;
+        })
+      }),
     }
   )
 );

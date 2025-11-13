@@ -5,8 +5,14 @@ import StoreManager from '@/components/dashboard/StoreManager';
 import OrderProcessor from '@/components/dashboard/OrderProcessor';
 import AiChat from '@/components/dashboard/AiChat';
 
+interface User {
+  nombre: string;
+  plan: string;
+  status: string;
+}
+
 const UserDashboard = () => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

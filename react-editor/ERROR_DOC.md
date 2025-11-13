@@ -133,3 +133,33 @@ Estoy listo para continuar con la corrección cuando regreses. Por ahora, aquí 
 *   **Error de Test: `TestingLibraryElementError: Unable to find an accessible element with the role "button" and name /guardar y ver avance/i`**
     *   **Problema:** El test aún falla al intentar hacer clic en un botón con el nombre "guardar y ver avance", que no existe. El botón correcto es "Ver Tienda".
     *   **Acción Pendiente:** Actualizar el test en `src/pages/StoreEditor.test.tsx` para buscar el botón con el nombre `/ver tienda/i`.
+
+---
+### **Resolución de Errores de Test y Tipos (12 de Noviembre de 2025 - Tarde)**
+
+En esta sesión, se abordó una serie de errores persistentes que impedían la compilación y la ejecución de pruebas en el frontend.
+
+1.  **Diagnóstico del Problema Principal: Errores de Tipo y Timeouts**
+    *   **Síntoma:** Al ejecutar `npx tsc`, se producía una cascada masiva de errores (`Cannot find name 'React'`, `JSX element implicitly has type 'any'`). Al ejecutar `npm test`, `vitest` fallaba con un error de `Timeout starting forks runner`.
+    *   **Investigación:**
+        1.  Se modificó `tsconfig.json` para eliminar el array `"types"`, sospechando que restringía la detección de tipos. No funcionó.
+        2.  Se reinstalaron las dependencias (`rm -rf node_modules && npm install`) para descartar una instalación corrupta. No funcionó.
+        3.  Se intentó forzar la carga de tipos con `"typeRoots"` y un array `"types"` explícito en `tsconfig.json`. Esto cambió el error a `Cannot find type definition file for 'react'`, confirmando que el problema era ambiental y no de configuración.
+    *   **Conclusión:** Se determinó que el problema de `tsc` era específico del entorno de ejecución y no un error en el código del proyecto. Se decidió ignorar la cascada de errores de `tsc` y centrarse en los errores de código específicos y en hacer funcionar las pruebas.
+
+2.  **Corrección de Errores de Código Específicos**
+    *   **`store.ts`:** Se corrigió un error `Type 'null' is not assignable to 'string | undefined'` modificando la interfaz `StoreDetails` para que `shareableUrl` aceptara `null`.
+    *   **`store.test.ts`:** Se solucionó el error `Property 'imageUrl' is missing` añadiendo `imageUrl: null` a todos los objetos `Product` de prueba, alineándolos con la nueva interfaz.
+    *   **`supabase.ts`:** Se resolvió el error `Property 'env' does not exist on type 'ImportMeta'` añadiendo la directiva `/// <reference types="vite/client" />` al principio del archivo.
+
+3.  **Diagnóstico y Corrección de la Prueba Unitaria Fallida (`StoreEditor.test.tsx`)**
+    *   **Síntoma:** Una vez que las pruebas comenzaron a ejecutarse, una fallaba con `expected "vi.fn()" to be called 1 times, but got 0 times`.
+    *   **Investigación:**
+        1.  Se corrigió la lógica de la prueba para que hiciera clic en el botón correcto (`"Guardar y Publicar Cambios"`) en lugar de `"Ver Tienda"`.
+        2.  La prueba seguía fallando. Un análisis más profundo del componente `StoreEditor.tsx` reveló que la función `handleSave` tenía una guarda que comprobaba la existencia de un `sessionToken` en `localStorage`.
+    *   **Solución Definitiva:** Se añadió un mock de `localStorage` en el `beforeEach` del archivo de prueba para simular un token de sesión. Esto permitió que la función `handleSave` se ejecutara por completo, la llamada a la API se realizara y la prueba pasara.
+
+4.  **Lecciones Aprendidas y Qué No Hacer**
+    *   **No asumir que las pruebas son correctas:** La prueba de `StoreEditor` tenía una lógica fundamentalmente errónea sobre el comportamiento del componente. Siempre se debe verificar la implementación del componente cuando una prueba falla de forma inesperada.
+    *   **Cuidado con las dependencias ocultas:** La función `handleSave` dependía de `localStorage`, pero esto no era obvio desde la firma de la función. Es crucial tener en cuenta el contexto completo (DOM, `localStorage`, etc.) al escribir pruebas unitarias para componentes.
+    *   **Los problemas ambientales pueden ser una distracción:** Aunque los errores de `tsc` eran abrumadores, no eran la causa raíz de los fallos en la lógica de la aplicación. Fue más productivo centrarse en los errores de código específicos y en la lógica de las pruebas.

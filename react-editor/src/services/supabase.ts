@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 import { createClient } from '@supabase/supabase-js';
 
 // Obtener las variables de entorno de Vite

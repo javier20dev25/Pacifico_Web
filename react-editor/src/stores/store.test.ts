@@ -25,6 +25,7 @@ describe('Zustand Store: Product Management', () => {
       idLocal: 'prod_123',
       nombre: 'Test Product',
       descripcion: 'A great product',
+      imageUrl: null,
       // All other fields are optional as per the Product interface
     };
 
@@ -44,8 +45,8 @@ describe('Zustand Store: Product Management', () => {
   });
 
   it('should delete a product from the list using deleteProduct', () => {
-    const product1: Product = { idLocal: 'p1', nombre: 'P1', descripcion: 'd1' };
-    const product2: Product = { idLocal: 'p2', nombre: 'P2', descripcion: 'd2' };
+    const product1: Product = { idLocal: 'p1', nombre: 'P1', descripcion: 'd1', imageUrl: null };
+    const product2: Product = { idLocal: 'p2', nombre: 'P2', descripcion: 'd2', imageUrl: null };
 
     // Setup initial state with two products
     useAppStore.getState().setProducts([product1, product2]);
@@ -64,7 +65,7 @@ describe('Zustand Store: Product Management', () => {
   });
 
    it('should update a product in the list using updateProduct', () => {
-    const product1: Product = { idLocal: 'p1', nombre: 'Original Name', descripcion: 'd1' };
+    const product1: Product = { idLocal: 'p1', nombre: 'Original Name', descripcion: 'd1', imageUrl: null };
     
     // Setup initial state
     useAppStore.getState().setProducts([product1]);
