@@ -1,3 +1,4 @@
+/// <reference types="vitest/globals" />
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StoreEditor from './StoreEditor';
@@ -33,7 +34,7 @@ vi.mock('@/stores/store', async (importOriginal) => {
       payment_methods: {}, accepts_full_payment: false, accepts_advance_payment: false, advance_options: {}, accepts_installments: false, installment_options: [],
       logoUrl: null, // Added for StoreDetails
       shareableUrl: null, // Added for StoreDetails
-    } as Partial<useStore.StoreDetails>, // Explicitly type the store object
+    } as useStore.StoreDetails, // Explicitly type the store object
     products: [],
   };
 
