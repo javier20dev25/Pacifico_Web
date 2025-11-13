@@ -16,37 +16,31 @@ vi.mock('@/hooks/useInitialData', () => ({
 vi.mock('@/stores/store', async (importOriginal) => {
   const actual = await importOriginal(); // Importar el módulo original
 
-  const setStoreDetails = vi.fn();
-  const mockStoreData: Partial<useStore.AppState> = {
+  const completeMockState: useStore.AppState = {
     store: {
       uuid: '123-abc',
       nombre: 'Mi Tienda de Prueba',
-      slug: 'mi-tienda-de-prueba',
       descripcion: '',
       whatsapp: '',
       youtubeLink: '',
       currency: 'USD',
-      storeType: 'by_order' as const,
+      storeType: 'by_order',
       isLogisticsDual: false,
       airRate: 0, airMinDays: 0, airMaxDays: 0,
       seaRate: 0, seaMinDays: 0, seaMaxDays: 0,
       delivery_type: 'no', delivery_fixed_cost: 0, delivery_range_start: 0, delivery_range_end: 0, delivery_note: '',
       payment_methods: {}, accepts_full_payment: false, accepts_advance_payment: false, advance_options: {}, accepts_installments: false, installment_options: [],
-      logoUrl: null, // Added for StoreDetails
-      shareableUrl: null, // Added for StoreDetails
-    } as useStore.StoreDetails, // Explicitly type the store object
+      logoUrl: null,
+      shareableUrl: null,
+    },
     products: [],
-  };
-
-  const completeMockState: useStore.AppState = {
-    ...mockStoreData,
     cart: { items: {}, selectedShipping: 'air' },
     isProductModalOpen: false,
     editingProductId: null,
     setStore: vi.fn(),
     setLogoFile: vi.fn(),
     clearProductImageFiles: vi.fn(),
-    setStoreDetails: setStoreDetails,
+    setStoreDetails: vi.fn(),
     setProducts: vi.fn(),
     addProduct: vi.fn(),
     updateProduct: vi.fn(),
