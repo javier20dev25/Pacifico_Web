@@ -110,11 +110,14 @@ const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       store: {
+        uuid: '',
         storeType: 'by_order',
         nombre: 'Mi Tienda',
         descripcion: '',
         logoUrl: null,
         logoFile: null,
+        whatsapp: '',
+        youtubeLink: '',
         currency: 'USD',
         isLogisticsDual: true,
         airRate: 5.5,
@@ -134,6 +137,7 @@ const useAppStore = create<AppState>()(
         advance_options: { '50': false, '25': false, '10': false },
         accepts_installments: false,
         installment_options: [],
+        shareableUrl: null,
       },
       products: [],
       cart: {

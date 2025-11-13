@@ -241,3 +241,40 @@ Después de todas las correcciones de configuración, el linter ahora reporta er
 3.  **`store.ts`:** Prefijar con `_` todos los parámetros no utilizados en las definiciones de acciones.
 
 ---
+---
+### **Depuración de Pruebas y "Blindaje" del Store (13 de Noviembre de 2025)**
+
+Durante esta sesión, se abordó la estabilización final del proyecto `react-editor`, resolviendo tanto la causa raíz de la fragilidad de los componentes como los problemas técnicos que impedían la validación a través de pruebas.
+
+**1. Reparación del Entorno de Pruebas (Vitest)**
+
+*   **Problema:** Al ejecutar `npm test`, las pruebas fallaban inmediatamente con el error `Error: [vitest-pool]: Timeout starting forks runner.`.
+*   **Diagnóstico:** Este error indicaba que `vitest` no podía crear sus procesos paralelos (`forks`) para ejecutar las pruebas. Se determinó que la causa era el entorno de ejecución con recursos limitados (Termux), que no manejaba bien la paralelización. Los intentos de solucionarlo con flags de línea de comando (`--threads=false`, `--single-thread`) fracasaron debido a incompatibilidades de versión.
+*   **Solución:** La solución robusta fue modificar directamente la configuración de Vitest. En `react-editor/vite.config.ts`, se añadió la propiedad `threads: false` al objeto de configuración `test`.
+    ```javascript
+    // vite.config.ts
+    test: {
+      // ... otras opciones
+      threads: false, // <-- AÑADIDO
+    },
+    ```
+*   **Lección / Qué no hacer:** No depender de flags de CLI para configuraciones críticas del entorno, ya que pueden cambiar o no ser compatibles. Es preferible definir estas configuraciones en el archivo (`vite.config.ts`) para garantizar la consistencia.
+
+**2. Reparación de Prueba Unitaria por Mock Incompleto**
+
+*   **Problema:** Una vez que las pruebas se ejecutaron, la prueba `StoreEditor.test.tsx` falló con el error `Error: [vitest] No "availablePaymentMethods" export is defined on the "@/stores/store" mock.`
+*   **Diagnóstico:** El archivo de prueba estaba suplantando (`mocking`) el módulo del store (`@/stores/store`). Sin embargo, el mock solo reemplazaba la exportación `default` (el hook `useStore`), eliminando inadvertidamente todas las demás exportaciones nombradas del módulo, como la constante `availablePaymentMethods` que el componente `PaymentEditor` necesitaba para renderizarse.
+*   **Solución:** Se refactorizó el `vi.mock` para utilizar la capacidad de `importOriginal`, que permite acceder al módulo real. Se mantuvieron las exportaciones originales y solo se sobrescribió la exportación `default`.
+    ```javascript
+    // StoreEditor.test.tsx
+    vi.mock('@/stores/store', async (importOriginal) => {
+      const actual = await importOriginal(); // Obtiene las exportaciones reales
+      // ... lógica del mock ...
+      return {
+        ...actual, // Re-exporta todo lo del módulo original
+        __esModule: true,
+        default: mockUseStore, // Sobrescribe solo el hook
+      };
+    });
+    ```
+*   **Lección / Qué no hacer:** Nunca asumir que un `vi.mock` preserva las exportaciones no mencionadas. Si un componente bajo prueba depende de múltiples exportaciones de un módulo mockeado, se debe usar el patrón `importOriginal` para asegurar que todas las dependencias estén disponibles.

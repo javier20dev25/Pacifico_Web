@@ -13,7 +13,7 @@ vi.mock('@/hooks/useInitialData', () => ({
   useInitialData: () => ({ isLoading: false, isError: false }),
 }));// Mock del store de Zustand (versión final autocontenida)
 vi.mock('@/stores/store', async (importOriginal) => {
-
+  const actual = await importOriginal(); // Importar el módulo original
 
   const setStoreDetails = vi.fn();
   const mockStoreData = {
@@ -35,7 +35,7 @@ vi.mock('@/stores/store', async (importOriginal) => {
     products: [],
   };
 
-  const completeMockState: AppState = {
+  const completeMockState: useStore.AppState = {
     ...mockStoreData,
     cart: { items: {}, selectedShipping: 'air' },
     isProductModalOpen: false,
@@ -56,19 +56,20 @@ vi.mock('@/stores/store', async (importOriginal) => {
   };
 
   interface MockUseStore {
-    <T>(selector: (state: AppState) => T): T;
-    getState: () => AppState;
+    <T>(selector: (state: useStore.AppState) => T): T;
+    getState: () => useStore.AppState;
   }
 
-  const mockUseStore = ((_selector: (state: AppState) => unknown): unknown => {
+  const mockUseStore = ((_selector: (state: useStore.AppState) => unknown): unknown => {
     return _selector(completeMockState);
   }) as MockUseStore;
 
   mockUseStore.getState = () => completeMockState;
 
   return {
+    ...actual, // Mantener las exportaciones originales (como availablePaymentMethods)
     __esModule: true,
-    default: mockUseStore,
+    default: mockUseStore, // Sobrescribir solo el default export
   };
 });describe('StoreEditor', () => {
   beforeEach(() => {
