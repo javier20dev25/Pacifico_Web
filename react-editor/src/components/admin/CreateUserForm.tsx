@@ -1,22 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '@/api/axiosConfig';
+import { AxiosError } from 'axios';
 
-const CreateUserForm = ({ onUserCreated }) => {
+// --- TIPOS ---
+type Plan = {
+  id: number;
+  nombre: string;
+};
+
+type ResultData = {
+  copyPasteMessage: string;
+  credentials: {
+    correo: string;
+    password?: string;
+  };
+};
+
+type CreateUserFormProps = {
+  onUserCreated: () => void;
+};
+
+const CreateUserForm: React.FC<CreateUserFormProps> = ({ onUserCreated }) => {
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
   const [planNombre, setPlanNombre] = useState('');
-  const [plans, setPlans] = useState([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<ResultData | null>(null);
 
   useEffect(() => {
     const fetchPlans = async () => {
       try {
         const response = await apiClient.get('/admin/plans');
-        setPlans(response.data || []);
-        if (response.data && response.data.length > 0) {
-          setPlanNombre(response.data[0].nombre);
+        const data = response.data || [];
+        setPlans(data);
+        if (data.length > 0) {
+          setPlanNombre(data[0].nombre);
         }
       } catch {
         setError('No se pudieron cargar los planes.');
@@ -25,14 +45,14 @@ const CreateUserForm = ({ onUserCreated }) => {
     fetchPlans();
   }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
     setResult(null);
 
     try {
-      const response = await apiClient.post('/admin/create-temporary-user', {
+      const response = await apiClient.post<ResultData>('/admin/create-temporary-user', {
         nombre,
         correo,
         plan_nombre: planNombre,
@@ -42,8 +62,12 @@ const CreateUserForm = ({ onUserCreated }) => {
       onUserCreated(); 
       setNombre('');
       setCorreo('');
-    } catch (err) {
-      setError(err.response?.data?.error || 'Error al crear el usuario.');
+    } catch (err: unknown) {
+      if (err instanceof AxiosError) {
+        setError(err.response?.data?.error || 'Error al crear el usuario.');
+      } else {
+        setError('Ocurrió un error inesperado.');
+      }
     } finally {
       setIsLoading(false);
     }

@@ -1,8 +1,27 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import useAppStore, { type Product } from '@/stores/store';
 
-// --- COMPONENTES DE FORMULARIO EXTRAÍDOS PARA ESTABILIDAD ---
-const FormRow = ({ label, htmlFor, children, description }) => (
+// --- TIPOS PARA PROPS ---
+type FormRowProps = {
+  label: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+  description?: string;
+};
+
+type ByOrderFormProps = {
+  productData: Partial<Product>;
+  handleFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>, field: keyof Product, isCheckbox?: boolean) => void;
+};
+
+type InStockFormProps = {
+  productData: Partial<Product>;
+  handleFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>, field: keyof Product, isCheckbox?: boolean) => void;
+};
+
+
+// --- COMPONENTES DE FORMULARIO EXTRAÍDOS Y TIPADOS ---
+const FormRow = ({ label, htmlFor, children, description }: FormRowProps) => (
   <div>
     <label htmlFor={htmlFor} className="text-sm font-medium text-gray-800">{label}</label>
     <div className="flex items-start gap-4">
@@ -12,67 +31,67 @@ const FormRow = ({ label, htmlFor, children, description }) => (
   </div>
 );
 
-const ByOrderForm = ({ productData, handleFormChange }) => {
-  const { costo_base_final, peso_lb, margen_valor, margen_tipo } = productData;
+const ByOrderForm = ({ productData, handleFormChange }: ByOrderFormProps) => {
+  const { costo_base_final, peso_lb, margen_valor, margen_tipo, distributorLink } = productData;
 
   return (
     <>
       <fieldset className="border p-4 rounded-md space-y-4">
         <legend className="text-lg font-semibold px-2">Cálculo de Precio (Por Encargo)</legend>
         <FormRow label="Costo Base ($)" htmlFor="costo_base_final" description="Es lo que vale tu producto en la plataforma donde lo estás comprando.">
-          <input id="costo_base_final" type="number" value={costo_base_final} onChange={(e) => handleFormChange(e, 'costo_base_final')} className="input w-full p-2 border rounded" />
+          <input id="costo_base_final" type="number" value={costo_base_final || ''} onChange={(e) => handleFormChange(e, 'costo_base_final')} className="input w-full p-2 border rounded" />
         </FormRow>
         <FormRow label="Peso (Lb)" htmlFor="peso_lb" description="Revisa la información del producto en la web del proveedor para encontrar este dato.">
-          <input id="peso_lb" type="number" value={peso_lb} onChange={(e) => handleFormChange(e, 'peso_lb')} className="input w-full p-2 border rounded" />
+          <input id="peso_lb" type="number" value={peso_lb || ''} onChange={(e) => handleFormChange(e, 'peso_lb')} className="input w-full p-2 border rounded" />
         </FormRow>
         <FormRow label="Margen de Ganancia" htmlFor="margen_valor" description="La ganancia a añadir. Puede ser un monto fijo ($) o un porcentaje (%).">
           <div className="flex items-center gap-2">
-            <input id="margen_valor" type="number" value={margen_valor} onChange={(e) => handleFormChange(e, 'margen_valor')} className="input w-full p-2 border rounded" />
-            <select id="margen_tipo" value={margen_tipo} onChange={(e) => handleFormChange(e, 'margen_tipo')} className="input p-2 border rounded bg-gray-100">
+            <input id="margen_valor" type="number" value={margen_valor || ''} onChange={(e) => handleFormChange(e, 'margen_valor')} className="input w-full p-2 border rounded" />
+            <select id="margen_tipo" value={margen_tipo || 'fixed'} onChange={(e) => handleFormChange(e, 'margen_tipo')} className="input p-2 border rounded bg-gray-100">
               <option value="fixed">$ (Fijo)</option>
               <option value="percent">% (Porcentaje)</option>
             </select>
           </div>
         </FormRow>
         <FormRow label="Enlace del Proveedor (Secreto)" htmlFor="distributorLink" description="El enlace a la página del producto en el sitio de tu proveedor (ej. Shein, AliExpress). No será visible para tus clientes.">
-          <input id="distributorLink" type="text" value={productData.distributorLink || ''} onChange={(e) => handleFormChange(e, 'distributorLink')} className="input w-full p-2 border rounded" />
+          <input id="distributorLink" type="text" value={distributorLink || ''} onChange={(e) => handleFormChange(e, 'distributorLink')} className="input w-full p-2 border rounded" />
         </FormRow>
       </fieldset>
     </>
   );
 };
 
-const InStockForm = ({ productData, handleFormChange }) => {
+const InStockForm = ({ productData, handleFormChange }: InStockFormProps) => {
   const { precio_base, impuesto_porcentaje, impuestos_incluidos } = productData;
   return (
     <fieldset className="border p-4 rounded-md space-y-4">
       <legend className="text-lg font-semibold px-2">Precio (Stock Local)</legend>
       <FormRow label="Precio Base ($)" htmlFor="precio_base" description="El precio de venta final del producto, con tu ganancia ya incluida.">
-        <input id="precio_base" type="number" value={precio_base} onChange={(e) => handleFormChange(e, 'precio_base')} className="input w-full p-2 border rounded" />
+        <input id="precio_base" type="number" value={precio_base || ''} onChange={(e) => handleFormChange(e, 'precio_base')} className="input w-full p-2 border rounded" />
       </FormRow>
       <FormRow label="Impuestos (%)" htmlFor="impuesto_porcentaje" description="Opcional. Un porcentaje de impuestos que se añadirá al precio base.">
-        <input id="impuesto_porcentaje" type="number" value={impuesto_porcentaje} onChange={(e) => handleFormChange(e, 'impuesto_porcentaje')} className="input w-full p-2 border rounded" />
+        <input id="impuesto_porcentaje" type="number"value={impuesto_porcentaje || ''} onChange={(e) => handleFormChange(e, 'impuesto_porcentaje')} className="input w-full p-2 border rounded" />
       </FormRow>
       <FormRow label="¿Impuestos ya incluidos?" htmlFor="impuestos_incluidos" description="Marca esta casilla si el precio base ya incluye los impuestos.">
-        <input id="impuestos_incluidos" type="checkbox" checked={impuestos_incluidos} onChange={(e) => handleFormChange(e, 'impuestos_incluidos', true)} className="h-6 w-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+        <input id="impuestos_incluidos" type="checkbox" checked={impuestos_incluidos || false} onChange={(e) => handleFormChange(e, 'impuestos_incluidos', true)} className="h-6 w-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
       </FormRow>
     </fieldset>
   );
 };
 
-const getInitialProductData = () => ({
+const getInitialProductData = (): Product => ({
   idLocal: 'product_' + Date.now(),
   nombre: '',
   descripcion: '',
   youtubeLink: '',
   imageUrl: null,
   imageFile: null,
-  costo_base_final: '',
-  peso_lb: '',
-  margen_valor: '',
+  costo_base_final: undefined,
+  peso_lb: undefined,
+  margen_valor: undefined,
   margen_tipo: 'fixed',
-  precio_base: '',
-  impuesto_porcentaje: '',
+  precio_base: undefined,
+  impuesto_porcentaje: undefined,
   impuestos_incluidos: false,
   distributorLink: '',
 });
@@ -84,26 +103,38 @@ const ProductModal = () => {
   const closeModal = useAppStore((state) => state.closeProductModal);
   const addProduct = useAppStore((state) => state.addProduct);
   const updateProduct = useAppStore((state) => state.updateProduct);
-  const [productData, setProductData] = useState(() => getInitialProductData());
+  const [productData, setProductData] = useState<Product>(() => getInitialProductData());
 
   useEffect(() => {
     const productToEdit = editingProductId ? products.find(p => p.idLocal === editingProductId) : null;
     if (productToEdit) {
-      const formState = { ...getInitialProductData(), ...productToEdit };
-      formState.costo_base_final = String(productToEdit.costo_base_final || '');
-      formState.peso_lb = String(productToEdit.peso_lb || '');
-      formState.margen_valor = String(productToEdit.margen_valor || '');
-      formState.precio_base = String(productToEdit.precio_base || '');
-      formState.impuesto_porcentaje = String(productToEdit.impuesto_porcentaje || '');
-      setProductData(formState);
+      // Ya no se necesitan conversiones a String, los tipos ahora coinciden
+      setProductData({ ...getInitialProductData(), ...productToEdit });
     } else {
       setProductData(getInitialProductData());
     }
   }, [editingProductId, products]);
 
-  const handleFormChange = (e, field, isCheckbox = false) => {
-    const { value, checked } = e.target;
-    setProductData(prev => ({ ...prev, [field]: isCheckbox ? checked : value }));
+  const handleFormChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+    field: keyof Product,
+    isCheckbox = false
+  ) => {
+    const { type, value } = e.target;
+    
+    let finalValue: string | number | boolean | undefined;
+
+    if (isCheckbox) {
+      finalValue = (e.target as HTMLInputElement).checked;
+    } else {
+      finalValue = value;
+    }
+
+    if (type === 'number' && value !== '') {
+      finalValue = parseFloat(value);
+    }
+
+    setProductData(prev => ({ ...prev, [field]: finalValue }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,14 +155,7 @@ const ProductModal = () => {
   const handleSave = () => {
     if (!productData.nombre) { alert('El nombre del producto es obligatorio.'); return; }
 
-    const dataToSave: Partial<Product> = {
-      ...productData,
-      costo_base_final: parseFloat(productData.costo_base_final) || 0,
-      peso_lb: parseFloat(productData.peso_lb) || 0,
-      margen_valor: parseFloat(productData.margen_valor) || 0,
-      precio_base: parseFloat(productData.precio_base) || 0,
-      impuesto_porcentaje: parseFloat(productData.impuesto_porcentaje) || 0,
-    };
+    const dataToSave: Partial<Product> = { ...productData };
 
     if (store.storeType === 'by_order') {
       const cost = dataToSave.costo_base_final || 0;
@@ -164,7 +188,7 @@ const ProductModal = () => {
             <input type="file" id="image-upload" accept="image/*" className="hidden" onChange={handleImageChange} />
             <input id="nombre" type="text" placeholder="Nombre del Producto" value={productData.nombre} onChange={(e) => handleFormChange(e, 'nombre')} className="input w-full p-2 border rounded" />
             <textarea id="descripcion" placeholder="Descripción" value={productData.descripcion} onChange={(e) => handleFormChange(e, 'descripcion')} className="input w-full p-2 border rounded"></textarea>
-            <input id="youtubeLink" type="text" placeholder="Enlace de Video de YouTube (Opcional)" value={productData.youtubeLink} onChange={(e) => handleFormChange(e, 'youtubeLink')} className="input w-full p-2 border rounded" />
+            <input id="youtubeLink" type="text" placeholder="Enlace de Video de YouTube (Opcional)" value={productData.youtubeLink || ''} onChange={(e) => handleFormChange(e, 'youtubeLink')} className="input w-full p-2 border rounded" />
           </fieldset>
 
           {store.storeType === 'by_order' ? 

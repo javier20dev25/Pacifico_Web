@@ -1,5 +1,19 @@
 import React from 'react';
-import { Link } from 'react-router-dom';const StoreManager = ({ stores }) => {  const handleShare = (url) => {
+import { Link } from 'react-router-dom';
+
+// --- TIPOS ---
+type Store = {
+  nombre?: string;
+  shareableUrl?: string;
+  activa?: boolean;
+};
+
+type StoreManagerProps = {
+  stores: Store[];
+};
+
+const StoreManager: React.FC<StoreManagerProps> = ({ stores }) => {
+  const handleShare = (url: string) => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url)
         .then(() => alert('¡Enlace de la tienda copiado al portapapeles!'))
@@ -7,12 +21,16 @@ import { Link } from 'react-router-dom';const StoreManager = ({ stores }) => {  
     } else {
       alert('La función de copiar no está disponible en tu navegador.');
     }
-  };  const handleDelete = () => {
+  };
+
+  const handleDelete = () => {
     // Lógica de borrado se implementará después
     if (window.confirm('¿Estás seguro de que quieres eliminar tu tienda? Esta acción no se puede deshacer.')) {
         console.log('TODO: Implementar borrado de tienda');
     }
-  }  // Caso 1: No hay tiendas
+  };
+
+  // Caso 1: No hay tiendas
   if (!stores || stores.length === 0) {
     return (
       <div className="text-center bg-white shadow-md rounded-lg p-8">
@@ -23,11 +41,14 @@ import { Link } from 'react-router-dom';const StoreManager = ({ stores }) => {  
         </Link>
       </div>
     );
-  }  // Caso 2: Ya existe una tienda
+  }
+
+  // Caso 2: Ya existe una tienda
   const store = stores[0];
   const storeName = store.nombre || 'Mi Tienda';
   const publicUrl = store.shareableUrl || '#';
-  const isLaunched = store.activa === true;  return (
+
+  return (
     <div>
       <h2 className="text-2xl font-bold mb-6">{storeName}</h2>
       <div className="bg-white shadow-md rounded-lg p-4">
@@ -55,4 +76,6 @@ import { Link } from 'react-router-dom';const StoreManager = ({ stores }) => {  
       </div>
     </div>
   );
-};export default StoreManager;
+};
+
+export default StoreManager;

@@ -222,7 +222,7 @@ router.post('/orders', protect, async (req, res) => {
   try {
     const userUuid = req.user.uuid;
     const {
-      customer_name,
+      cliente_nombre,
       order_date,
       products,
       total_price,
@@ -230,7 +230,7 @@ router.post('/orders', protect, async (req, res) => {
       raw_message,
     } = req.body;
 
-    if (!customer_name || !order_date || !products || !raw_message) {
+    if (!cliente_nombre || !order_date || !products || !raw_message) {
       return res
         .status(400)
         .json({ error: 'Faltan datos requeridos para guardar el pedido.' });
@@ -241,7 +241,7 @@ router.post('/orders', protect, async (req, res) => {
       .insert([
         {
           user_id: userUuid,
-          customer_name,
+          cliente_nombre,
           order_date,
           products,
           total_price,

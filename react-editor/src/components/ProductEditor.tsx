@@ -14,9 +14,9 @@ const ProductItem = ({ product }: { product: Product }) => {
           {storeType === 'by_order' && (
             <div className="text-xs text-gray-500 space-y-1 mt-2 p-2 bg-gray-50 rounded-md border">
               <div className="grid grid-cols-3 gap-x-4">
-                <span>Costo: <strong>${parseFloat(product.costo_base_final).toFixed(2) || '0.00'}</strong></span>
-                <span>Peso: <strong>{parseFloat(product.peso_lb).toFixed(2) || '0.00'} lb</strong></span>
-                <span>Margen: <strong>{product.margen_tipo === 'fixed' ? '$' + parseFloat(product.margen_valor).toFixed(2) : parseFloat(product.margen_valor).toFixed(2) + '%'}</strong></span>
+                <span>Costo: <strong>${product.costo_base_final?.toFixed(2) || '0.00'}</strong></span>
+                <span>Peso: <strong>{product.peso_lb?.toFixed(2) || '0.00'} lb</strong></span>
+                <span>Margen: <strong>{product.margen_tipo === 'fixed' ? '$' + product.margen_valor?.toFixed(2) : product.margen_valor?.toFixed(2) + '%'}</strong></span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 pt-2 mt-2 border-t">
                 <p className="font-semibold text-blue-600">✈️ Aéreo: ${product.precio_final_aereo?.toFixed(2) || 'N/A'}</p>
@@ -26,7 +26,7 @@ const ProductItem = ({ product }: { product: Product }) => {
           )}
           {storeType === 'in_stock' && (
             <div className="text-xs text-gray-500 space-y-1 mt-2 p-2 bg-gray-50 rounded-md border">
-                <p>Precio Base: <strong>${parseFloat(product.precio_base).toFixed(2) || '0.00'}</strong></p>
+                <p>Precio Base: <strong>${product.precio_base?.toFixed(2) || '0.00'}</strong></p>
             </div>
           )}
         </div>

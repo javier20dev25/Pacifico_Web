@@ -1,11 +1,33 @@
 import React, { useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
+import useAppStore, { type Product } from '@/stores/store';
 
-import useAppStore from '@/stores/store';
+// --- TIPOS E INTERFACES ---
 
-// Lógica de parseo mejorada para que busque en los productos existentes
-function parseOrderText(text, storeProducts) {
-  const order = { products: [], raw_message: text };
+type OrderProduct = {
+  name: string;
+  quantity: number;
+  price: number;
+  unit_price: number;
+  foundProduct: Product | null;
+};
+
+type ProcessedOrder = {
+  products: OrderProduct[];
+  raw_message: string;
+  order_date: Date;
+  customer_name: string;
+  total_price: number;
+  shipping_method: string;
+  payment_plan: string;
+  payment_method: string;
+};
+
+// --- LÓGICA DE PARSEO TIPADA ---
+
+function parseOrderText(text: string, storeProducts: Product[]): ProcessedOrder {
+  const order: Partial<ProcessedOrder> = { products: [], raw_message: text };
+  
   const headerRegex = /^ \[(\d{1,2}\/\d{1,2}\/\d{2,4}), (\d{1,2}:\d{2}:\d{2})\] ([^:]+):/m;
   const headerMatch = text.match(headerRegex);
   order.order_date = headerMatch ? new Date(headerMatch[1].split('/').reverse().join('-') + 'T' + headerMatch[2]) : new Date();
@@ -17,15 +39,14 @@ function parseOrderText(text, storeProducts) {
     const productName = productMatch[1].trim();
     const quantity = parseInt(productMatch[2], 10);
     const linePrice = parseFloat(productMatch[3].replace(/,/g, ''));
-    const existingProduct = storeProducts.find(p => p.nombre.toLowerCase() === productName.toLowerCase());
+    const existingProduct = storeProducts.find(p => p.nombre.toLowerCase() === productName.toLowerCase()) || null;
 
-    order.products.push({
+    order.products?.push({
       name: productName,
       quantity: quantity,
-      price: linePrice, // Precio total de la línea
-      unit_price: quantity > 0 ? linePrice / quantity : linePrice, // Precio por unidad
-      // Enriquecer con datos del producto encontrado
-      foundProduct: existingProduct || null,
+      price: linePrice,
+      unit_price: quantity > 0 ? linePrice / quantity : linePrice,
+      foundProduct: existingProduct,
     });
   }
 
@@ -44,22 +65,26 @@ function parseOrderText(text, storeProducts) {
   const paymentMethodMatch = text.match(paymentMethodRegex);
   order.payment_method = paymentMethodMatch ? paymentMethodMatch[1].trim() : 'No especificado';
 
-  if (order.products.length === 0) {
+  if (!order.products || order.products.length === 0) {
     throw new Error('No se encontraron productos con el formato esperado.');
   }
-  return order;
+  
+  return order as ProcessedOrder;
 }
+
+// --- COMPONENTE PRINCIPAL ---
 
 const OrderProcessor = () => {
   const [orderText, setOrderText] = useState('');
-  const [processedOrder, setProcessedOrder] = useState(null);
+  const [processedOrder, setProcessedOrder] = useState<ProcessedOrder | null>(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const invoiceRef = useRef(null);
+  const invoiceRef = useRef<HTMLDivElement>(null);
   const storeProducts = useAppStore((state) => state.products);
 
-  const handleHeaderChange = (e, field) => {
-    setProcessedOrder(prev => ({ ...prev, [field]: e.target.value }));
+  const handleHeaderChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof ProcessedOrder) => {
+    if (!processedOrder) return;
+    setProcessedOrder(prev => ({ ...prev!, [field]: e.target.value }));
   };
 
   const handleProcessOrder = async () => {
@@ -72,8 +97,8 @@ const OrderProcessor = () => {
     try {
       const parsedOrder = parseOrderText(orderText, storeProducts);
       setProcessedOrder(parsedOrder);
-    } catch (err) {
-      const errorMessage = err.message || 'Error al procesar el pedido.';
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al procesar el pedido.';
       setError(errorMessage);
       setProcessedOrder(null);
     } finally {
@@ -90,7 +115,7 @@ const OrderProcessor = () => {
       const imageURL = canvas.toDataURL('image/png');
       const downloadLink = document.createElement('a');
       downloadLink.href = imageURL;
-      downloadLink.download = 'factura_' + (processedOrder?.customer_name || 'cliente') + '_' + Date.now() + '.png';
+      downloadLink.download = `factura_${processedOrder?.customer_name || 'cliente'}_${Date.now()}.png`;
       document.body.appendChild(downloadLink);
       downloadLink.click();
       document.body.removeChild(downloadLink);
@@ -101,7 +126,7 @@ const OrderProcessor = () => {
 
   const orderTotals = processedOrder ? processedOrder.products.reduce((acc, p) => {
     const unitWeight = p.foundProduct?.peso_lb || 0;
-    acc.totalWeight += unitWeight * p.quantity;
+    acc.totalWeight += (typeof unitWeight === 'number' ? unitWeight : 0) * p.quantity;
     acc.totalPrice += p.price;
     return acc;
   }, { totalWeight: 0, totalPrice: 0 }) : { totalWeight: 0, totalPrice: 0 };
@@ -159,7 +184,7 @@ const OrderProcessor = () => {
                     </thead>
                     <tbody>
                       {processedOrder.products.map((p, index) => {
-                        const unitWeight = p.foundProduct?.peso_lb || 0;
+                        const unitWeight = typeof p.foundProduct?.peso_lb === 'number' ? p.foundProduct.peso_lb : 0;
                         const totalWeight = unitWeight * p.quantity;
                         return (
                           <tr key={index}>
@@ -175,7 +200,7 @@ const OrderProcessor = () => {
                     </tbody>
                     <tfoot className="font-bold bg-gray-50">
                       <tr className="border-t-2">
-                        <td className="p-2" colSpan="4">Totales Generales:</td>
+                        <td className="p-2" colSpan={4}>Totales Generales:</td>
                         <td className="p-2">C${orderTotals.totalPrice.toFixed(2)}</td>
                         <td className="p-2">{orderTotals.totalWeight.toFixed(2)} lb</td>
                       </tr>

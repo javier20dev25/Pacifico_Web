@@ -1,15 +1,13 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-// --- INTERFACES DE TIPADO SEGURO ---
-
 export interface StoreDetails {
   uuid?: string;
   storeType: 'by_order' | 'in_stock';
   nombre: string;
   descripcion: string;
   logoUrl?: string;
-  logoFile?: File;
+  logoFile?: File | null;
   whatsapp?: string;
   youtubeLink?: string;
   currency: 'USD' | 'NIO';
@@ -51,7 +49,8 @@ export interface Product {
   peso_lb?: number;
   tags?: string[];
   imageUrl?: string;
-  imageFile?: File;
+  imageFile?: File | null;
+  distributorLink?: string;
 }
 
 export interface CartItem {
@@ -66,7 +65,6 @@ export interface CartState {
   selectedInstallments?: number;
 }
 
-// Interfaz para el payload de datos iniciales
 interface InitialDataPayload {
   storeData?: {
     store?: Partial<StoreDetails>;
@@ -75,7 +73,7 @@ interface InitialDataPayload {
   shareableUrl?: string;
 }
 
-interface AppState {
+export interface AppState {
   store: StoreDetails;
   products: Product[];
   cart: CartState;
@@ -109,10 +107,31 @@ export const availablePaymentMethods: Record<string, string> = {
     'efectivo': 'Efectivo'
 };
 
+function sanitizeProductForRuntime(p: Product): Product {
+  return {
+    idLocal: p.idLocal,
+    nombre: p.nombre,
+    descripcion: p.descripcion,
+    youtubeLink: p.youtubeLink ?? undefined,
+    precio_base: p.precio_base,
+    impuesto_porcentaje: p.impuesto_porcentaje,
+    impuestos_incluidos: p.impuestos_incluidos,
+    costo_base_final: p.costo_base_final,
+    margen_valor: p.margen_valor,
+    margen_tipo: p.margen_tipo,
+    precio_final_aereo: p.precio_final_aereo,
+    precio_final_maritimo: p.precio_final_maritimo,
+    peso_lb: p.peso_lb,
+    tags: p.tags,
+    imageUrl: p.imageUrl ?? undefined,
+    imageFile: null,
+    distributorLink: p.distributorLink ?? undefined
+  };
+}
+
 const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      // Estado Inicial
       store: {
         storeType: 'by_order',
         nombre: 'Mi Tienda',
@@ -144,15 +163,10 @@ const useAppStore = create<AppState>()(
       },
       isProductModalOpen: false,
       editingProductId: null,
-
-      // Acciones para modificar el estado
       setStore: (store) => set({ store }),
       setLogoFile: (file) => set((state) => ({ store: { ...state.store, logoFile: file } })),
       clearProductImageFiles: () => set((state) => ({
-        products: state.products.map(p => {
-          const { imageFile, ...rest } = p;
-          return rest;
-        })
+        products: state.products.map((p) => sanitizeProductForRuntime(p))
       })),
       setStoreDetails: (details) => set((state) => ({ store: { ...state.store, ...details } })),
       setProducts: (products) => set({ products }),
@@ -168,14 +182,11 @@ const useAppStore = create<AppState>()(
       setCart: (cart) => set({ cart }),
       openProductModal: (productId = null) => set({ isProductModalOpen: true, editingProductId: productId }),
       closeProductModal: () => set({ isProductModalOpen: false, editingProductId: null }),
-      setStoreType: (type) => set((state) => ({ store: { ...state.store, storeType: type } })), 
-      
-      // Lógica de carga de datos actualizada
+      setStoreType: (type) => set((state) => ({ store: { ...state.store, storeType: type } })),
       loadInitialData: (data) => set((state) => {
         const storeData = data.storeData?.store || {};
         const productsData = data.storeData?.products || [];
         const shareableUrl = data.shareableUrl;
-        
         return {
             store: { ...state.store, ...storeData, shareableUrl: shareableUrl },
             products: productsData
@@ -184,7 +195,19 @@ const useAppStore = create<AppState>()(
     }),
     {
       name: 'pacificoweb-draft',
+      version: 1,
       storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => {
+        return (hydratedState, error) => {
+          if (error) {
+            console.log('An error happened during hydration', error);
+          } else if (hydratedState?.products) {
+            hydratedState.products = hydratedState.products.map((p: Product) =>
+              sanitizeProductForRuntime(p)
+            );
+          }
+        };
+      }
     }
   )
 );

@@ -137,51 +137,9 @@ El proyecto se encuentra en un estado funcional, con los flujos de autenticació
 *   **Página de Vista Previa en Blanco:** El problema de que la vista previa de la tienda se muestre en blanco aún no se ha investigado.
 *   **Simplificación de Botones en Dashboard:** El usuario ha sugerido unificar los botones de "Vista Previa" y "Vista Pública" en un solo botón que lleve a la tienda lanzada.
 
-## 3.9. Estabilización del Flujo de Tiendas (Noviembre 2025 - Continuación)
-
-Tras solucionar los problemas de autenticación y creación de tiendas, el foco se centró en el flujo principal del usuario: guardar y visualizar su tienda. Este proceso reveló una serie de problemas profundos y entrelazados.
-
-### Incidente 1: El `slug` Persistente de "mi-tienda"
-
-*   **Síntoma:** Sin importar el nombre que se le diera a una tienda, la URL pública generada siempre era `.../store/mi-tienda`.
-*   **Causa Raíz:** El trigger de la base de datos (`generate_unique_store_slug`) solo se activaba si el valor del campo `slug` era `NULL`. La ruta del backend `PUT /api/user/store-data` enviaba el `slug` por defecto del estado del frontend ("mi-tienda"), por lo que el trigger nunca se ejecutaba.
-*   **Solución Fallida:** Se intentó usar `delete payload.slug`, pero esto no funcionaba para los `UPDATE` en la base de datos.
-*   **Solución Definitiva:** Se modificó la ruta `PUT /api/user/store-data` para que, antes de hacer el `UPSERT`, establezca explícitamente `payload.slug = null`. Esto fuerza al trigger a ejecutarse siempre, generando un `slug` único basado en el nombre de la tienda.
-
-### Incidente 2: Error de Subida de Imágenes (`Bucket not found`)
-
-*   **Síntoma:** Al guardar una tienda con imágenes, el backend crasheaba con el error `StorageApiError: Bucket not found`.
-*   **Causa Raíz:** El código del backend tenía los nombres de los buckets de Supabase Storage ("store-logos", "product-images") hardcodeados, mientras que el archivo de entorno `.env` especificaba un bucket diferente (`imagenes`).
-*   **Solución Definitiva:** Se refactorizó la ruta `PUT /api/user/store-data` para que todas las operaciones de subida de archivos usen la variable de entorno `process.env.STORAGE_BUCKET`. Esto centraliza la configuración del bucket y soluciona el error, asumiendo que el bucket (ej: "imagenes") existe y es público en Supabase.
-
-### Incidente 3: Arquitectura de Visualización Fallida y Errores de Referencia
-
-*   **Síntoma:** En un intento por solucionar problemas de visualización, se creó una arquitectura de SPA con un componente `StoreViewer.tsx`. Esto resultó en una UI duplicada (la navegación principal aparecía dentro del contenido de la tienda) y una experiencia de usuario confusa. Además, durante los refactors, el servidor empezó a crashear al iniciar o al guardar debido a `ReferenceError: upload is not defined` y `ReferenceError: cleanStoreDataUrls is not defined`.
-*   **Causa Raíz:**
-    1.  **Arquitectura SPA:** El `StoreViewer.tsx` se renderizaba dentro del layout principal de la aplicación de React, heredando su navegación, lo cual era incorrecto para una vista pública.
-    2.  **`ReferenceError`s:** Una limpieza de código demasiado agresiva eliminó las definiciones de `multer` y de funciones helper que todavía eran necesarias.
-*   **Solución Definitiva:**
-    1.  **Retorno a la Arquitectura Original:** Se descartó por completo el enfoque de `StoreViewer.tsx` y se eliminaron los archivos asociados. Se restauró la lógica original en `server.js`, donde la ruta `GET /store/:slug` es la única responsable de la visualización.
-    2.  **Renderizado del Lado del Servidor (SSR simple):** El flujo actual y correcto es que `server.js` obtiene los datos de la tienda de Supabase, lee la plantilla `public/viewer_template.html`, inyecta los datos en un bloque `<script>`, y sirve el HTML resultante. Esto asegura que se use la plantilla original del proyecto y aísla completamente la vista pública de la aplicación del editor.
-    3.  **Corrección de Errores:** Se restauraron las definiciones de `multer` y `cleanStoreDataUrls` en `backend/api/user.js`, solucionando los crashes del servidor.
-
-## 4. Estado Actual del Proyecto (Actualizado a 11 de Noviembre de 2025)
-
-El proyecto se encuentra en un estado **funcionalmente estable**. Los flujos de autenticación, gestión de usuarios y, crucialmente, de creación, guardado y visualización de tiendas, están operando de acuerdo a la arquitectura final descrita.
-
-*   **Backend:** Arranca sin errores. La API de guardado de tiendas (`PUT /api/user/store-data`) ahora maneja correctamente la subida de imágenes, la generación de `slugs` y la persistencia de datos en las columnas correctas de la base de datos.
-*   **Frontend:** La lógica de guardado en `StoreEditor.tsx` y la de visualización en `StoreManager.tsx` interactúan correctamente con el backend.
-*   **Visualización de Tienda:** La ruta pública `GET /store/:slug` sirve la plantilla HTML correcta con los datos inyectados desde la base de datos.
-
-### Tareas Pendientes
-
-*   **Confirmación Final:** El usuario (Astaroth) necesita realizar una prueba completa del flujo para confirmar que todos los errores han sido resueltos.
-*   **Limpieza de Código:** Eliminar cualquier `console.log` o `alert` de depuración que se haya añadido durante el proceso.
-*   **Estilo de la Plantilla:** Revisar y mejorar los estilos de `public/viewer_template.html` si es necesario para asegurar que renderiza los datos de forma atractiva.
-
 ## 4.1. Estabilización del Flujo de Visualización y `slug`s (Noviembre 2025)
 
-Tras las correcciones anteriores, persistían dos problemas críticos que impedían la correcta visualización y unicidad de las tiendas.
+Tras solucionar los problemas de persistencia de datos y generación de URLs, el último obstáculo era una página de visualización de la tienda que se mostraba completamente en blanco. Este problema desencadenó una depuración en múltiples etapas para descubrir una cascada de errores de seguridad y configuración.
 
 ### Incidente 1: Error 404 en la Vista Previa
 
@@ -228,3 +186,69 @@ Tras resolver los problemas de persistencia de datos y generación de URLs, el �
 *   **Solución Definitiva:** Se realizó el ajuste final a la CSP en `server.js`, añadiendo los dominios de las CDNs a las directivas `script-src` y `style-src`, y añadiendo `'unsafe-inline'` a `style-src`. Esto permitió que todos los recursos de estilo se cargaran correctamente.
 
 Con esta última corrección, todos los aspectos de la visualización de la tienda quedaron completamente funcionales, resolviendo la cascada de errores.
+
+## 4.3. Estabilización de CI/CD y Despliegue (12 de Noviembre de 2025 - Continuación)
+
+Tras la estabilización de la funcionalidad principal, se abordaron los problemas relacionados con la integración continua (CI) en GitHub Actions y el despliegue en Vercel.
+
+### Incidente 1: Fallo de Pruebas en GitHub Actions por Variables de Entorno
+
+*   **Síntoma:** Las pruebas del backend en GitHub Actions fallaban con el mensaje "Falta la URL de Supabase, la clave anónima o la clave de servicio en el archivo .env".
+*   **Causa Raíz:** El entorno de GitHub Actions, por seguridad, no tiene acceso al archivo `.env` local. Las variables de entorno sensibles deben ser proporcionadas a través de los "Secrets" del repositorio de GitHub.
+*   **Solución:** Se modificó el archivo `.github/workflows/ci.yml` para que el paso de "Run Backend Tests" utilizara los "Secrets" de GitHub (`secrets.SUPABASE_URL`, `secrets.SUPABASE_ANON_KEY`, `secrets.SUPABASE_SERVICE_KEY`). Se instruyó al usuario para que creara manualmente estos secrets en la configuración de su repositorio de GitHub.
+
+### Incidente 2: Fallo de Despliegue en Vercel (Monorepo y TypeScript)
+
+*   **Síntoma:** El despliegue del frontend en Vercel fallaba con múltiples errores de TypeScript, incluyendo "Cannot find namespace 'JSX'", "Cannot find module '@/api/axiosConfig'", y advertencias sobre dependencias obsoletas de ESLint.
+*   **Causa Raíz:** Vercel no estaba configurado para reconocer la estructura de monorepo del proyecto ni para construir correctamente la aplicación de React ubicada en el subdirectorio `react-editor`. El proceso de build de Vercel no estaba utilizando la configuración de TypeScript (`tsconfig.json`) ni las dependencias del frontend.
+*   **Solución:**
+    1.  Se modificó el `package.json` raíz para:
+        *   Añadir el campo `"workspaces": ["react-editor"]`, declarando formalmente la estructura de monorepo.
+        *   Añadir un script `"vercel-build": "npm run build --prefix react-editor"`, instruyendo a Vercel cómo construir el frontend.
+        *   Actualizar la versión de `eslint` en `devDependencies` a `^9.36.0` para unificarla con la del frontend y resolver advertencias.
+    2.  Se confirmó que el script `build` en `react-editor/package.json` ya estaba configurado correctamente como `"build": "vite build"`, lo cual es la forma óptima para que Vite maneje la compilación de TypeScript.
+*   **Estado Actual:** Se espera que estas configuraciones permitan a Vercel construir y desplegar el frontend correctamente. Se requiere una nueva construcción en Vercel para que los cambios surtan efecto.
+
+### Incidente 3: Alerta de Seguridad de GitHub (Vulnerabilidad Moderada)
+
+*   **Síntoma:** GitHub Dependabot reportó una vulnerabilidad moderada en el repositorio.
+*   **Investigación:** Se intentó acceder a los detalles de la alerta a través de la URL proporcionada por GitHub, pero esta no era accesible públicamente. Se realizaron auditorías de seguridad con `npm audit` tanto en el backend (raíz) como en el frontend (`react-editor`), pero ambas reportaron "found 0 vulnerabilities".
+*   **Estado Actual:** La vulnerabilidad específica no pudo ser identificada por las herramientas locales. Se solicitó al usuario que proporcionara el nombre del paquete vulnerable y la versión recomendada por GitHub desde su panel de seguridad para una corrección precisa.
+
+### Incidente 4: Fallo al Disparar Workflow Manualmente (`workflow_dispatch`)
+
+*   **Síntoma:** El usuario intentó disparar manualmente el flujo de trabajo de GitHub Actions usando `gh workflow run`, pero recibió el error "Workflow does not have 'workflow_dispatch' trigger".
+*   **Causa Raíz:** El archivo `.github/workflows/ci.yml` no incluye el evento `workflow_dispatch` en su sección `on:`, lo cual es necesario para permitir la ejecución manual.
+*   **Estado Actual:** Se propuso al usuario añadir este trigger al `ci.yml` para habilitar la ejecución manual del workflow en el futuro.
+
+### Incidente 5: Fallo de Compilación del Frontend (`react-editor`) - `ERR_MODULE_NOT_FOUND`
+
+*   **Problema:** Al ejecutar `npm run build` en `react-editor`, se produjo el error `Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@vitejs/plugin-react'`.
+*   **Causa Raíz:** La dependencia `@vitejs/plugin-react` no estaba listada en las `devDependencies` del archivo `package.json` del proyecto `react-editor`.
+*   **Solución:** Se añadió `"@vitejs/plugin-react": "^5.1.1"` a la sección `devDependencies` en `react-editor/package.json` y se ejecutó `npm install` para instalar la dependencia.
+
+## 4.4. Resolución Masiva de Errores de TypeScript (12 de Noviembre de 2025)
+
+Paralelamente a las correcciones de CI/CD, se llevó a cabo una tarea intensiva para eliminar la deuda técnica en el frontend de React. El proyecto sufría de una gran cantidad de errores de TypeScript debido a la falta de tipado explícito, lo que impedía la compilación.
+
+*   **Estrategia:** Se realizó una corrección sistemática, archivo por archivo, añadiendo interfaces, tipos para props, estados y manejando errores de forma segura.
+*   **Resultado:** Se resolvieron la gran mayoría de los errores de tipo `any` implícito, `unknown` en `catch`, y propiedades inexistentes. Esto estabilizó la base de código del frontend, permitiendo compilaciones limpias y mejorando la mantenibilidad.
+*   **Documentación Detallada:** El proceso completo, los errores específicos por archivo y las soluciones aplicadas se documentaron en un informe técnico separado. Para un análisis exhaustivo, consulte el archivo `react-editor/ERROR_DOC.md`.
+
+## 4.5. Estabilización de Linting y Testing del Frontend (12 de Noviembre de 2025)
+
+Se abordó una serie de errores de linting y testing en el proyecto `react-editor` para mejorar la calidad del código y asegurar la correcta ejecución de las pruebas unitarias.
+
+*   **Errores de Linting Resueltos:**
+    *   **Variables no utilizadas (`no-unused-vars`):** Se corrigieron instancias de variables declaradas pero no usadas en `src/components/admin/UsersTable.tsx` (`isLoadingCredentials`), `src/components/dashboard/StoreManager.tsx` (`isLaunched`), `src/pages/StoreEditor.tsx` (`viewerHtml`), y `src/stores/store.ts` (`_state`). La función `clearProducts` en `react-editor/tmp/repro.ts` también fue eliminada al ser un archivo temporal no utilizado.
+    *   **Uso explícito de `any` (`no-explicit-any`):** Se eliminó el uso de `any` en el mock de Zustand en `src/pages/StoreEditor.test.tsx` y en las funciones de sanitización de productos en `src/stores/store.ts`, mejorando la seguridad de tipos.
+*   **Errores de Testing Resueltos:**
+    *   **Dependencias de Testing faltantes:** Se resolvió el error `Cannot find package '@testing-library/react'` añadiendo `@testing-library/react` y `@testing-library/jest-dom` a las `devDependencies` de `react-editor/package.json`.
+    *   **Entorno `window` no definido:** Se solucionó `ReferenceError: window is not defined` configurando Vitest para usar el entorno `jsdom` en `react-editor/vite.config.ts`.
+    *   **Mock de `availablePaymentMethods` incompleto:** Se corrigió el error `No "availablePaymentMethods" export is defined` incluyendo esta exportación en el mock de `@/stores/store` en `src/pages/StoreEditor.test.tsx`.
+    *   **Variables elevadas en `vi.mock`:** Se resolvió el error de Vitest moviendo las variables de nivel superior (`setStoreDetails`, `mockStoreData`, `completeMockState`) dentro de la función factory de `vi.mock` en `src/pages/StoreEditor.test.tsx`.
+    *   **`TestingLibraryElementError` por botones no encontrados:** Se ajustaron los selectores de botones en `src/pages/StoreEditor.test.tsx` para que coincidieran con los nombres accesibles correctos de los botones "Guardar y Publicar Cambios" y "Ver Tienda", eliminando errores de `Unable to find an accessible element`.
+*   **Pendiente:**
+    *   **Error de Test: `TestingLibraryElementError: Unable to find an accessible element with the role "button" and name /guardar y ver avance/i`**
+        *   **Problema:** El test aún falla al intentar hacer clic en un botón con el nombre "guardar y ver avance", que no existe. El botón correcto es "Ver Tienda".
+        *   **Acción Pendiente:** Actualizar el test en `src/pages/StoreEditor.test.tsx` para buscar el botón con el nombre `/ver tienda/i`.

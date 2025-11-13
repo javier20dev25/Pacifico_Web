@@ -1,5 +1,16 @@
-import React from 'react';const AdminStats = ({ stats }) => {
-  if (!stats) return null;  return (
+import React from 'react';
+
+type AdminStatsProps = {
+  stats: {
+    temp: number;
+    active: number;
+  } | null;
+};
+
+const AdminStats: React.FC<AdminStatsProps> = ({ stats }) => {
+  if (!stats) return null;
+  
+  return (
     <div className="bg-white shadow-md rounded-lg p-6 mb-8">
       <h2 className="text-xl font-bold text-gray-800 mb-4">Estadísticas Rápidas</h2>
       <div className="space-y-2">
@@ -8,4 +19,6 @@ import React from 'react';const AdminStats = ({ stats }) => {
       </div>
     </div>
   );
-};export default AdminStats;
+};
+
+export default AdminStats;

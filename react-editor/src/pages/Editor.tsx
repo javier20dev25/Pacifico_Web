@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Editor(): JSX.Element {
+export default function Editor() {
   return (
     <main style={{ padding: 16 }}>
       <h1>Editor (placeholder)</h1>

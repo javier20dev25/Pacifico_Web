@@ -10,7 +10,10 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import apiClient from '@/api/axiosConfig';ChartJS.register(
+import apiClient from '@/api/axiosConfig';
+
+// --- REGISTRO DE COMPONENTES DE CHART.JS ---
+ChartJS.register(
   CategoryScale,
   LinearScale,
   PointElement,
@@ -18,14 +21,40 @@ import apiClient from '@/api/axiosConfig';ChartJS.register(
   Title,
   Tooltip,
   Legend
-);const RegistrationChart = () => {
-  const [chartData, setChartData] = useState(null);
-  const [error, setError] = useState('');  useEffect(() => {
+);
+
+// --- TIPOS ---
+type Stat = {
+  registration_date: string;
+  user_count: number;
+};
+
+type ChartData = {
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    borderColor: string;
+    backgroundColor: string;
+    tension: number;
+    fill: boolean;
+  }[];
+};
+
+const RegistrationChart = () => {
+  const [chartData, setChartData] = useState<ChartData | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await apiClient.get('/admin/registration-stats');
-        const stats = response.data || [];        const labels = stats.map(s => s.registration_date);
-        const data = stats.map(s => s.user_count);        setChartData({
+        const response = await apiClient.get<Stat[]>('/admin/registration-stats');
+        const stats = response.data || [];
+        
+        const labels = stats.map((s: Stat) => s.registration_date);
+        const data = stats.map((s: Stat) => s.user_count);
+
+        setChartData({
           labels,
           datasets: [
             {
@@ -42,14 +71,20 @@ import apiClient from '@/api/axiosConfig';ChartJS.register(
         setError('No se pudieron cargar las estadísticas de registro.');
         console.error('Error fetching chart data:', err);
       }
-    };    fetchStats();
-  }, []);  const options = {
+    };
+
+    fetchStats();
+  }, []);
+
+  const options = {
     responsive: true,
     maintainAspectRatio: false,
     scales: {
       y: { beginAtZero: true },
     },
-  };  return (
+  };
+
+  return (
     <div className="bg-white shadow-md rounded-lg p-6">
       <h2 className="text-xl font-bold text-gray-800 mb-4">Histórico de Registros</h2>
       <div className="relative h-64 md:h-80">
@@ -63,4 +98,6 @@ import apiClient from '@/api/axiosConfig';ChartJS.register(
       </div>
     </div>
   );
-};export default RegistrationChart;
+};
+
+export default RegistrationChart;

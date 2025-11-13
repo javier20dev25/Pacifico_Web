@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Home(): JSX.Element {
+export default function Home() {
   return (
     <main style={{ padding: 16 }}>
       <h1>Página Home (placeholder)</h1>

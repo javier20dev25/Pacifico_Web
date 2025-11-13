@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '@/api/axiosConfig';
+import { AxiosError } from 'axios';
+
+// --- TIPOS ---
+type ChatMessage = {
+  sender: 'user' | 'ai';
+  text: string;
+  isError?: boolean;
+};
 
 const AiChat = () => {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const chatEndRef = useRef(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -16,17 +24,18 @@ const AiChat = () => {
   }, [messages, isTyping]);
 
   const handleSendMessage = async () => {
-    const message = input.trim();
-    if (!message) return;
+    const messageText = input.trim();
+    if (!messageText) return;
 
-    setMessages(prev => [...prev, { sender: 'user', text: message }]);
+    setMessages(prev => [...prev, { sender: 'user', text: messageText }]);
     setInput('');
     setIsTyping(true);
 
     try {
-      const response = await apiClient.post('/chat', { message });
+      const response = await apiClient.post<{ response: string }>('/chat', { message: messageText });
       setMessages(prev => [...prev, { sender: 'ai', text: response.data.response }]);
-    } catch (error) {
+    } catch (err: unknown) {
+      const error = err as AxiosError<{ error: string }>;
       const errorMessage = error.response?.data?.error || 'El asistente no pudo responder.';
       setMessages(prev => [...prev, { sender: 'ai', text: errorMessage, isError: true }]);
     } finally {
@@ -34,7 +43,7 @@ const AiChat = () => {
     }
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSendMessage();
     }

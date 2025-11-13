@@ -7,7 +7,6 @@ import PaymentEditor from '@/components/PaymentEditor';
 import ProductModal from '@/components/ProductModal';
 import apiClient from '@/api/axiosConfig';
 import { useInitialData } from '@/hooks/useInitialData';
-import viewerHtml from '@/assets/viewer_template.html?raw';
 import axios from 'axios';
 
 function StoreEditor() {
@@ -42,7 +41,7 @@ function StoreEditor() {
       const formData = new FormData();
 
       // 1. Adjuntar el logo si ha sido modificado
-      const logoFile = useStore.getState().logoFile;
+      const logoFile = useStore.getState().store.logoFile;
       if (logoFile) {
         formData.append('logo', logoFile);
       }
@@ -166,7 +165,7 @@ function StoreEditor() {
         <ProductEditor />
         <div className="mt-8 flex flex-col sm:flex-row gap-4">
           <button
-            onClick={() => window.open(shareableUrl, '_blank')}
+            onClick={() => window.open(shareableUrl || '', '_blank')}
             disabled={isSaving || !shareableUrl}
             title={!shareableUrl ? 'Guarda la tienda para activar este botón' : 'Ver tu tienda como la ven tus clientes'}
             className="px-6 py-3 w-full sm:w-auto flex-1 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 disabled:bg-gray-400 disabled:cursor-not-allowed"

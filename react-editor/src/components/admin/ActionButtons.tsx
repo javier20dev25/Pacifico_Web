@@ -1,7 +1,14 @@
 import React from 'react';
+import type { User, Action } from './UsersTable';
 
-const ActionButtons = ({ user, onAction }) => {
-  const handleButtonClick = (action) => {
+type ActionButtonsProps = {
+  user: User;
+  onAction: (action: Action, user: User) => void | Promise<void>;
+  isLoadingCredentials?: boolean;
+};
+
+const ActionButtons: React.FC<ActionButtonsProps> = ({ user, onAction, isLoadingCredentials }) => {
+  const handleButtonClick = (action: Action) => {
     onAction(action, user);
   };
 
@@ -17,6 +24,7 @@ const ActionButtons = ({ user, onAction }) => {
         <button 
           onClick={() => handleButtonClick('show-credentials')}
           className={successBtn}
+          disabled={isLoadingCredentials}
         >
           Credenciales
         </button>

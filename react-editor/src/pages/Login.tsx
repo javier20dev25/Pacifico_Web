@@ -1,8 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import apiClient from '@/api/axiosConfig';
+import { AxiosError } from 'axios';
 
-const EyeIcon = ({ visible }) => (
+// --- TIPOS ---
+type EyeIconProps = {
+  visible: boolean;
+};
+
+type LoginResponseData = {
+  success?: boolean;
+  sessionToken?: string;
+  user?: { rol: string };
+  tempToken?: string;
+  error?: string;
+};
+
+type CompleteRegistrationResponseData = {
+  status?: string;
+  token?: string;
+  error?: string;
+};
+
+const EyeIcon: React.FC<EyeIconProps> = ({ visible }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     {visible ? (
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -12,7 +32,7 @@ const EyeIcon = ({ visible }) => (
   </svg>
 );
 
-const Login = () => {
+const Login: React.FC = () => {
   const [formToShow, setFormToShow] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +42,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [registrationError, setRegistrationError] = useState('');
   const [notification, setNotification] = useState('');
-  const [tempToken, setTempToken] = useState(null);
+  const [tempToken, setTempToken] = useState<string | null>(null);
   const [strength, setStrength] = useState('');
 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -33,10 +53,8 @@ const Login = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Mostrar mensaje de notificación si viene de una redirección (ej. cambio de contraseña)
     if (location.state?.message) {
       setNotification(location.state.message);
-      // Limpiar el estado de la ubicación para no mostrar el mensaje de nuevo si se refresca
       window.history.replaceState({}, document.title);
     }
 
@@ -47,7 +65,6 @@ const Login = () => {
     }
   }, [location]);
 
-  // Efecto para la fortaleza de la contraseña
   useEffect(() => {
     if (!newPassword) {
       setStrength('');
@@ -67,7 +84,7 @@ const Login = () => {
     }
   }, [newPassword]);
 
-  const handleLoginSubmit = async (e) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setNotification('');
@@ -77,7 +94,7 @@ const Login = () => {
       localStorage.removeItem('remembered_email');
     }
     try {
-      const response = await apiClient.post('/auth/login', { correo: email, password });
+      const response = await apiClient.post<LoginResponseData>('/auth/login', { correo: email, password });
       const data = response.data;
       if (data.success && data.sessionToken) {
         localStorage.setItem('sessionToken', data.sessionToken);
@@ -92,13 +109,14 @@ const Login = () => {
       } else {
         throw new Error('Respuesta inesperada del servidor.');
       }
-    } catch (err) {
-      const errorMessage = err.response?.data?.error || err.message || 'Error desconocido en el login';
+    } catch (err: unknown) {
+      const error = err as AxiosError<LoginResponseData>;
+      const errorMessage = error.response?.data?.error || error.message || 'Error desconocido en el login';
       setError(errorMessage);
     }
   };
 
-  const handleRegisterSubmit = async (e) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegistrationError('');
     if (newPassword !== confirmPassword) {
@@ -110,7 +128,7 @@ const Login = () => {
         return;
     }
     try {
-        const response = await apiClient.post('/auth/complete-registration', { tempToken, password: newPassword });
+        const response = await apiClient.post<CompleteRegistrationResponseData>('/auth/complete-registration', { tempToken, password: newPassword });
         const data = response.data;
         if (data.status === 'registration_complete' && data.token) {
             localStorage.setItem('sessionToken', data.token);
@@ -118,8 +136,9 @@ const Login = () => {
         } else {
             throw new Error('No se pudo completar el registro.');
         }
-    } catch (err) {
-        const errorMessage = err.response?.data?.error || err.message || 'Error desconocido';
+    } catch (err: unknown) {
+        const error = err as AxiosError<CompleteRegistrationResponseData>;
+        const errorMessage = error.response?.data?.error || error.message || 'Error desconocido';
         setRegistrationError(errorMessage);
     }
   };
@@ -131,17 +150,17 @@ const Login = () => {
       <form onSubmit={handleLoginSubmit}>
         <div className="mb-4">
           <label htmlFor="login-email" className="block font-semibold text-gray-700 mb-2">Correo Electrónico</label>
-          <input type="email" id="login-email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input type="email" id="login-email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} required />
         </div>
         <div className="mb-4">
           <label htmlFor="login-password" className="block font-semibold text-gray-700 mb-2">Contraseña</label>
           <div className="relative">
-            <input type={isPasswordVisible ? 'text' : 'password'} id="login-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <input type={isPasswordVisible ? 'text' : 'password'} id="login-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={password} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} required />
             <button type="button" className="absolute inset-y-0 right-0 px-3 flex items-center" onClick={() => setIsPasswordVisible(!isPasswordVisible)}><EyeIcon visible={!isPasswordVisible} /></button>
           </div>
         </div>
         <div className="flex items-center mb-4">
-          <input type="checkbox" id="remember-me" className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+          <input type="checkbox" id="remember-me" className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked={rememberMe} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRememberMe(e.target.checked)} />
           <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">Recordarme</label>
         </div>
         {error && <div className="text-red-500 text-sm min-h-[20px] mb-4">{error}</div>}
@@ -158,7 +177,7 @@ const Login = () => {
         <div className="mb-4">
           <label htmlFor="new-password" className="block font-semibold text-gray-700 mb-2">Nueva Contraseña</label>
           <div className="relative">
-            <input type={isNewPasswordVisible ? 'text' : 'password'} id="new-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+            <input type={isNewPasswordVisible ? 'text' : 'password'} id="new-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newPassword} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)} required />
             <button type="button" className="absolute inset-y-0 right-0 px-3 flex items-center" onClick={() => setIsNewPasswordVisible(!isNewPasswordVisible)}><EyeIcon visible={!isNewPasswordVisible} /></button>
           </div>
           {strength && <div className="text-sm text-gray-500 mt-2 min-h-[18px]" dangerouslySetInnerHTML={{ __html: strength }} />}
@@ -166,7 +185,7 @@ const Login = () => {
         <div className="mb-6">
           <label htmlFor="confirm-password" className="block font-semibold text-gray-700 mb-2">Confirmar Contraseña</label>
           <div className="relative">
-            <input type={isConfirmPasswordVisible ? 'text' : 'password'} id="confirm-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+            <input type={isConfirmPasswordVisible ? 'text' : 'password'} id="confirm-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={confirmPassword} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)} required />
             <button type="button" className="absolute inset-y-0 right-0 px-3 flex items-center" onClick={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}><EyeIcon visible={!isConfirmPasswordVisible} /></button>
           </div>
         </div>
