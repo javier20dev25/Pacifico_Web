@@ -1,4 +1,5 @@
 /// <reference types="vitest/globals" />
+declare const vi: any;
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StoreEditor from './StoreEditor';
@@ -65,7 +66,7 @@ vi.mock('@/stores/store', async (importOriginal) => {
 
   return {
     ...actual, // Mantener las exportaciones originales (como availablePaymentMethods)
-    __esModule: true,
+    
     default: mockUseStore, // Sobrescribir solo el default export
   };
 });describe('StoreEditor', () => {
