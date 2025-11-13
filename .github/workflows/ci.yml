@@ -30,8 +30,6 @@ jobs:
 
     - name: Run Backend Lint
       run: npm run lint
-      env:
-        ESLINT_USE_FLAT_CONFIG: "false"
 
     - name: Run Backend Tests
       run: npm test
