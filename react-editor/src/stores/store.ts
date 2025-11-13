@@ -161,19 +161,19 @@ const useAppStore = create<AppState>()(
       updateProduct: (_productId, _updates) =>
         set((state) => ({
           products: state.products.map((p) =>
-            p.idLocal === productId ? { ...p, ...updates } : p
+            p.idLocal === _productId ? { ...p, ..._updates } : p
           ),
         })),
       deleteProduct: (_productId) =>
-        set((state) => ({ products: state.products.filter((p) => p.idLocal !== productId) })),
+        set((state) => ({ products: state.products.filter((p) => p.idLocal !== _productId) })),
       setCart: (_cart) => set({ cart: _cart }),
       openProductModal: (_productId = null) => set({ isProductModalOpen: true, editingProductId: _productId }),
       closeProductModal: () => set({ isProductModalOpen: false, editingProductId: null }),
       setStoreType: (_type) => set((state) => ({ store: { ...state.store, storeType: _type } })),
       loadInitialData: (_data) => set((state) => {
-        const storeData = data.storeData?.store || {};
-        const productsData = data.storeData?.products || [];
-        const shareableUrl = data.shareableUrl;
+        const storeData = _data.storeData?.store || {};
+        const productsData = _data.storeData?.products || [];
+        const shareableUrl = _data.shareableUrl;
         return {
             store: { ...state.store, ...storeData, shareableUrl: shareableUrl },
             products: productsData
