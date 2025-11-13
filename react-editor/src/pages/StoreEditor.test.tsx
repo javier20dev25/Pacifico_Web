@@ -31,6 +31,8 @@ vi.mock('@/stores/store', async (importOriginal) => {
       seaRate: 0, seaMinDays: 0, seaMaxDays: 0,
       delivery_type: 'no', delivery_fixed_cost: 0, delivery_range_start: 0, delivery_range_end: 0, delivery_note: '',
       payment_methods: {}, accepts_full_payment: false, accepts_advance_payment: false, advance_options: {}, accepts_installments: false, installment_options: [],
+      logoUrl: null, // Added for StoreDetails
+      shareableUrl: null, // Added for StoreDetails
     },
     products: [],
   };
