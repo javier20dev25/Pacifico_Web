@@ -1,5 +1,4 @@
 /// <reference types="vitest/globals" />
-declare const vi: any;
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StoreEditor from './StoreEditor';
@@ -14,7 +13,7 @@ vi.mock('@/api/axiosConfig', () => ({
 vi.mock('@/hooks/useInitialData', () => ({
   useInitialData: () => ({ isLoading: false, isError: false }),
 }));// Mock del store de Zustand (versión final autocontenida)
-vi.mock('@/stores/store', async (importOriginal) => {
+vi.mock('@/stores/store', async (importOriginal: typeof import('@/stores/store')) => {
   const actual = await importOriginal(); // Importar el módulo original
 
   const completeMockState: useStore.AppState = {
