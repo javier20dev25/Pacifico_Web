@@ -127,14 +127,6 @@ Estoy listo para continuar con la corrección cuando regreses. Por ahora, aquí 
     *   **Solución:** Se actualizó el test para buscar el botón con el nombre `/guardar y publicar cambios/i`.
 
 ---
-
-### **Pendiente (12 de Noviembre de 2025)**
-
-*   **Error de Test: `TestingLibraryElementError: Unable to find an accessible element with the role "button" and name /guardar y ver avance/i`**
-    *   **Problema:** El test aún falla al intentar hacer clic en un botón con el nombre "guardar y ver avance", que no existe. El botón correcto es "Ver Tienda".
-    *   **Acción Pendiente:** Actualizar el test en `src/pages/StoreEditor.test.tsx` para buscar el botón con el nombre `/ver tienda/i`.
-
----
 ### **Resolución de Errores de Test y Tipos (12 de Noviembre de 2025 - Tarde)**
 
 En esta sesión, se abordó una serie de errores persistentes que impedían la compilación y la ejecución de pruebas en el frontend.
@@ -163,3 +155,89 @@ En esta sesión, se abordó una serie de errores persistentes que impedían la c
     *   **No asumir que las pruebas son correctas:** La prueba de `StoreEditor` tenía una lógica fundamentalmente errónea sobre el comportamiento del componente. Siempre se debe verificar la implementación del componente cuando una prueba falla de forma inesperada.
     *   **Cuidado con las dependencias ocultas:** La función `handleSave` dependía de `localStorage`, pero esto no era obvio desde la firma de la función. Es crucial tener en cuenta el contexto completo (DOM, `localStorage`, etc.) al escribir pruebas unitarias para componentes.
     *   **Los problemas ambientales pueden ser una distracción:** Aunque los errores de `tsc` eran abrumadores, no eran la causa raíz de los fallos en la lógica de la aplicación. Fue más productivo centrarse en los errores de código específicos y en la lógica de las pruebas.
+
+---
+### **Actualización: Migración y Depuración de ESLint (12 de Noviembre de 2025 - Continuación)**
+
+Tras la estabilización de las pruebas unitarias, se inició la migración de la configuración de ESLint al nuevo formato `eslint.config.mjs` y la corrección de los errores de linting restantes.
+
+**1. Problema Inicial: Fallo de Linting en CI por Configuración Obsoleta**
+*   **Síntoma:** El paso "Run Backend Lint" en GitHub Actions fallaba con el error `ESLint couldn't find an eslint.config.(js|mjs|cjs) file.`
+*   **Causa Raíz:** La versión de ESLint en CI (v9+) espera por defecto el nuevo formato `eslint.config.js`, mientras el proyecto usaba `.eslintrc.json`.
+*   **Solución Temporal (Hotfix):** Se añadió `ESLINT_USE_FLAT_CONFIG=false` al paso de linting del backend en `.github/workflows/ci.yml`. Esto permitió que ESLint usara la configuración antigua.
+
+**2. Errores de Linting Revelados por el Hotfix**
+Una vez que el hotfix permitió que el linter se ejecutara, se revelaron errores reales:
+*   **Error Crítico:** `'e' is defined but never used` en `backend/lib/supabaseAdmin.js`.
+*   **Advertencias:** Múltiples advertencias de `prettier/prettier` en varios archivos.
+
+**3. Migración a `eslint.config.mjs` (Solución Definitiva)**
+Para una solución robusta y a largo plazo, se decidió migrar al nuevo formato de configuración de ESLint:
+*   **Backend:** Se creó `eslint.config.mjs` en la raíz del proyecto, adaptando la plantilla proporcionada por el usuario para JavaScript, Prettier y Jest.
+*   **Frontend:** Se creó `react-editor/eslint.config.mjs`, adaptando la plantilla para React, TypeScript, React Hooks y Prettier.
+*   **Limpieza:** Se eliminaron los archivos `.eslintrc.json` y `.eslintignore` de la raíz.
+
+**4. Problemas Durante la Migración y su Depuración**
+
+*   **Fallo al Ejecutar `npx eslint . --fix` (Error de Módulos):**
+    *   **Síntoma:** `Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'eslint-config-prettier'` y otros plugins.
+    *   **Causa Raíz:** Los nuevos plugins y configuraciones (`eslint-config-prettier`, `eslint-plugin-react`, `eslint-plugin-react-hooks`, `typescript-eslint`) no estaban instalados como dependencias de desarrollo.
+    *   **Solución:** Se instalaron las dependencias faltantes en el directorio raíz y en `react-editor` respectivamente.
+
+*   **Fallo al Ejecutar `npx eslint . --fix` (Error de Parsing `sourceType: module`):**
+    *   **Síntoma:** `Parsing error: 'import' and 'export' may appear only with 'sourceType: module'` en los archivos `eslint.config.js` (y otros config files).
+    *   **Causa Raíz:** Node.js estaba intentando interpretar los archivos de configuración (que usan sintaxis ES Module) como CommonJS, ya que el `package.json` raíz no tiene `"type": "module"`.
+    *   **Solución:** Se renombraron `eslint.config.js` a `eslint.config.mjs` (tanto en la raíz como en `react-editor`). La extensión `.mjs` fuerza a Node.js a tratarlos como módulos ES.
+
+*   **Fallo al Ejecutar `npx eslint react-editor --fix` (Errores de `parserOptions.project`):**
+    *   **Síntoma:** `ESLint was configured to run on <file> using parserOptions.project: <tsconfigRootDir>/tsconfig.json. However, that TSConfig does not include this file.` para archivos de configuración (`.mjs`, `.js`, `.ts`) y el directorio `dist/`.
+    *   **Causa Raíz:** La configuración de ESLint del frontend estaba aplicando el "typed linting" (que usa `tsconfig.json`) a todos los archivos, incluyendo los que no son parte del proyecto TypeScript.
+    *   **Solución:** Se reestructuró `react-editor/eslint.config.mjs` para:
+        *   Definir `ignores` a nivel global.
+        *   Aplicar el "typed linting" (`parserOptions.project`) **solo** a los archivos `src/**/*.{ts,tsx}`.
+        *   Tener una configuración separada y más simple para archivos `.js` y `.mjs` que no usan el parser de TypeScript.
+
+**5. Errores de Linting Actuales (Después de la Reestructuración)**
+
+Después de todas las correcciones de configuración, el linter ahora reporta errores de código específicos:
+
+*   **`backend/lib/supabaseAdmin.js`:**
+    *   `'_e' is defined but never used` (`no-unused-vars`). Se corrigió renombrando `e` a `_e` en el `catch` block. **(RESUELTO)**
+
+*   **`react-editor/src/components/LogisticsEditor.tsx`, `PaymentEditor.tsx`, `StoreInfoCard.tsx`:**
+    *   `'React' is not defined` (`no-undef`). Se corrigió añadiendo `import React from 'react';` a cada archivo. **(RESUELTO)**
+
+*   **`react-editor/src/components/ProductModal.tsx`:**
+    *   `'_e' is defined but never used`, `'_field' is defined but never used`, `'_isCheckbox' is defined but never used` (`no-unused-vars`). Estos errores ocurren en las definiciones de tipo de `handleFormChange` en `ByOrderFormProps` y `InStockFormProps`.
+    *   **Intentos:** Se intentó prefijar con `_` y luego eliminar los nombres de los parámetros, pero esto último causó errores de parsing.
+    *   **Estado Actual:** Se revirtieron los cambios a la versión con `_` prefijado. El linter sigue marcándolos. Se considerará usar `eslint-disable-next-line` si no hay otra solución.
+
+*   **`react-editor/src/components/admin/ActionButtons.tsx`:**
+    *   `'_action' is defined but never used`, `'_user' is defined but never used` (`no-unused-vars`). Estos errores ocurren en la definición de tipo de `onAction` en `ActionButtonsProps`.
+    *   **Intentos:** Se intentó prefijar con `_` y luego eliminar los nombres de los parámetros, pero esto último causó errores de parsing.
+    *   **Estado Actual:** Se revirtieron los cambios a la versión con `_` prefijado. El linter sigue marcándolos. Se considerará usar `eslint-disable-next-line` si no hay otra solución.
+
+*   **`react-editor/src/pages/StoreEditor.test.tsx`:**
+    *   `'useStore' is defined but never used` (`no-unused-vars`).
+    *   `'importOriginal' is defined but never used` (`no-unused-vars`).
+    *   `'AppState' is not defined` (`no-undef`).
+    *   `'selector' is defined but never used` (`no-unused-vars`).
+    *   `'state' is defined but never used` (`no-unused-vars`).
+    *   **Intentos:** Se modificó la importación de `useStore` y se intentó renombrar `selector` a `_selector`. Se eliminó la variable `setStoreDetailsMock`.
+    *   **Estado Actual:** Se revirtieron algunos cambios. Los errores de `AppState` y `useStore` persisten debido a la complejidad del mock de Zustand y cómo se manejan las importaciones. Los errores de `selector` y `state` en el mock de `useStore` son particularmente problemáticos y parecen ser falsos positivos o una interacción compleja con el linter.
+
+*   **`react-editor/src/stores/store.ts`:**
+    *   Múltiples errores de `no-unused-vars` para parámetros en las definiciones de acciones del store (`store`, `file`, `details`, `products`, `product`, `productId`, `updates`, `cart`, `type`, `data`, `imageFile`).
+    *   **Estado Actual:** Pendiente de prefijar con `_` o eliminar si es posible.
+
+**Próximos Pasos (Pendiente):**
+
+1.  **`ProductModal.tsx` y `ActionButtons.tsx`:** Aplicar `// eslint-disable-next-line @typescript-eslint/no-unused-vars` a las líneas problemáticas en las definiciones de tipo.
+2.  **`StoreEditor.test.tsx`:**
+    *   Re-añadir `import { AppState } from '@/stores/store';`.
+    *   Renombrar `importOriginal` a `_importOriginal` en el mock de `vi.mock`.
+    *   Aplicar `// eslint-disable-next-line` a los errores persistentes de `selector` y `state` en el mock de `useStore` si no se encuentra una solución más limpia.
+    *   Revisar el error de `useStore` no utilizado.
+3.  **`store.ts`:** Prefijar con `_` todos los parámetros no utilizados en las definiciones de acciones.
+
+---

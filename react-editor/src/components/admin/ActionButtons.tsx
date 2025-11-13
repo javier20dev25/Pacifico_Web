@@ -3,7 +3,7 @@ import type { User, Action } from './UsersTable';
 
 type ActionButtonsProps = {
   user: User;
-  onAction: (action: Action, user: User) => void | Promise<void>;
+  onAction: (_action: Action, _user: User) => void | Promise<void>;
   isLoadingCredentials?: boolean;
 };
 

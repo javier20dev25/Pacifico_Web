@@ -1,3 +1,4 @@
+import React from 'react';
 import useAppStore from '@/stores/store';const LogisticsEditor = () => {
   // Patrón correcto de Zustand: seleccionar estado y acciones por separado
   const store = useAppStore((state) => state.store);

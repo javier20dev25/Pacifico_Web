@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StoreEditor from './StoreEditor';
 import apiClient from '@/api/axiosConfig';
-import useStore, { availablePaymentMethods, AppState } from '@/stores/store';// Mock del apiClient (axios)
+import * as useStore from '@/stores/store';// Mock del apiClient (axios)
 vi.mock('@/api/axiosConfig', () => ({
   default: {
     put: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock('@/hooks/useInitialData', () => ({
   useInitialData: () => ({ isLoading: false, isError: false }),
 }));// Mock del store de Zustand (versión final autocontenida)
 vi.mock('@/stores/store', async (importOriginal) => {
-  const actual = await importOriginal(); // Import actual module to get availablePaymentMethods
+
 
   const setStoreDetails = vi.fn();
   const mockStoreData = {
@@ -60,8 +60,8 @@ vi.mock('@/stores/store', async (importOriginal) => {
     getState: () => AppState;
   }
 
-  const mockUseStore = ((selector: (state: AppState) => unknown): unknown => {
-    return selector(completeMockState);
+  const mockUseStore = ((_selector: (state: AppState) => unknown): unknown => {
+    return _selector(completeMockState);
   }) as MockUseStore;
 
   mockUseStore.getState = () => completeMockState;
@@ -69,7 +69,6 @@ vi.mock('@/stores/store', async (importOriginal) => {
   return {
     __esModule: true,
     default: mockUseStore,
-    availablePaymentMethods: (actual as any).availablePaymentMethods, // Use the actual availablePaymentMethods
   };
 });describe('StoreEditor', () => {
   beforeEach(() => {
@@ -97,7 +96,7 @@ vi.mock('@/stores/store', async (importOriginal) => {
   });  it('debería seguir el flujo de edición y llamar a la API al guardar', async () => {
     render(<StoreEditor />);
     
-    const { setStoreDetails: setStoreDetailsMock } = useStore.getState();
+    
     
     // Mockear la respuesta de la API para que sea exitosa
     (apiClient.put as vi.Mock).mockResolvedValue({ data: { storeData: { store: {}, products: [] } } });

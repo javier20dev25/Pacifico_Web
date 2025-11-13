@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import useAppStore, { availablePaymentMethods } from '@/stores/store';const PaymentEditor = () => {
+import React, { useState } from 'react';
+import useAppStore, { availablePaymentMethods } from '@/stores/store';
+
+const PaymentEditor = () => {
   const store = useAppStore((state) => state.store);
   const setStoreDetails = useAppStore((state) => state.setStoreDetails);  // Estado local para el formulario de añadir nueva opción de cuota
   const [newInstallment, setNewInstallment] = useState({ type: 'monthly', max: 3 });  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {

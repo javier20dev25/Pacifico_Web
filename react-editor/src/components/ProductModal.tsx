@@ -11,12 +11,12 @@ type FormRowProps = {
 
 type ByOrderFormProps = {
   productData: Partial<Product>;
-  handleFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>, field: keyof Product, isCheckbox?: boolean) => void;
+  handleFormChange: (_e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>, _field: keyof Product, _isCheckbox?: boolean) => void;
 };
 
 type InStockFormProps = {
   productData: Partial<Product>;
-  handleFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>, field: keyof Product, isCheckbox?: boolean) => void;
+  handleFormChange: (_e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>, _field: keyof Product, _isCheckbox?: boolean) => void;
 };
 
 

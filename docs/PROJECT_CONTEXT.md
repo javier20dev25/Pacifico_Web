@@ -274,3 +274,16 @@ Tras una serie de correcciones de linting y tipado, el proyecto `react-editor` t
 ### Resultado Final
 
 Con la implementación del mock de `localStorage` y las correcciones de tipo, **todas las pruebas unitarias del frontend pasaron con éxito**. Esto desbloqueó el proceso de CI/CD y marcó la estabilización completa de la base de código del frontend, dejándola en un estado robusto y verificable.
+
+## 4.7. Migración y Depuración de ESLint (12 de Noviembre de 2025)
+
+Se inició un esfuerzo significativo para migrar la configuración de ESLint al nuevo formato `eslint.config.mjs` y resolver los errores de linting que estaban bloqueando el CI/CD.
+
+*   **Problema Inicial:** El CI fallaba porque la versión de ESLint en GitHub Actions (v9+) esperaba el nuevo formato de configuración (`eslint.config.js`), mientras el proyecto usaba el formato antiguo (`.eslintrc.json`).
+*   **Solución Temporal:** Se aplicó un hotfix en el `ci.yml` para forzar a ESLint a usar la configuración antigua, lo que permitió que el linter se ejecutara y revelara los errores de código reales.
+*   **Migración a `eslint.config.mjs`:** Se crearon nuevas configuraciones de ESLint en formato `.mjs` tanto para el backend como para el frontend (`react-editor`), adaptando las plantillas modernas para TypeScript, React y Prettier. Se eliminaron los archivos de configuración antiguos.
+*   **Depuración de la Migración:** Durante el proceso, se resolvieron varios problemas:
+    *   **Dependencias Faltantes:** Se instalaron los plugins de ESLint necesarios para las nuevas configuraciones.
+    *   **Errores de Parsing:** Se solucionaron problemas de interpretación de los archivos de configuración (`.mjs`) renombrándolos para asegurar que Node.js los tratara como módulos ES.
+    *   **Errores de `parserOptions.project`:** Se reestructuró la configuración del frontend para aplicar el "typed linting" solo a los archivos de código fuente (`src/**/*.{ts,tsx}`), evitando que ESLint intentara analizar archivos de configuración o de `dist` con el parser de TypeScript.
+*   **Estado Actual:** La configuración de ESLint está ahora en el nuevo formato y es funcional. Se han corregido los errores de `no-undef` relacionados con `React` y se ha avanzado en la resolución de errores de `no-unused-vars`. Sin embargo, persisten algunos errores de `no-unused-vars` en definiciones de tipo y en el mock de Zustand del frontend, que requieren más depuración o el uso de directivas `eslint-disable-next-line` como solución temporal.
