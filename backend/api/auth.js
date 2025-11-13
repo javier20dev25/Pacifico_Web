@@ -18,7 +18,7 @@ function isPasswordStrong(password) {
 // ==========================================================
 router.post('/login', async (req, res) => {
   console.log('[DEBUG req.body]', req.body);
-  const correo = (req.body.correo || req.body.email).trim();
+  const correo = (req.body.correo || req.body.email || '').trim();
   const password = req.body.contrasena || req.body.password;
 
   if (!correo || !password) {
