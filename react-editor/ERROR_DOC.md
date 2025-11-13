@@ -278,3 +278,19 @@ Durante esta sesión, se abordó la estabilización final del proyecto `react-ed
     });
     ```
 *   **Lección / Qué no hacer:** Nunca asumir que un `vi.mock` preserva las exportaciones no mencionadas. Si un componente bajo prueba depende de múltiples exportaciones de un módulo mockeado, se debe usar el patrón `importOriginal` para asegurar que todas las dependencias estén disponibles.
+---
+### **Resolución de Conflicto de ESLint en CI (no-unused-vars) (13 de Noviembre de 2025)**
+
+*   **Problema:** El pipeline de CI seguía fallando en el paso "Run Frontend Lint" con errores `no-unused-vars`, incluso para variables que estaban correctamente prefijadas con un guion bajo (`_`) para ser ignoradas (ej. `_e`, `_action`).
+*   **Causa Raíz:** Se identificó un conflicto entre la regla base de ESLint (`no-unused-vars`), habilitada por `js.configs.recommended`, y la regla específica de TypeScript (`@typescript-eslint/no-unused-vars`). La regla base, que no respeta la configuración `argsIgnorePattern: "^_"`, estaba tomando precedencia y reportando los errores.
+*   **Solución:** La solución definitiva fue desactivar explícitamente la regla base dentro de la configuración de ESLint para archivos TypeScript. Esto asegura que solo la regla de TypeScript, que es más inteligente y está correctamente configurada, se aplique.
+    ```javascript
+    // en react-editor/eslint.config.mjs
+    rules: {
+      // ... otras reglas
+      "no-unused-vars": "off", // <-- AÑADIDO: Desactiva la regla base de ESLint.
+      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }], // <-- ESTA REGLA TOMA EL CONTROL.
+      // ... otras reglas
+    },
+    ```
+*   **Lección / Qué no hacer:** En un proyecto de TypeScript que utiliza `typescript-eslint`, siempre se debe desactivar la regla base `no-unused-vars` para evitar conflictos. La regla del plugin de TypeScript está diseñada específicamente para entender la sintaxis del lenguaje y debe ser la única fuente de verdad para esta validación.
