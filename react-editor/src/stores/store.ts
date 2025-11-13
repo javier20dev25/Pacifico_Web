@@ -146,8 +146,8 @@ const useAppStore = create<AppState>()(
       },
       isProductModalOpen: false,
       editingProductId: null,
-      setStore: (store) => set({ store }),
-      setLogoFile: (file) => set((state) => ({ store: { ...state.store, logoFile: file } })),
+      setStore: (_store) => set({ store: _store }),
+      setLogoFile: (_file) => set((state) => ({ store: { ...state.store, logoFile: _file } })),
       clearProductImageFiles: () => set((state) => ({
         products: state.products.map(p => {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -155,22 +155,22 @@ const useAppStore = create<AppState>()(
           return rest;
         })
       })),
-      setStoreDetails: (details) => set((state) => ({ store: { ...state.store, ...details } })),
-      setProducts: (products) => set({ products }),
-      addProduct: (product) => set((state) => ({ products: [...state.products, product] })),
-      updateProduct: (productId, updates) =>
+      setStoreDetails: (_details) => set((state) => ({ store: { ...state.store, ..._details } })),
+      setProducts: (_products) => set({ products: _products }),
+      addProduct: (_product) => set((state) => ({ products: [...state.products, _product] })),
+      updateProduct: (_productId, _updates) =>
         set((state) => ({
           products: state.products.map((p) =>
             p.idLocal === productId ? { ...p, ...updates } : p
           ),
         })),
-      deleteProduct: (productId) =>
+      deleteProduct: (_productId) =>
         set((state) => ({ products: state.products.filter((p) => p.idLocal !== productId) })),
-      setCart: (cart) => set({ cart }),
-      openProductModal: (productId = null) => set({ isProductModalOpen: true, editingProductId: productId }),
+      setCart: (_cart) => set({ cart: _cart }),
+      openProductModal: (_productId = null) => set({ isProductModalOpen: true, editingProductId: _productId }),
       closeProductModal: () => set({ isProductModalOpen: false, editingProductId: null }),
-      setStoreType: (type) => set((state) => ({ store: { ...state.store, storeType: type } })),
-      loadInitialData: (data) => set((state) => {
+      setStoreType: (_type) => set((state) => ({ store: { ...state.store, storeType: _type } })),
+      loadInitialData: (_data) => set((state) => {
         const storeData = data.storeData?.store || {};
         const productsData = data.storeData?.products || [];
         const shareableUrl = data.shareableUrl;
