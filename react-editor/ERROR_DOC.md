@@ -137,21 +137,17 @@ En esta sesión, se abordó una serie de errores persistentes que impedían la c
         1.  Se modificó `tsconfig.json` para eliminar el array `"types"`, sospechando que restringía la detección de tipos. No funcionó.
         2.  Se reinstalaron las dependencias (`rm -rf node_modules && npm install`) para descartar una instalación corrupta. No funcionó.
         3.  Se intentó forzar la carga de tipos con `"typeRoots"` y un array `"types"` explícito en `tsconfig.json`. Esto cambió el error a `Cannot find type definition file for 'react'`, confirmando que el problema era ambiental y no de configuración.
-    *   **Conclusión:** Se determinó que el problema de `tsc` era específico del entorno de ejecución y no un error en el código del proyecto. Se decidió ignorar la cascada de errores de `tsc` y centrarse en los errores de código específicos y en hacer funcionar las pruebas.
+    *   **Conclusión:** Se determinó que el problema de `tsc` era específico del entorno de ejecución y no un error en el código del proyecto. Se decidió ignorar la cascada de errores de `tsc` y centrarse en los errores de código reales que impedían la ejecución de `vitest`.
+    *   **Solución:** Se corrigieron errores de tipo específicos en `store.ts` (permitiendo `null` en `shareableUrl`), `store.test.ts` (actualizando datos de prueba) y `supabase.ts` (añadiendo `/// <reference types="vite/client" />`). Estos cambios permitieron que `vitest` finalmente comenzara a ejecutar las pruebas.
 
-2.  **Corrección de Errores de Código Específicos**
-    *   **`store.ts`:** Se corrigió un error `Type 'null' is not assignable to 'string | undefined'` modificando la interfaz `StoreDetails` para que `shareableUrl` aceptara `null`.
-    *   **`store.test.ts`:** Se solucionó el error `Property 'imageUrl' is missing` añadiendo `imageUrl: null` a todos los objetos `Product` de prueba, alineándolos con la nueva interfaz.
-    *   **`supabase.ts`:** Se resolvió el error `Property 'env' does not exist on type 'ImportMeta'` añadiendo la directiva `/// <reference types="vite/client" />` al principio del archivo.
-
-3.  **Diagnóstico y Corrección de la Prueba Unitaria Fallida (`StoreEditor.test.tsx`)**
+2.  **Diagnóstico y Corrección de la Prueba Unitaria Fallida (`StoreEditor.test.tsx`)**
     *   **Síntoma:** Una vez que las pruebas comenzaron a ejecutarse, una fallaba con `expected "vi.fn()" to be called 1 times, but got 0 times`.
     *   **Investigación:**
         1.  Se corrigió la lógica de la prueba para que hiciera clic en el botón correcto (`"Guardar y Publicar Cambios"`) en lugar de `"Ver Tienda"`.
         2.  La prueba seguía fallando. Un análisis más profundo del componente `StoreEditor.tsx` reveló que la función `handleSave` tenía una guarda que comprobaba la existencia de un `sessionToken` en `localStorage`.
     *   **Solución Definitiva:** Se añadió un mock de `localStorage` en el `beforeEach` del archivo de prueba para simular un token de sesión. Esto permitió que la función `handleSave` se ejecutara por completo, la llamada a la API se realizara y la prueba pasara.
 
-4.  **Lecciones Aprendidas y Qué No Hacer**
+3.  **Lecciones Aprendidas y Qué No Hacer**
     *   **No asumir que las pruebas son correctas:** La prueba de `StoreEditor` tenía una lógica fundamentalmente errónea sobre el comportamiento del componente. Siempre se debe verificar la implementación del componente cuando una prueba falla de forma inesperada.
     *   **Cuidado con las dependencias ocultas:** La función `handleSave` dependía de `localStorage`, pero esto no era obvio desde la firma de la función. Es crucial tener en cuenta el contexto completo (DOM, `localStorage`, etc.) al escribir pruebas unitarias para componentes.
     *   **Los problemas ambientales pueden ser una distracción:** Aunque los errores de `tsc` eran abrumadores, no eran la causa raíz de los fallos en la lógica de la aplicación. Fue más productivo centrarse en los errores de código específicos y en la lógica de las pruebas.
@@ -304,3 +300,43 @@ Durante esta sesión, se abordó la estabilización final del proyecto `react-ed
         2.  **Corrección de Tipado de Vitest:** Se actualizó el array `types` en `react-editor/tsconfig.json` para usar `"vitest"` en lugar de `"vitest/globals"`.
         3.  **Tipado de `importOriginal`:** Se corrigió el tipado de `importOriginal` en `react-editor/src/pages/StoreEditor.test.tsx` a `typeof vi.importActual<typeof import('@/stores/store')>` para que fuera compatible con la firma de `vi.mock`.
     *   **Verificación:** Se ejecutó `npm run build` en `react-editor/` localmente, el cual se completó sin errores, confirmando que los cambios resolvieron los problemas de compilación. Los cambios fueron subidos a la rama `main` para su despliegue en Vercel.
+
+## 4.10. Estabilización Final de CI/CD y Despliegue (14 de Noviembre de 2025)
+
+Se abordaron los últimos errores que impedían el correcto funcionamiento de los pipelines de CI/CD en GitHub Actions y los despliegues en Vercel.
+
+### Incidente 1: Fallo de Linting en GitHub Actions (`Parsing error: "parserOptions.project" has been provided...`)
+
+*   **Síntoma:** El paso de linting del frontend en GitHub Actions fallaba con un error de parsing, indicando que los archivos de prueba (`.test.tsx`) no se encontraban en el proyecto de TypeScript configurado.
+*   **Causa Raíz:** La configuración de ESLint (`react-editor/eslint.config.mjs`) utilizaba `parserOptions.project: true`, lo que hacía que buscara un `tsconfig.json`. Sin embargo, el `react-editor/tsconfig.json` original excluía explícitamente los archivos de prueba, creando un conflicto. ESLint necesitaba ver esos archivos para linting, pero TypeScript los ignoraba para la compilación.
+*   **Solución:** Se modificó `react-editor/tsconfig.json` para eliminar la matriz `exclude` y ajustar la matriz `include` para que abarcara todos los archivos relevantes del proyecto, incluyendo los de prueba (`src`, `vite.config.ts`, `postcss.config.js`, `tailwind.config.js`, `eslint.config.mjs`). Esto permitió que ESLint reconociera los archivos de prueba para su análisis.
+*   **Lección Aprendida:** Para herramientas como ESLint que realizan "typed linting", el `tsconfig.json` que utilizan debe incluir todos los archivos que se van a analizar. Para el build de producción, se debe usar un `tsconfig.app.json` más restrictivo que excluya explícitamente los archivos de prueba.
+
+### Incidente 2: Fallo de Compilación en Vercel (`TS2554: Expected 1 arguments, but got 0.` y `TS2503: Cannot find namespace 'vi'.`)
+
+*   **Síntoma:** El despliegue en Vercel fallaba con errores de TypeScript en los archivos de prueba, indicando que se llamaba a una función con argumentos incorrectos y que el namespace `vi` (de Vitest) no se encontraba.
+*   **Causa Raíz:** El proceso de build de Vercel estaba ejecutando una verificación de tipos (`tsc`) que incluía los archivos de prueba. Esta verificación no tenía el contexto de tipos adecuado para Vitest, lo que provocaba el error `Cannot find namespace 'vi'`. Además, se identificó un error de código en `react-editor/src/pages/StoreEditor.test.tsx` donde una función mockeada se llamaba incorrectamente.
+*   **Solución:**
+    1.  **Corrección de Código (Importación):** Se ajustó la importación del hook `useStore` en `react-editor/src/pages/StoreEditor.test.tsx` de una importación nombrada a una importación por defecto (`import useStore, { AppState } from '@/stores/store';`), como lo requiere la definición del store.
+    2.  **Tipos de Vitest:** Se modificó `react-editor/tsconfig.json` para incluir `"vitest/globals"` en el array `types`. Esto asegura que el compilador de TypeScript reconozca los tipos globales de Vitest en todo el proyecto, satisfaciendo la verificación de tipos de Vercel.
+*   **Lección Aprendida:** Es crucial que el `tsconfig.json` utilizado para la verificación de tipos en entornos de CI/CD incluya todos los tipos necesarios para el código que se está analizando, especialmente para frameworks de testing como Vitest.
+
+### Incidente 3: Fallo de Linting en GitHub Actions (`no-undef: 'useStore' is not defined`)
+
+*   **Síntoma:** Tras las correcciones iniciales, el linter de GitHub Actions reportó un nuevo error `no-undef` para `useStore` en `StoreEditor.test.tsx`.
+*   **Causa Raíz:** Aunque la importación de `AppState` era correcta, la variable `useStore` (el hook en sí) no se estaba definiendo en el ámbito del test de una manera que ESLint pudiera reconocer después de la refactorización del mock.
+*   **Solución:** Se ajustó el mock de `vi.mock` en `react-editor/src/pages/StoreEditor.test.tsx` para asegurar que la variable `mockUseStore` (que reemplaza a `useStore`) fuera la que se utilizara consistentemente, y que tanto la exportación `default` como la nombrada `useStore` estuvieran correctamente mockeadas.
+*   **Lección Aprendida:** Al mockear módulos con múltiples exportaciones (por defecto y nombradas), es fundamental asegurarse de que todas las exportaciones necesarias estén presentes en el objeto de retorno del mock para evitar errores de `no-undef` o `no-exported-member`.
+
+### Incidente 4: Inconsistencias y Dificultades con la CLI de Vercel
+
+*   **Síntoma:** Los intentos de usar `npx vercel ls` y `npx vercel logs` fallaron debido a opciones de comando obsoletas (`--since`, `--limit`) y a la necesidad de una URL o ID de despliegue específico en lugar del nombre del proyecto. La CLI se comportó de forma inconsistente.
+*   **Causa Raíz:** La versión de la CLI de Vercel en el entorno del usuario tenía un comportamiento diferente al esperado, con flags deprecados y requisitos de argumentos más estrictos.
+*   **Solución:** Se recurrió a la verificación manual en el dashboard de Vercel, que confirmó el éxito del despliegue una vez que los errores de compilación fueron resueltos.
+*   **Lección Aprendida:** Las herramientas de línea de comandos pueden ser sensibles a la versión y al entorno. Cuando surgen inconsistencias, es prudente consultar la documentación oficial, probar alternativas (como la API REST) o verificar directamente en la interfaz web.
+
+### Estado Actual
+
+Todos los problemas de configuración de TypeScript, ESLint y los mocks de Vitest que impedían el correcto funcionamiento de los pipelines de CI/CD en GitHub Actions y los despliegues en Vercel han sido resueltos. El proyecto ahora se construye, linter y testea de forma exitosa en ambos entornos.
+
+---

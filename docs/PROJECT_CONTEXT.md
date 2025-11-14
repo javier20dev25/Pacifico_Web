@@ -299,3 +299,43 @@ Este caso práctico demuestra la aplicación de la filosofía de "Blindaje Profu
 *   **Solución (Blindaje en el Origen):** En lugar de añadir parches defensivos (como el encadenamiento opcional `?.`) en cada componente que consumía el store, se aplicó el blindaje directamente en la fuente de la verdad. El objeto de estado inicial dentro del `create<AppState>()` del store fue meticulosamente completado para incluir **todas y cada una de las propiedades** de la interfaz `StoreDetails`, asignándoles a cada una un valor por defecto seguro (`''`, `null`, `false`, `0`, `[]`, etc.).
 
 *   **Lección Estratégica / Qué hacer a futuro:** Este incidente es un recordatorio clave: **el blindaje más efectivo se aplica en el origen de los datos, no en el punto de consumo**. Las validaciones en los componentes son una segunda línea de defensa, pero la primera y más importante es garantizar la integridad estructural de la fuente de datos. Un store global (Zustand, Redux, Context) **debe** ser inicializado siempre con un estado completo y bien formado que respete su contrato de tipos. Este único cambio en el store proporciona una protección robusta y automática para todos los componentes que lo consumen, tanto los actuales como los futuros.
+
+## 4.9. Estabilización de CI/CD y Despliegue (14 de Noviembre de 2025)
+
+Tras una serie de correcciones de código y configuración, se abordaron los problemas persistentes en los pipelines de Integración Continua (CI) de GitHub Actions y los despliegues en Vercel.
+
+### Incidente 1: Fallo de Linting en GitHub Actions (`Parsing error: "parserOptions.project" has been provided...`)
+
+*   **Síntoma:** El paso de linting del frontend en GitHub Actions fallaba con un error de parsing, indicando que los archivos de prueba (`.test.tsx`) no se encontraban en el proyecto de TypeScript configurado.
+*   **Causa Raíz:** La configuración de ESLint (`react-editor/eslint.config.mjs`) utilizaba `parserOptions.project: true`, lo que hacía que buscara un `tsconfig.json`. Sin embargo, el `react-editor/tsconfig.json` original excluía explícitamente los archivos de prueba, creando un conflicto. ESLint necesitaba ver esos archivos para linting, pero TypeScript los ignoraba para la compilación.
+*   **Solución:** Se modificó `react-editor/tsconfig.json` para eliminar la matriz `exclude` y ajustar la matriz `include` para que abarcara todos los archivos relevantes del proyecto, incluyendo los de prueba (`src`, `vite.config.ts`, `postcss.config.js`, `tailwind.config.js`, `eslint.config.mjs`). Esto permitió que ESLint reconociera los archivos de prueba para su análisis.
+*   **Lección Aprendida:** Para herramientas como ESLint que realizan "typed linting", el `tsconfig.json` que utilizan debe incluir todos los archivos que se van a analizar. Para el build de producción, se debe usar un `tsconfig.app.json` más restrictivo que excluya explícitamente los archivos de prueba.
+
+### Incidente 2: Fallo de Compilación en Vercel (`TS2554: Expected 1 arguments, but got 0.` y `TS2503: Cannot find namespace 'vi'.`)
+
+*   **Síntoma:** El despliegue en Vercel fallaba con errores de TypeScript en los archivos de prueba, indicando que se llamaba a una función con argumentos incorrectos y que el namespace `vi` (de Vitest) no se encontraba.
+*   **Causa Raíz:** El proceso de build de Vercel estaba ejecutando una verificación de tipos (`tsc`) que incluía los archivos de prueba. Esta verificación no tenía el contexto de tipos adecuado para Vitest, lo que provocaba el error `Cannot find namespace 'vi'`. Además, se identificó un error de código en `react-editor/src/pages/StoreEditor.test.tsx` donde una función mockeada se llamaba incorrectamente.
+*   **Solución:**
+    1.  **Corrección de Código:** Se ajustó la importación del hook `useStore` en `react-editor/src/pages/StoreEditor.test.tsx` de una importación nombrada a una importación por defecto (`import useStore, { AppState } from '@/stores/store';`), como lo requiere la definición del store.
+    2.  **Tipos de Vitest:** Se modificó `react-editor/tsconfig.json` para incluir `"vitest/globals"` en el array `types`. Esto asegura que el compilador de TypeScript reconozca los tipos globales de Vitest en todo el proyecto, satisfaciendo la verificación de tipos de Vercel.
+*   **Lección Aprendida:** Es crucial que el `tsconfig.json` utilizado para la verificación de tipos en entornos de CI/CD incluya todos los tipos necesarios para el código que se está analizando, especialmente para frameworks de testing como Vitest.
+
+### Incidente 3: Fallo de Linting en GitHub Actions (`no-undef: 'useStore' is not defined`)
+
+*   **Síntoma:** Tras las correcciones iniciales, el linter de GitHub Actions reportó un nuevo error `no-undef` para `useStore` en `StoreEditor.test.tsx`.
+*   **Causa Raíz:** Aunque la importación de `AppState` era correcta, la variable `useStore` (el hook en sí) no se estaba definiendo en el ámbito del test de una manera que ESLint pudiera reconocer después de la refactorización del mock.
+*   **Solución:** Se ajustó el mock de `vi.mock` en `react-editor/src/pages/StoreEditor.test.tsx` para asegurar que la variable `mockUseStore` (que reemplaza a `useStore`) fuera la que se utilizara consistentemente, y que tanto la exportación `default` como la nombrada `useStore` estuvieran correctamente mockeadas.
+*   **Lección Aprendida:** Al mockear módulos con múltiples exportaciones (por defecto y nombradas), es fundamental asegurarse de que todas las exportaciones necesarias estén presentes en el objeto de retorno del mock para evitar errores de `no-undef` o `no-exported-member`.
+
+### Incidente 4: Inconsistencias y Dificultades con la CLI de Vercel
+
+*   **Síntoma:** Los intentos de usar `npx vercel ls` y `npx vercel logs` fallaron debido a opciones de comando obsoletas (`--since`, `--limit`) y a la necesidad de una URL o ID de despliegue específico en lugar del nombre del proyecto. La CLI se comportó de forma inconsistente.
+*   **Causa Raíz:** La versión de la CLI de Vercel en el entorno del usuario tenía un comportamiento diferente al esperado, con flags deprecados y requisitos de argumentos más estrictos.
+*   **Solución:** Se recurrió a la verificación manual en el dashboard de Vercel, que confirmó el éxito del despliegue una vez que los errores de compilación fueron resueltos.
+*   **Lección Aprendida:** Las herramientas de línea de comandos pueden ser sensibles a la versión y al entorno. Cuando surgen inconsistencias, es prudente consultar la documentación oficial, probar alternativas (como la API REST) o verificar directamente en la interfaz web.
+
+### Estado Actual
+
+Todos los problemas de configuración de TypeScript, ESLint y los mocks de Vitest que impedían el correcto funcionamiento de los pipelines de CI/CD en GitHub Actions y los despliegues en Vercel han sido resueltos. El proyecto ahora se construye, linter y testea de forma exitosa en ambos entornos.
+
+---
