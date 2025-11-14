@@ -13,7 +13,7 @@ vi.mock('@/api/axiosConfig', () => ({
 vi.mock('@/hooks/useInitialData', () => ({
   useInitialData: () => ({ isLoading: false, isError: false }),
 }));// Mock del store de Zustand (versión final autocontenida)
-vi.mock('@/stores/store', async (importOriginal: typeof import('@/stores/store')) => {
+vi.mock('@/stores/store', async (importOriginal: typeof vi.importActual<typeof import('@/stores/store')>) => {
   const actual = await importOriginal(); // Importar el módulo original
 
   const completeMockState: useStore.AppState = {
