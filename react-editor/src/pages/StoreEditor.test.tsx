@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StoreEditor from './StoreEditor';
 import apiClient from '@/api/axiosConfig';
-import { AppState } from '@/stores/store';
+import { AppState, useStore } from '@/stores/store';
 
 // Mock del apiClient (axios)
 vi.mock('@/api/axiosConfig', () => ({
@@ -59,20 +59,21 @@ vi.mock('@/stores/store', async (importOriginal) => {
   };
 
   interface MockUseStore {
-    <T>(selector: (state: useStore.AppState) => T): T;
-    getState: () => useStore.AppState;
+    <T>(selector: (state: AppState) => T): T;
+    getState: () => AppState;
   }
 
-  const mockUseStore = ((_selector: (state: useStore.AppState) => unknown): unknown => {
-    return _selector(completeMockState);
+  const mockUseStore = ((selector: (state: AppState) => unknown): unknown => {
+    return selector(completeMockState);
   }) as MockUseStore;
 
   mockUseStore.getState = () => completeMockState;
 
   return {
     ...actual, // Mantener las exportaciones originales (como availablePaymentMethods)
-    
+    __esModule: true,
     default: mockUseStore, // Sobrescribir solo el default export
+    useStore: mockUseStore, // Asegurarse de que la exportación nombrada también esté mockeada
   };
 });describe('StoreEditor', () => {
   beforeEach(() => {
