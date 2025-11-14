@@ -1,4 +1,6 @@
 {
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
   "compilerOptions": {
     "target": "ES2022",
     "useDefineForClassFields": true,
@@ -18,7 +20,5 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "types": ["vite/client", "node", "react", "vitest"]
-  },
-  "include": ["src", "vite.config.ts", "postcss.config.js", "tailwind.config.js", "eslint.config.mjs"],
-}
+    "types": ["vite/client", "node", "react"]
+  }}

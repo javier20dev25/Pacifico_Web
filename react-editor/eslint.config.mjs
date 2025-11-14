@@ -32,7 +32,7 @@ export default tseslint.config(
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
-        project: true, // Automatically find tsconfig.json
+        project: './tsconfig.eslint.json', // Usar el tsconfig específico para ESLint
         tsconfigRootDir: import.meta.dirname,
       },
       globals: {

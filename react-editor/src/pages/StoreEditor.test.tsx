@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StoreEditor from './StoreEditor';
 import apiClient from '@/api/axiosConfig';
-import { AppState, useStore } from '@/stores/store';
+import useStore, { AppState } from '@/stores/store';
 
 // Mock del apiClient (axios)
 vi.mock('@/api/axiosConfig', () => ({

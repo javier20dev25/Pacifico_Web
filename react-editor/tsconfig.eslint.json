@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "node", "react", "vitest/globals"]
+  },
+  "include": [
+    "src",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx",
+    "vite.config.ts",
+    "postcss.config.js",
+    "tailwind.config.js",
+    "eslint.config.mjs"
+  ],
+  "exclude": ["node_modules", "dist"]
+}
