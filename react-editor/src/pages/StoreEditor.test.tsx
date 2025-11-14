@@ -3,20 +3,26 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StoreEditor from './StoreEditor';
 import apiClient from '@/api/axiosConfig';
-import * as useStore from '@/stores/store';// Mock del apiClient (axios)
+import { AppState } from '@/stores/store';
+
+// Mock del apiClient (axios)
 vi.mock('@/api/axiosConfig', () => ({
   default: {
     put: vi.fn(),
     post: vi.fn(),
   },
-}));// Mock del hook de datos iniciales
+}));
+
+// Mock del hook de datos iniciales
 vi.mock('@/hooks/useInitialData', () => ({
   useInitialData: () => ({ isLoading: false, isError: false }),
-}));// Mock del store de Zustand (versión final autocontenida)
-vi.mock('@/stores/store', async (importOriginal: typeof vi.importActual<typeof import('@/stores/store')>) => {
-  const actual = await importOriginal(); // Importar el módulo original
+}));
 
-  const completeMockState: useStore.AppState = {
+// Mock del store de Zustand (versión final autocontenida)
+vi.mock('@/stores/store', async (importOriginal) => {
+  const actual = await importOriginal() as object; // Importar el módulo original
+
+  const completeMockState: AppState = {
     store: {
       uuid: '123-abc',
       nombre: 'Mi Tienda de Prueba',

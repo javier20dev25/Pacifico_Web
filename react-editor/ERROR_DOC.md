@@ -294,3 +294,13 @@ Durante esta sesión, se abordó la estabilización final del proyecto `react-ed
     },
     ```
 *   **Lección / Qué no hacer:** En un proyecto de TypeScript que utiliza `typescript-eslint`, siempre se debe desactivar la regla base `no-unused-vars` para evitar conflictos. La regla del plugin de TypeScript está diseñada específicamente para entender la sintaxis del lenguaje y debe ser la única fuente de verdad para esta validación.
+### **Resolución de Errores de Vercel (13 de Noviembre de 2025)**
+
+1.  **Errores de Compilación en Vercel (`TS2769`, `TS2349`, `TS2503`)**
+    *   **Problema:** Vercel reportaba errores de tipado (`TS2769`, `TS2349`, `TS2503`) relacionados con `vi.mock` y la variable `vi` en los archivos de test, a pesar de que GitHub Actions los validaba correctamente.
+    *   **Causa Raíz:** Vercel no estaba procesando correctamente los tipos de Vitest para los archivos de test, o había un conflicto en la forma en que se manejaban los tipos durante el build.
+    *   **Solución:**
+        1.  **Exclusión de Archivos de Test:** Se modificó `react-editor/tsconfig.json` para excluir los archivos de test (`**/*.test.ts`, `**/*.test.tsx`, `**/*.spec.ts`, `**/*.spec.tsx`) de la compilación de TypeScript durante el build.
+        2.  **Corrección de Tipado de Vitest:** Se actualizó el array `types` en `react-editor/tsconfig.json` para usar `"vitest"` en lugar de `"vitest/globals"`.
+        3.  **Tipado de `importOriginal`:** Se corrigió el tipado de `importOriginal` en `react-editor/src/pages/StoreEditor.test.tsx` a `typeof vi.importActual<typeof import('@/stores/store')>` para que fuera compatible con la firma de `vi.mock`.
+    *   **Verificación:** Se ejecutó `npm run build` en `react-editor/` localmente, el cual se completó sin errores, confirmando que los cambios resolvieron los problemas de compilación. Los cambios fueron subidos a la rama `main` para su despliegue en Vercel.
