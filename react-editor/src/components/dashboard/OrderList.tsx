@@ -1,5 +1,5 @@
 import { fmt } from '../../lib/format';
-import { Order } from '../../types';
+import type { Order } from '../../types';
 
 const OrderList = ({ orders = [] }: { orders?: Order[] }) => {
   const safeOrders = Array.isArray(orders) ? orders : [];

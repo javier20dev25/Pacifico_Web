@@ -29,7 +29,7 @@ export interface StoreDetails {
   advance_options: Record<string, boolean>;
   accepts_installments: boolean;
   installment_options: { type: string, max: number }[];
-  shareableUrl: string | null;
+  shareableUrl: string | null | undefined;
 }
 
 export interface Product {
@@ -87,7 +87,7 @@ export interface AppState {
   updateProduct: (productId: string, updates: Partial<Product>) => void;
   deleteProduct: (productId: string) => void;
   setCart: (cart: CartState) => void;
-  openProductModal: (productId?: string) => void;
+  openProductModal: (productId?: string | null) => void;
   closeProductModal: () => void;
   setStoreType: (type: 'by_order' | 'in_stock') => void;
   loadInitialData: (data: InitialDataPayload) => void;

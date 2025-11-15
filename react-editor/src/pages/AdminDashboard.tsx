@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import apiClient from '@/api/axiosConfig';
 import AdminStats from '@/components/admin/AdminStats';
 import CreateUserForm from '@/components/admin/CreateUserForm';
 import UsersTable from '@/components/admin/UsersTable';
 import RegistrationChart from '@/components/admin/RegistrationChart';
-import { User } from '@/components/admin/UsersTable'; // Importamos el tipo User
+import type { User } from '@/components/admin/UsersTable'; // Importamos el tipo User
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState<User[]>([]);

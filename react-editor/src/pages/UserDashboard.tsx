@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import apiClient from '@/api/axiosConfig';
 import UserInfo from '@/components/dashboard/UserInfo';
 import StoreManager from '@/components/dashboard/StoreManager';

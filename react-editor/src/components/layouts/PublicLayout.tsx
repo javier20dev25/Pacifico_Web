@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Outlet } from 'react-router-dom';
 
 // Este layout simplemente renderiza la ruta hija sin ninguna UI adicional.
