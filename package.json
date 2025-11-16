@@ -12,7 +12,7 @@
     "lint": "eslint . --ext .js",
     "format": "prettier --write \"./**/*.js\"",
     "test": "jest --forceExit",
-    "vercel-build": "mv react-editor/src/pages/StoreEditor.test.tsx react-editor/src/pages/StoreEditor.test.tsx.bak && npm run build --prefix react-editor && mv react-editor/src/pages/StoreEditor.test.tsx.bak react-editor/src/pages/StoreEditor.test.tsx"
+    "vercel-build": "mv react-editor/src/pages/StoreEditor.test.tsx react-editor/src/pages/StoreEditor.test.tsx.bak && mv react-editor/src/stores/store.test.ts react-editor/src/stores/store.test.ts.bak && npm run build --prefix react-editor && mv react-editor/src/pages/StoreEditor.test.tsx.bak react-editor/src/pages/StoreEditor.test.tsx && mv react-editor/src/stores/store.test.ts.bak react-editor/src/stores/store.test.ts"
   },
   "author": "Astaroth & Gemini",
   "license": "ISC",
