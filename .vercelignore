@@ -1,0 +1,3 @@
+# evitar que los tests lleguen al build host
+react-editor/src/**/*.test.*
+react-editor/src/**/*.spec.*
