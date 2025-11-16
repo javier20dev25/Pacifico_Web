@@ -2,9 +2,7 @@ import { z } from 'zod';
 
 // Esquema para la creación de un usuario por parte de un administrador.
 export const AdminCreateUserSchema = z.object({
-  nombre: z.string({
-    required_error: 'El nombre de la tienda es requerido',
-  }).min(1, { message: 'El nombre no puede estar vacío' }),
+  nombre: z.string().nonempty('El nombre de la tienda es requerido'),
   
   // El correo es opcional, si no se provee, la API genera uno.
   // Si se provee, debe ser un formato de email válido.
@@ -13,9 +11,7 @@ export const AdminCreateUserSchema = z.object({
     .endsWith('@pacificoweb.com', { message: 'El correo electrónico debe ser del dominio @pacificoweb.com' })
     .optional(),
 
-  plan_nombre: z.string({
-    required_error: 'El nombre del plan es requerido',
-  }).min(1, { message: 'El nombre del plan no puede estar vacío' }),
+  plan_nombre: z.string().nonempty('El nombre del plan es requerido'),
 });
 
 // Exportamos el tipo de TypeScript inferido.
