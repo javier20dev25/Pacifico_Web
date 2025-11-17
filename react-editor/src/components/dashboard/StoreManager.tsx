@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { PlusIcon, PencilIcon, EyeIcon, ShareIcon, TrashIcon } from '@heroicons/react/24/solid';
 
 // --- TIPOS ---
 type Store = {
@@ -33,11 +34,11 @@ const StoreManager: React.FC<StoreManagerProps> = ({ stores }) => {
   // Caso 1: No hay tiendas
   if (!stores || stores.length === 0) {
     return (
-      <div className="text-center bg-white shadow-md rounded-lg p-8">
-        <h2 className="text-2xl font-bold mb-4">Mi Tienda</h2>
-        <p className="text-gray-500 mb-6">Aún no has creado tu tienda.</p>
-        <Link to="/editor" className="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700">
-          ➕ Crear mi Primera Tienda
+      <div className="text-center bg-gray-100 shadow-md rounded-lg p-8 neumorphic-flat">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">Mi Tienda</h2>
+        <p className="text-gray-600 mb-6">Aún no has creado tu tienda.</p>
+        <Link to="/editor" className="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 inline-flex items-center justify-center neumorphic-button">
+          <PlusIcon className="h-5 w-5 mr-2" /> Crear mi Primera Tienda
         </Link>
       </div>
     );
@@ -49,28 +50,28 @@ const StoreManager: React.FC<StoreManagerProps> = ({ stores }) => {
   const publicUrl = store.shareableUrl || '#';
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">{storeName}</h2>
-      <div className="bg-white shadow-md rounded-lg p-4">
-        <div className="aspect-w-16 aspect-h-9 border-2 border-gray-200 rounded-lg overflow-hidden mb-4 bg-gray-100">
+    <div className="mt-8">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">{storeName}</h2>
+      <div className="bg-gray-100 shadow-md rounded-lg p-4 neumorphic-flat">
+        <div className="aspect-w-16 aspect-h-9 border-2 border-gray-200 rounded-lg overflow-hidden mb-4 bg-gray-50 neumorphic-flat-inner">
           {publicUrl !== '#' ? (
             <iframe src={publicUrl} className="w-full h-64 md:h-96" title="Vista previa de la tienda" />
           ) : (
-            <div className="w-full h-64 md:h-96 flex items-center justify-center"><p>La tienda no tiene un enlace público aún.</p></div>
+            <div className="w-full h-64 md:h-96 flex items-center justify-center"><p className="text-gray-600">La tienda no tiene un enlace público aún.</p></div>
           )}
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link to="/editor" className="flex-1 sm:flex-none text-center bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600">
-              ✏️ Editar Tienda
+        <div className="flex flex-wrap items-center justify-center gap-4 mt-4">
+            <Link to="/editor" className="flex-1 sm:flex-none text-center bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 inline-flex items-center justify-center neumorphic-button">
+              <PencilIcon className="h-5 w-5 mr-2" /> Editar Tienda
             </Link>
-          <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="flex-1 sm:flex-none text-center bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600">
-            👁️ Ver Tienda
+          <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="flex-1 sm:flex-none text-center bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 inline-flex items-center justify-center neumorphic-button">
+            <EyeIcon className="h-5 w-5 mr-2" /> Ver Tienda
           </a>
-          <button onClick={() => handleShare(publicUrl)} className="flex-1 sm:flex-none bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600">
-            🔗 Compartir
+          <button onClick={() => handleShare(publicUrl)} className="flex-1 sm:flex-none bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 inline-flex items-center justify-center neumorphic-button">
+            <ShareIcon className="h-5 w-5 mr-2" /> Compartir
           </button>
-          <button onClick={handleDelete} className="flex-1 sm:flex-none bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600">
-            🗑️ Eliminar
+          <button onClick={handleDelete} className="flex-1 sm:flex-none bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 inline-flex items-center justify-center neumorphic-button">
+            <TrashIcon className="h-5 w-5 mr-2" /> Eliminar
           </button>
         </div>
       </div>

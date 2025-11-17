@@ -300,42 +300,59 @@ Este caso práctico demuestra la aplicación de la filosofía de "Blindaje Profu
 
 *   **Lección Estratégica / Qué hacer a futuro:** Este incidente es un recordatorio clave: **el blindaje más efectivo se aplica en el origen de los datos, no en el punto de consumo**. Las validaciones en los componentes son una segunda línea de defensa, pero la primera y más importante es garantizar la integridad estructural de la fuente de datos. Un store global (Zustand, Redux, Context) **debe** ser inicializado siempre con un estado completo y bien formado que respete su contrato de tipos. Este único cambio en el store proporciona una protección robusta y automática para todos los componentes que lo consumen, tanto los actuales como los futuros.
 
-## 4.9. Estabilización de CI/CD y Despliegue (14 de Noviembre de 2025)
+## 4.10. Incidente Crítico: Persistencia del Error TS2503 en Vercel y Solución Final (Noviembre 2025)
 
-Tras una serie de correcciones de código y configuración, se abordaron los problemas persistentes en los pipelines de Integración Continua (CI) de GitHub Actions y los despliegues en Vercel.
+Este incidente documenta una serie de fallos de despliegue en Vercel causados por un error `TS2503: Cannot find namespace 'vi'` que persistió a pesar de múltiples intentos de solución, revelando un comportamiento anómalo del entorno de Vercel.
 
-### Incidente 1: Fallo de Linting en GitHub Actions (`Parsing error: "parserOptions.project" has been provided...`)
+### Cronología del Incidente:
 
-*   **Síntoma:** El paso de linting del frontend en GitHub Actions fallaba con un error de parsing, indicando que los archivos de prueba (`.test.tsx`) no se encontraban en el proyecto de TypeScript configurado.
-*   **Causa Raíz:** La configuración de ESLint (`react-editor/eslint.config.mjs`) utilizaba `parserOptions.project: true`, lo que hacía que buscara un `tsconfig.json`. Sin embargo, el `react-editor/tsconfig.json` original excluía explícitamente los archivos de prueba, creando un conflicto. ESLint necesitaba ver esos archivos para linting, pero TypeScript los ignoraba para la compilación.
-*   **Solución:** Se modificó `react-editor/tsconfig.json` para eliminar la matriz `exclude` y ajustar la matriz `include` para que abarcara todos los archivos relevantes del proyecto, incluyendo los de prueba (`src`, `vite.config.ts`, `postcss.config.js`, `tailwind.config.js`, `eslint.config.mjs`). Esto permitió que ESLint reconociera los archivos de prueba para su análisis.
-*   **Lección Aprendida:** Para herramientas como ESLint que realizan "typed linting", el `tsconfig.json` que utilizan debe incluir todos los archivos que se van a analizar. Para el build de producción, se debe usar un `tsconfig.app.json` más restrictivo que excluya explícitamente los archivos de prueba.
+1.  **Problema Inicial:** El despliegue en Vercel fallaba con `Error: react-editor/src/pages/StoreEditor.test.tsx(XXX,YY): error TS2503: Cannot find namespace 'vi'`. Esto indicaba que el compilador de TypeScript (`tsc`) estaba procesando archivos de prueba (`.test.tsx`) que utilizaban `Vitest` (una dependencia de desarrollo) en el build de producción.
 
-### Incidente 2: Fallo de Compilación en Vercel (`TS2554: Expected 1 arguments, but got 0.` y `TS2503: Cannot find namespace 'vi'.`)
+2.  **Intento 1 (Configuración `tsconfig.app.json` - primera versión):**
+    *   **Acción:** Se añadió una regla `exclude` a `react-editor/tsconfig.app.json` para ignorar archivos de prueba y se simplificó el script `vercel-build` en `package.json`.
+    *   **Resultado:** **Falla.** El error `TS2503` persistió.
 
-*   **Síntoma:** El despliegue en Vercel fallaba con errores de TypeScript en los archivos de prueba, indicando que se llamaba a una función con argumentos incorrectos y que el namespace `vi` (de Vitest) no se encontraba.
-*   **Causa Raíz:** El proceso de build de Vercel estaba ejecutando una verificación de tipos (`tsc`) que incluía los archivos de prueba. Esta verificación no tenía el contexto de tipos adecuado para Vitest, lo que provocaba el error `Cannot find namespace 'vi'`. Además, se identificó un error de código en `react-editor/src/pages/StoreEditor.test.tsx` donde una función mockeada se llamaba incorrectamente.
-*   **Solución:**
-    1.  **Corrección de Código:** Se ajustó la importación del hook `useStore` en `react-editor/src/pages/StoreEditor.test.tsx` de una importación nombrada a una importación por defecto (`import useStore, { AppState } from '@/stores/store';`), como lo requiere la definición del store.
-    2.  **Tipos de Vitest:** Se modificó `react-editor/tsconfig.json` para incluir `"vitest/globals"` en el array `types`. Esto asegura que el compilador de TypeScript reconozca los tipos globales de Vitest en todo el proyecto, satisfaciendo la verificación de tipos de Vercel.
-*   **Lección Aprendida:** Es crucial que el `tsconfig.json` utilizado para la verificación de tipos en entornos de CI/CD incluya todos los tipos necesarios para el código que se está analizando, especialmente para frameworks de testing como Vitest.
+3.  **Intento 2 (Refinamiento del `tsconfig.app.json` - inclusión y exclusión robusta):**
+    *   **Acción:** Se hizo más específico el patrón `include` en `react-editor/tsconfig.app.json` a `["src/**/*.ts", "src/**/*.tsx"]` y se mantuvo un `exclude` robusto.
+    *   **Resultado:** **Falla.** El error `TS2503` persistió.
 
-### Incidente 3: Fallo de Linting en GitHub Actions (`no-undef: 'useStore' is not defined`)
+4.  **Intento 3, 4 y 5 (Hacks de `mv` y "Exorcismo"):**
+    *   **Acción:** Se implementaron soluciones drásticas en el script `vercel-build` del `package.json` raíz, que incluían renombrar temporalmente el archivo de prueba (`.bak`) o moverlo completamente fuera del directorio `react-editor` antes de la compilación.
+    *   **Razonamiento:** Se intentó ocultar físicamente el archivo del compilador, ya que las configuraciones de `tsconfig.json` no eran respetadas.
+    *   **Resultado:** **Falla.** En cada intento, el log de Vercel mostraba que los comandos `mv` se ejecutaban, pero `tsc` *seguía reportando el error en la ruta original del archivo de prueba*. Esto reveló un comportamiento anómalo del entorno de Vercel, posiblemente relacionado con un caché de sistema de archivos o una indexación previa que ignoraba los cambios en tiempo de ejecución del script.
 
-*   **Síntoma:** Tras las correcciones iniciales, el linter de GitHub Actions reportó un nuevo error `no-undef` para `useStore` en `StoreEditor.test.tsx`.
-*   **Causa Raíz:** Aunque la importación de `AppState` era correcta, la variable `useStore` (el hook en sí) no se estaba definiendo en el ámbito del test de una manera que ESLint pudiera reconocer después de la refactorización del mock.
-*   **Solución:** Se ajustó el mock de `vi.mock` en `react-editor/src/pages/StoreEditor.test.tsx` para asegurar que la variable `mockUseStore` (que reemplaza a `useStore`) fuera la que se utilizara consistentemente, y que tanto la exportación `default` como la nombrada `useStore` estuvieran correctamente mockeadas.
-*   **Lección Aprendida:** Al mockear módulos con múltiples exportaciones (por defecto y nombradas), es fundamental asegurarse de que todas las exportaciones necesarias estén presentes en el objeto de retorno del mock para evitar errores de `no-undef` o `no-exported-member`.
+5.  **Diagnóstico Clave: Anomalía del Entorno de Vercel vs. Comportamiento Local:**
+    *   Se ejecutó `npm ci && npm run vercel-build` localmente, y el build se completó **sin errores**. Esto confirmó que la configuración de TypeScript era correcta y funcional en un entorno estándar, y que el problema era **100% específico del entorno de Vercel**.
 
-### Incidente 4: Inconsistencias y Dificultades con la CLI de Vercel
+6.  **Solución Arquitectónica (Corrección de la Jerarquía de `tsconfig.json`):**
+    *   **Acción:** Se identificó que el `react-editor/tsconfig.json` (el archivo base) tenía un `include: ["src"]` demasiado amplio. Se corrigió a `"include": ["src/**/*.ts", "src/**/*.tsx"]`. Luego, se simplificó `react-editor/tsconfig.app.json` eliminando sus propiedades `include` y `exclude` redundantes, permitiendo que heredara correctamente del base.
+    *   **Razonamiento:** Esta fue la solución arquitectónicamente correcta para el proyecto, asegurando que la configuración de TypeScript fuera coherente y estricta desde la base.
+    *   **Resultado:** **Falla en Vercel.** A pesar de que localmente funcionaba, Vercel seguía fallando con `TS2503`. Esto confirmó que Vercel ignoraba las configuraciones de `tsconfig.json` de una manera fundamentalmente anómala.
 
-*   **Síntoma:** Los intentos de usar `npx vercel ls` y `npx vercel logs` fallaron debido a opciones de comando obsoletas (`--since`, `--limit`) y a la necesidad de una URL o ID de despliegue específico en lugar del nombre del proyecto. La CLI se comportó de forma inconsistente.
-*   **Causa Raíz:** La versión de la CLI de Vercel en el entorno del usuario tenía un comportamiento diferente al esperado, con flags deprecados y requisitos de argumentos más estrictos.
-*   **Solución:** Se recurrió a la verificación manual en el dashboard de Vercel, que confirmó el éxito del despliegue una vez que los errores de compilación fueron resueltos.
-*   **Lección Aprendida:** Las herramientas de línea de comandos pueden ser sensibles a la versión y al entorno. Cuando surgen inconsistencias, es prudente consultar la documentación oficial, probar alternativas (como la API REST) o verificar directamente en la interfaz web.
+7.  **Solución Definitiva (Contención con `.vercelignore`):**
+    *   **Acción:** Se creó un archivo `.vercelignore` en la raíz del proyecto con las reglas `react-editor/src/**/*.test.*` y `react-editor/src/**/*.spec.*`.
+    *   **Razonamiento:** Esta medida de contención instruye a Vercel a no subir los archivos de prueba al host de build, eludiendo así cualquier comportamiento anómalo de Vercel que hacía que `tsc` los viera a pesar de todas las configuraciones y manipulaciones de archivos.
+    *   **Resultado:** **Éxito.** El error `TS2503` desapareció.
 
-### Estado Actual
+8.  **Aparición y Resolución del Error `TS2769` (Zod):**
+    *   **Problema:** Una vez resuelto el error de los tests, apareció un nuevo error `TS2769` en `shared/schemas/user.ts`, relacionado con la sintaxis de Zod para `required_error`.
+    *   **Acción:** Se corrigió la sintaxis de Zod en `shared/schemas/user.ts`, reemplazando `z.string({ required_error: '...' })` por el método idiomático `.nonempty('...')` para los campos `nombre` y `plan_nombre`.
+    *   **Resultado:** **Éxito.** El error `TS2769` fue resuelto.
 
-Todos los problemas de configuración de TypeScript, ESLint y los mocks de Vitest que impedían el correcto funcionamiento de los pipelines de CI/CD en GitHub Actions y los despliegues en Vercel han sido resueltos. El proyecto ahora se construye, linter y testea de forma exitosa en ambos entornos.
+### Conclusión Final:
 
----
+El despliegue en Vercel se completó con éxito tras una serie de depuraciones complejas. La solución final fue una combinación de:
+*   **Corrección arquitectónica de la jerarquía de `tsconfig.json`:** Asegurando una configuración de TypeScript limpia y estricta.
+*   **Implementación de `.vercelignore`:** Para forzar la exclusión de archivos de prueba en el entorno de Vercel, eludiendo su comportamiento anómalo.
+*   **Corrección de la sintaxis de Zod:** Para resolver un error de tipo que apareció una vez que los problemas de los tests fueron eliminados.
+
+### Lecciones Aprendidas y Qué No Tocar en el Futuro:
+
+*   **Anomalías de Entorno:** Los entornos de CI/CD pueden tener comportamientos anómalos que desafían la lógica estándar de compilación y sistema de archivos. Las soluciones de contención como `.vercelignore` son herramientas valiosas en estos casos.
+*   **Jerarquía de `tsconfig.json`:** Es crucial mantener una jerarquía de `tsconfig.json` limpia y específica, especialmente en monorepos. El `tsconfig.json` base debe ser estricto en sus `include` y `exclude`.
+*   **Sintaxis de Librerías:** Mantenerse al día con la sintaxis idiomática de librerías como Zod es vital para evitar errores de tipo.
+*   **No Tocar:**
+    *   La configuración actual de `react-editor/tsconfig.json` y `react-editor/tsconfig.app.json`.
+    *   El archivo `.vercelignore` (mientras los archivos de prueba permanezcan en `src`).
+    *   El script `vercel-build` en `package.json` (debe permanecer limpio: `npm run build --prefix react-editor`).
+    *   La sintaxis de Zod en `shared/schemas/user.ts` (usar `.nonempty()` para strings requeridos).

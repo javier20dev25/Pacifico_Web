@@ -1,3 +1,58 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Neumorphism Styles */
+.neumorphic-flat {
+  border-radius: 10px;
+  background: #e0e0e0;
+  box-shadow: 8px 8px 15px #bebebe,
+              -8px -8px 15px #ffffff;
+}
+
+.neumorphic-button {
+  border-radius: 10px;
+  background: #e0e0e0;
+  box-shadow: 5px 5px 10px #bebebe,
+              -5px -5px 10px #ffffff;
+  transition: all 0.2s ease-in-out;
+}
+
+.neumorphic-button:hover {
+  box-shadow: 3px 3px 6px #bebebe,
+              -3px -3px 6px #ffffff;
+}
+
+.neumorphic-button:active {
+  box-shadow: inset 2px 2px 5px #bebebe,
+              inset -2px -2px 5px #ffffff;
+}
+
+.neumorphic-flat-inner {
+  border-radius: 8px;
+  background: #f0f0f0;
+  box-shadow: inset 5px 5px 10px #d0d0d0,
+              inset -5px -5px 10px #ffffff;
+}
+
+.neumorphic-flat-sm {
+  border-radius: 5px;
+  background: #e0e0e0;
+  box-shadow: 3px 3px 6px #bebebe,
+              -3px -3px 6px #ffffff;
+}
+
+.neumorphic-input {
+  border-radius: 10px;
+  background: #e0e0e0;
+  box-shadow: inset 2px 2px 5px #bebebe,
+              inset -2px -2px 5px #ffffff;
+  border: none; /* Remove default border */
+  outline: none; /* Remove default outline on focus */
+}
+
+.neumorphic-input:focus {
+  box-shadow: inset 2px 2px 5px #bebebe,
+              inset -2px -2px 5px #ffffff,
+              0 0 0 2px rgba(66, 153, 225, 0.5); /* Focus ring */
+}

@@ -11,24 +11,24 @@ const Navigation = () => {
   const { isAuthenticated, userRole, userEmail } = useAuth();
   const logout = useLogout();
   return (
-    <nav style={{ padding: '1rem', backgroundColor: '#eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <nav className="bg-gray-100 p-4 flex justify-between items-center shadow-md neumorphic-flat">
       <div>
         {isAuthenticated ? (
           <>
-            <Link to="/dashboard" style={{ marginRight: '1rem' }}>Dashboard</Link>
-            <Link to="/editor" style={{ marginRight: '1rem' }}>Editor de Tienda</Link>
+            <Link to="/dashboard" className="mr-4 text-blue-600 hover:text-blue-800 font-medium">Dashboard</Link>
+            <Link to="/editor" className="mr-4 text-blue-600 hover:text-blue-800 font-medium">Editor de Tienda</Link>
             {userRole === 'admin' && (
-              <Link to="/admin" style={{ marginRight: '1rem' }}>Admin</Link>
+              <Link to="/admin" className="mr-4 text-blue-600 hover:text-blue-800 font-medium">Admin</Link>
             )}
           </>
         ) : (
-          <Link to="/login" style={{ marginRight: '1rem' }}>Login</Link>
+          <Link to="/login" className="mr-4 text-blue-600 hover:text-blue-800 font-medium">Login</Link>
         )}
       </div>
       {isAuthenticated && (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <span style={{ marginRight: '1rem', fontStyle: 'italic' }}>{userEmail}</span>
-          <button onClick={logout} style={{ background: 'none', border: 'none', color: 'blue', cursor: 'pointer', textDecoration: 'underline' }}>
+        <div className="flex items-center">
+          <span className="mr-4 text-gray-700 font-mono text-sm">{userEmail}</span>
+          <button onClick={logout} className="px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75 neumorphic-button">
             Logout
           </button>
         </div>
