@@ -71,7 +71,35 @@ router.post('/', async (req, res) => {
     const chat = model.startChat({
       history: conversationHistories.get(userUuid)?.history || [],
     });
-    const result = await chat.sendMessage(finalPrompt);
+
+    let result;
+    let lastError = null;
+    const maxRetries = 3;
+    let delay = 1000; // 1 second initial delay
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        result = await chat.sendMessage(finalPrompt);
+        lastError = null; // Clear error on success
+        break; // Exit loop on success
+      } catch (error) {
+        lastError = error;
+        // Check if it's a 503 error to justify a retry
+        if (error.status === 503) {
+          console.warn(`[WARN CHAT] Intento ${i + 1} fallido con error 503. Reintentando en ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Exponential backoff
+        } else {
+          // If it's not a 503, break the loop immediately
+          break;
+        }
+      }
+    }
+
+    if (lastError) {
+      throw lastError; // If all retries fail, throw the last error
+    }
+    
     const response = await result.response;
     const text = response.text(); // 4. Actualizar historial
     let session = conversationHistories.get(userUuid);

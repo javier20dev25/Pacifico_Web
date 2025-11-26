@@ -1,47 +1,55 @@
-// backend/api/uploads.js
 const express = require('express');
 const multer = require('multer');
+const { supabaseAdmin } = require('../services/supabase'); // Importar supabaseAdmin
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() }); // Configuración: nombre del bucket desde env (por defecto 'imagenes')
-// POST /api/upload-image
+const upload = multer({ storage: multer.memoryStorage() });
+const BUCKET_NAME = process.env.STORAGE_BUCKET || 'imagenes';
+
+// POST /api/upload-image (NO ESTÁ PROTEGIDA PARA FACILITAR PRUEBAS)
 // Recibe un multipart/form-data con campo 'image'.
-// Opcional: campo form 'folder' para subcarpeta (ej: 'productos' o 'logos')
 router.post('/upload-image', upload.single('image'), async (req, res) => {
   try {
-    console.log('UPLOAD REQ =>', {
-      file: req.file
-        ? {
-            originalname: req.file.originalname,
-            mimetype: req.file.mimetype,
-            size: req.file.size,
-          }
-        : null,
-      body: req.body,
-      auth: !!req.headers.authorization,
-    });
     if (!req.file) {
-      return res.status(400).json({ error: 'no_file_provided' });
-    } // Ejemplo: subir a Supabase Storage (ajusta según tu implementación)
-    // const key = `${req.body.folder || 'store_logos'}/${req.body.fileId || Date.now()}_${req.file.originalname}`;
-    // const { data, error: supErr } = await supabaseAdmin.storage.from('store_logos').upload(key, req.file.buffer, { contentType: req.file.mimetype });
-    // if (supErr) throw supErr;
-    // const publicUrl = supabaseAdmin.storage.from('store_logos').getPublicUrl(key).data.publicUrl;    // Si no usas Supabase o la subida es distinta, inserta aquí tu código de almacenamiento.
-    // Simular respuesta de éxito (reemplaza por tu lógica real):
-    const simulatedUrl = `https://cdn.example.com/${Date.now()}_${req.file.originalname}`;
-    return res.json({ ok: true, url: simulatedUrl });
-  } catch (err) {
-    console.error('UPLOAD HANDLER ERROR:', err);
-    // Multer file limit
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(413).json({ error: 'file_too_large' });
+      return res.status(400).json({ error: 'No se proporcionó ningún archivo.' });
     }
-    // Si es un error de un SDK (ej. Supabase), suele tener .status / .message / .details
-    const status = err.status || 400;
-    const detail = err.response?.data || err.details || null;
-    return res
-      .status(status)
-      .json({ error: err.message || 'upload_failed', detail });
+
+    // 1. Crear una ruta única para el archivo en el bucket
+    const filePath = `test-uploads/${Date.now()}_${req.file.originalname}`;
+
+    // 2. Subir el archivo a Supabase Storage
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false, // No sobrescribir si ya existe
+      });
+
+    if (uploadError) {
+      console.error('Error al subir a Supabase Storage:', uploadError);
+      throw uploadError; // Lanzar el error para que lo capture el catch
+    }
+
+    // 3. Obtener la URL pública del archivo subido
+    const { data: urlData } = supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(filePath);
+
+    if (!urlData || !urlData.publicUrl) {
+        throw new Error('No se pudo obtener la URL pública del archivo subido.');
+    }
+    
+    console.log('[UPLOAD] Archivo subido con éxito. URL pública:', urlData.publicUrl);
+
+    // 4. Devolver la URL pública al cliente
+    return res.json({ success: true, url: urlData.publicUrl });
+
+  } catch (err) {
+    console.error('Error en el manejador de subida:', err);
+    const status = err.status || 500;
+    const message = err.message || 'Error desconocido en el servidor durante la subida.';
+    return res.status(status).json({ error: message });
   }
 });
+
 module.exports = router;

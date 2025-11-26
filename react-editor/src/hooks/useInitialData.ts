@@ -14,10 +14,12 @@ export function useInitialData() {
         setIsError(false);
 
         const response = await apiClient.get('/user/store-data');
-        const { storeData } = response.data;
+        const { storeData, shareableUrl: rawUrl } = response.data;
 
         if (storeData && storeData.store) {
-          setStoreDetails(storeData.store);
+          // Cache Busting: Añadir un timestamp a la URL para forzar la recarga
+          const shareableUrl = rawUrl ? `${rawUrl}?v=${Date.now()}` : '';
+          setStoreDetails({ ...storeData.store, shareableUrl });
         }
         if (storeData && storeData.products) {
           setProducts(storeData.products);

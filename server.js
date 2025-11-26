@@ -27,7 +27,9 @@ if (process.env.NODE_ENV !== 'test') {
           ...helmet.contentSecurityPolicy.getDefaultDirectives(),
           'frame-ancestors': ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173'],
           'script-src': ["'self'", "'unsafe-inline'", 'https://cdn.tailwindcss.com'],
-          'style-src': ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'],
+          'style-src': ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com', 'https://ka-f.fontawesome.com'],
+          'img-src': ["'self'", "data:", "*.supabase.co"], // <-- AÑADIR ESTA LÍNEA
+          'connect-src': ["'self'", "https://ka-f.fontawesome.com"], // Necesario para Font Awesome v6
         },
       },
     })
@@ -70,62 +72,92 @@ const statisticsRoutes = require('./backend/api/statistics');
 const orderRoutes = require('./backend/api/orders');
 const { protect, isAdmin } = require('./backend/middleware/auth');
 
+// --- Rutas Públicas de la API (sin autenticación) ---
 app.use('/api/auth', authRoutes);
+app.use('/api/uploads', uploadRoutes); // La ruta de prueba de subida es pública
+
+// --- Rutas Protegidas de la API (requieren autenticación) ---
 app.use('/api/stats', protect, statisticsRoutes);
 app.use('/api/orders', protect, orderRoutes);
 app.use('/api/admin', protect, isAdmin, adminRoutes);
 app.use('/api/user', protect, userRoutes);
 app.use('/api/chat', protect, chatRoutes);
-app.use('/api', protect, uploadRoutes);
+
 
 // ==========================================================
 // NUEVA RUTA DINÁMICA PARA TIENDAS (por slug)
 // ==========================================================
+
+// Función auxiliar con reintentos para hacer la consulta a Supabase más robusta
+async function fetchStoreWithRetries(slug, retries = 3, delay = 100) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('stores')
+        .select('data')
+        .eq('slug', slug)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 es "not found", lo cual no es un error de red
+        throw error;
+      }
+      return { data, error };
+    } catch (e) {
+      console.error(`Intento ${i + 1} fallido para obtener slug '${slug}':`, e.message);
+      if (i === retries - 1) throw e; // Lanzar el error en el último intento
+      await new Promise(res => setTimeout(res, delay));
+    }
+  }
+}
+
 app.get('/store/:slug', async (req, res, next) => {
   const storeSlug = req.params.slug;
-  try {
-    // Buscar la tienda por slug en Supabase, seleccionando solo la columna 'data'
-    const { data: store, error } = await supabaseAdmin
-      .from('stores')
-      .select('data')
-      .eq('slug', storeSlug)
-      .single();
+  console.log(`[GET /store/:slug] 1. Iniciando proceso para slug: "${storeSlug}"`);
 
-    // Si hay un error, la tienda no se encuentra, o no tiene un objeto 'data'
-    if (error || !store || !store.data) {
-      console.error(`Tienda o datos de la tienda no encontrados para slug: ${storeSlug}`, error);
-      return res.status(404).send('Tienda no encontrada');
+  try {
+    const { data: store, error } = await fetchStoreWithRetries(storeSlug);
+    console.log(`[GET /store/:slug] 2. Resultado de fetchStoreWithRetries:`, { store, error: error ? { message: error.message, code: error.code } : null });
+
+    // Verificación explícita de los datos
+    if (error) {
+      console.error(`[GET /store/:slug] 3a. Error de base de datos detectado:`, error.message);
+      return res.status(500).send('Error al consultar la base de datos.');
+    }
+    if (!store) {
+      console.error(`[GET /store/:slug] 3b. La consulta no devolvió una tienda (slug no encontrado).`);
+      return res.status(404).send(`Tienda con slug "${storeSlug}" no encontrada.`);
+    }
+    if (!store.data || typeof store.data !== 'object') {
+      console.error(`[GET /store/:slug] 3c. La tienda se encontró, pero la columna 'data' está vacía, nula o no es un objeto.`);
+      return res.status(500).send('Los datos de la tienda están corruptos o vacíos.');
     }
 
-    // Leer la plantilla del visor desde la ubicación correcta
+    console.log(`[GET /store/:slug] 4. Datos de la tienda validados. Procediendo a leer la plantilla HTML.`);
+    
     let viewerHtml = await fs.readFile(
-      path.join(__dirname, 'public', 'viewer_template.html'), // Corregido a la ruta correcta
+      path.join(__dirname, 'public', 'viewer_template.html'),
       'utf8'
     );
 
-    // Preparar los datos para inyección: usamos directamente el contenido de la columna 'data'
     const previewData = store.data;
     const supabaseConfig = {
       url: process.env.VITE_SUPABASE_URL,
-      anonKey: process.env.VITE_SUPABASE_ANON_KEY,
       bucket: process.env.STORAGE_BUCKET || 'imagenes',
     };
 
-    // Inyectar los datos de la tienda y la configuración de Supabase en la plantilla
     const injectedScript = `<script type="module">
       window.STORE_DATA = ${JSON.stringify(previewData).replace(/<\/script/gi, '<\\/script')};
       window.SUPABASE_CONFIG = ${JSON.stringify(supabaseConfig).replace(/<\/script/gi, '<\\/script')};
     </script>`;
     
-    viewerHtml = viewerHtml.replace(
-      '__DATA_INJECTION_POINT__',
-      injectedScript
-    );
+    viewerHtml = viewerHtml.replace('__DATA_INJECTION_POINT__', injectedScript);
 
+    console.log(`[GET /store/:slug] 5. Inyección de datos completada. Enviando HTML al cliente.`);
     res.send(viewerHtml);
+
   } catch (error) {
-    console.error('Error al servir la tienda por slug:', error);
-    next(error); // Pasar al manejador de errores
+    console.error(`[GET /store/:slug] 6. Error fatal en el bloque try/catch:`, error);
+    next(error);
   }
 });
 

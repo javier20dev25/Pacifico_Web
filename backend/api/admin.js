@@ -7,12 +7,13 @@ const { AdminCreateUserSchema } = require('../../shared/schemas/user');
 // --- Helper: Generador de Contraseña ---
 function generateTemporaryPassword(length = 10) {
   const chars =
-    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let password = '';
   for (let i = 0; i < length; i++) {
     password += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return password;
+  // Añadir un carácter especial simple que no suele dar problemas, para cumplir la robustez.
+  return password + '!';
 } // --- Helper: Generador de Correo a partir del nombre de la tienda ---
 function nombreAToken(nombre) {
   return nombre
@@ -355,13 +356,15 @@ router.post('/renew-contract', async (req, res) => {
 // 7. RESETEAR CONTRASEÑA (NUEVO MÉTODO: GENERAR NUEVA CONTRASEÑA TEMPORAL)
 // ==========================================================
 router.post('/reset-password', async (req, res) => {
-  const { userUuid, email } = req.body; // Aceptamos email o uuid para flexibilidad
+  const { userUuid, email } = req.body;
 
   if (!userUuid && !email) {
     return res
       .status(400)
       .json({ error: 'Se requiere el UUID o el correo del usuario.' });
   }
+
+  console.log(`[RESET] Iniciando reseteo para: ${userUuid || email}`);
 
   try {
     let targetUser;
@@ -373,8 +376,10 @@ router.post('/reset-password', async (req, res) => {
         .select('uuid, nombre, correo')
         .eq('uuid', userUuid)
         .single();
-      if (error || !data)
-        throw new Error('Usuario no encontrado con ese UUID.');
+      if (error || !data) {
+        console.error('[RESET] Usuario no encontrado con UUID:', userUuid, error);
+        return res.status(404).json({ error: 'Usuario no encontrado con ese UUID.' });
+      }
       targetUser = data;
     } else {
       const { data, error } = await supabaseAdmin
@@ -382,23 +387,34 @@ router.post('/reset-password', async (req, res) => {
         .select('uuid, nombre, correo')
         .eq('correo', email)
         .single();
-      if (error || !data)
-        throw new Error('Usuario no encontrado con ese correo.');
+      if (error || !data) {
+        console.error('[RESET] Usuario no encontrado con correo:', email, error);
+        return res.status(404).json({ error: 'Usuario no encontrado con ese correo.' });
+      }
       targetUser = data;
     }
+    
+    console.log('[RESET] Usuario encontrado:', JSON.stringify(targetUser));
 
     // 2. Generar una nueva contraseña temporal
     const newTemporaryPassword = generateTemporaryPassword();
+    console.log(`[RESET] Nueva contraseña generada para ${targetUser.correo} (longitud: ${newTemporaryPassword.length})`);
 
     // 3. Actualizar la contraseña del usuario en Supabase Auth
-    const { error: authUpdateError } =
+    const { data: updateData, error: authUpdateError } =
       await supabaseAdmin.auth.admin.updateUserById(targetUser.uuid, {
         password: newTemporaryPassword,
       });
-    if (authUpdateError)
-      throw new Error(
-        `Error al actualizar contraseña en Supabase: ${authUpdateError.message}`
-      );
+
+    if (authUpdateError) {
+      console.error('[RESET] FALLO al actualizar contraseña en Supabase Auth:', authUpdateError);
+      return res.status(500).json({
+        error: 'Error crítico al actualizar la contraseña en el proveedor de autenticación.',
+        details: authUpdateError.message,
+      });
+    }
+    
+    console.log('[RESET] ÉXITO al actualizar contraseña en Supabase Auth. Respuesta:', JSON.stringify(updateData));
 
     // 4. Actualizar el perfil del usuario en nuestra tabla para forzar el flujo de primer login
     const { error: profileUpdateError } = await supabaseAdmin
@@ -409,13 +425,27 @@ router.post('/reset-password', async (req, res) => {
         actualizado_at: new Date(),
       })
       .eq('uuid', targetUser.uuid);
-    if (profileUpdateError)
-      throw new Error(
-        `Error al actualizar el perfil local: ${profileUpdateError.message}`
-      );
+
+    if (profileUpdateError) {
+       console.error('[RESET] FALLO al actualizar perfil local a temporal:', profileUpdateError);
+       // Aunque la contraseña en Auth se cambió, el flujo de login fallará. Es un estado inconsistente.
+       return res.status(500).json({
+        error: 'La contraseña se actualizó en Auth, pero no se pudo actualizar el estado del perfil local.',
+        details: profileUpdateError.message,
+      });
+    }
+    
+    console.log(`[RESET] ÉXITO al actualizar perfil local a 'temporary' para ${targetUser.correo}`);
 
     // 5. Preparar el mensaje para el administrador
-    const copyPasteMessage = `Hola ${targetUser.nombre}, hemos reseteado tu cuenta. Puedes volver a entrar con esta nueva contraseña temporal:\n\nCorreo: ${targetUser.correo}\nContraseña: ${newTemporaryPassword}\n\nAl entrar, el sistema te pedirá que establezcas una nueva contraseña personal.`;
+    const copyPasteMessage =
+`Hola ${targetUser.nombre}, hemos reseteado tu cuenta.
+Puedes volver a entrar con esta nueva contraseña temporal:
+
+Correo: ${targetUser.correo}
+Contraseña: ${newTemporaryPassword}
+
+Al entrar, el sistema te pedirá que establezcas una nueva contraseña personal.`;
 
     // 6. Devolver el mensaje para que el admin lo copie
     res.json({
@@ -424,7 +454,7 @@ router.post('/reset-password', async (req, res) => {
       copyPasteMessage: copyPasteMessage,
     });
   } catch (error) {
-    console.error('Error al resetear contraseña:', error);
+    console.error('[RESET] Error inesperado en el bloque try-catch:', error);
     res.status(500).json({
       error: 'Ocurrió un error inesperado en el servidor.',
       details: error.message,

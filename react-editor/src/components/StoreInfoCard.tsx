@@ -1,5 +1,6 @@
 import React from 'react';
 import useAppStore from '../stores/store';
+import { getPublicImageUrl } from '../lib/supabase-utils';
 
 const StoreInfoCard = () => {
   // Patrón correcto de Zustand: seleccionar estado y acciones por separado
@@ -34,7 +35,7 @@ const StoreInfoCard = () => {
         <label htmlFor="logo-upload" className="block text-sm font-medium text-gray-500 text-center">Logo de la Tienda</label>
         <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center border-2 border-dashed mx-auto overflow-hidden cursor-pointer" onClick={() => document.getElementById('logo-upload')?.click()}>
           {store.logoUrl ? (
-            <img src={store.logoUrl} alt="Logo" className="w-full h-full object-cover"/>
+            <img src={getPublicImageUrl(store.logoUrl)} alt="Logo" className="w-full h-full object-cover"/>
           ) : (
             <span className="text-gray-400 text-sm">Subir</span>
           )}

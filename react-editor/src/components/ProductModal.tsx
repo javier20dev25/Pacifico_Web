@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useAppStore, { type Product } from '@/stores/store';
+import { getPublicImageUrl } from '../lib/supabase-utils';
 
 // --- TIPOS PARA PROPS ---
 type FormRowProps = {
@@ -183,7 +184,7 @@ const ProductModal = () => {
           <fieldset className="border p-4 rounded-md space-y-4">
             <legend className="text-lg font-semibold px-2">Información Básica</legend>
             <div className="w-48 h-32 bg-gray-100 flex items-center justify-center border-2 border-dashed mx-auto overflow-hidden cursor-pointer" onClick={() => document.getElementById('image-upload')?.click()}>
-              {productData.imageUrl ? <img src={productData.imageUrl} alt="Preview" className="w-full h-full object-cover"/> : <span className="text-gray-400 text-sm">Subir Imagen</span>}
+              {productData.imageUrl ? <img src={getPublicImageUrl(productData.imageUrl)} alt="Preview" className="w-full h-full object-cover"/> : <span className="text-gray-400 text-sm">Subir Imagen</span>}
             </div>
             <input type="file" id="image-upload" accept="image/*" className="hidden" onChange={handleImageChange} />
             <input id="nombre" type="text" placeholder="Nombre del Producto" value={productData.nombre} onChange={(e) => handleFormChange(e, 'nombre')} className="input w-full p-2 border rounded" />

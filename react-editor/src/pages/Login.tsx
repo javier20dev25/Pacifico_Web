@@ -13,6 +13,7 @@ type LoginResponseData = {
   sessionToken?: string;
   user?: { rol: string };
   tempToken?: string;
+  mustChangePassword?: boolean; // <-- AÑADIDO
   error?: string;
 };
 
@@ -20,6 +21,11 @@ type CompleteRegistrationResponseData = {
   status?: string;
   token?: string;
   error?: string;
+};
+
+type UpdatePasswordResponseData = {
+    message?: string;
+    error?: string;
 };
 
 const EyeIcon: React.FC<EyeIconProps> = ({ visible }) => (
@@ -96,13 +102,16 @@ const Login: React.FC = () => {
     try {
       const response = await apiClient.post<LoginResponseData>('/auth/login', { correo: email, password });
       const data = response.data;
-      if (data.success && data.sessionToken) {
+      if (data.success && data.sessionToken && !data.mustChangePassword) {
         localStorage.setItem('sessionToken', data.sessionToken);
         if (data.user && data.user.rol === 'admin') {
           navigate('/admin');
         } else {
           navigate('/dashboard');
         }
+      } else if (data.success && data.sessionToken && data.mustChangePassword) {
+        localStorage.setItem('sessionToken', data.sessionToken);
+        setFormToShow('forceChangePassword');
       } else if (data.tempToken) {
         setTempToken(data.tempToken);
         setFormToShow('register');
@@ -139,69 +148,140 @@ const Login: React.FC = () => {
     } catch (err: unknown) {
         const error = err as AxiosError<CompleteRegistrationResponseData>;
         const errorMessage = error.response?.data?.error || error.message || 'Error desconocido';
-        setRegistrationError(errorMessage);
-    }
-  };
-
-  const renderLoginForm = () => (
-    <div>
-      <h2 className="text-center text-2xl font-bold text-gray-800 mb-6">Iniciar Sesión</h2>
-      {notification && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">{notification}</div>}
-      <form onSubmit={handleLoginSubmit}>
-        <div className="mb-4">
-          <label htmlFor="login-email" className="block font-semibold text-gray-700 mb-2">Correo Electrónico</label>
-          <input type="email" id="login-email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} required />
-        </div>
-        <div className="mb-4">
-          <label htmlFor="login-password" className="block font-semibold text-gray-700 mb-2">Contraseña</label>
-          <div className="relative">
-            <input type={isPasswordVisible ? 'text' : 'password'} id="login-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={password} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} required />
-            <button type="button" className="absolute inset-y-0 right-0 px-3 flex items-center" onClick={() => setIsPasswordVisible(!isPasswordVisible)}><EyeIcon visible={!isPasswordVisible} /></button>
-          </div>
-        </div>
-        <div className="flex items-center mb-4">
-          <input type="checkbox" id="remember-me" className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked={rememberMe} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRememberMe(e.target.checked)} />
-          <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">Recordarme</label>
-        </div>
-        {error && <div className="text-red-500 text-sm min-h-[20px] mb-4">{error}</div>}
-        <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">Ingresar</button>
-      </form>
-    </div>
-  );
-
-  const renderRegisterForm = () => (
-    <div>
-      <h2 className="text-center text-2xl font-bold text-gray-800 mb-4">Crea tu Contraseña</h2>
-      <p className="text-center text-gray-600 mb-6">Por seguridad, debes establecer una nueva contraseña para activar tu cuenta.</p>
-      <form onSubmit={handleRegisterSubmit}>
-        <div className="mb-4">
-          <label htmlFor="new-password" className="block font-semibold text-gray-700 mb-2">Nueva Contraseña</label>
-          <div className="relative">
-            <input type={isNewPasswordVisible ? 'text' : 'password'} id="new-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newPassword} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)} required />
-            <button type="button" className="absolute inset-y-0 right-0 px-3 flex items-center" onClick={() => setIsNewPasswordVisible(!isNewPasswordVisible)}><EyeIcon visible={!isNewPasswordVisible} /></button>
-          </div>
-          {strength && <div className="text-sm text-gray-500 mt-2 min-h-[18px]" dangerouslySetInnerHTML={{ __html: strength }} />}
-        </div>
-        <div className="mb-6">
-          <label htmlFor="confirm-password" className="block font-semibold text-gray-700 mb-2">Confirmar Contraseña</label>
-          <div className="relative">
-            <input type={isConfirmPasswordVisible ? 'text' : 'password'} id="confirm-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={confirmPassword} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)} required />
-            <button type="button" className="absolute inset-y-0 right-0 px-3 flex items-center" onClick={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}><EyeIcon visible={!isConfirmPasswordVisible} /></button>
-          </div>
-        </div>
-        {registrationError && <div className="text-red-500 text-sm min-h-[20px] mb-4">{registrationError}</div>}
-        <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">Guardar y Continuar</button>
-      </form>
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
-        {formToShow === 'login' ? renderLoginForm() : renderRegisterForm()}
-      </div>
-    </div>
-  );
-};
-
-export default Login;
+                setRegistrationError(errorMessage);
+            }
+          };
+        
+          const handleForceChangePasswordSubmit = async (e: React.FormEvent) => {
+            e.preventDefault();
+            setRegistrationError('');
+            if (newPassword !== confirmPassword) {
+              setRegistrationError('Las contraseñas no coinciden.');
+              return;
+            }
+            if (strength !== '<span style="color: green;">Contraseña Fuerte</span>') {
+                setRegistrationError('La contraseña no es suficientemente fuerte.');
+                return;
+            }
+            try {
+                // El token de sesión ya está en localStorage y será enviado por el interceptor de axios
+                const response = await apiClient.post<UpdatePasswordResponseData>('/user/update-password', { password: newPassword });
+                const data = response.data;
+                if (data.message) {
+                    // Limpiar el token de sesión antiguo por si se rota
+                    localStorage.removeItem('sessionToken');
+                    setNotification('Contraseña actualizada con éxito. Por favor, inicia sesión de nuevo.');
+                    setFormToShow('login');
+                    setPassword(''); // Limpiar campo de contraseña
+                } else {
+                    throw new Error('No se pudo actualizar la contraseña.');
+                }
+            } catch (err: unknown) {
+                const error = err as AxiosError<UpdatePasswordResponseData>;
+                const errorMessage = error.response?.data?.error || error.message || 'Error desconocido';
+                setRegistrationError(errorMessage);
+            }
+          };
+        
+          const renderLoginForm = () => (
+            <div>
+              <h2 className="text-center text-2xl font-bold text-gray-800 mb-6">Iniciar Sesión</h2>
+              {notification && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">{notification}</div>}
+              <form onSubmit={handleLoginSubmit}>
+                <div className="mb-4">
+                  <label htmlFor="login-email" className="block font-semibold text-gray-700 mb-2">Correo Electrónico</label>
+                  <input type="email" id="login-email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} required />
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="login-password" className="block font-semibold text-gray-700 mb-2">Contraseña</label>
+                  <div className="relative">
+                    <input type={isPasswordVisible ? 'text' : 'password'} id="login-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={password} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} required />
+                    <button type="button" className="absolute inset-y-0 right-0 px-3 flex items-center" onClick={() => setIsPasswordVisible(!isPasswordVisible)}><EyeIcon visible={!isPasswordVisible} /></button>
+                  </div>
+                </div>
+                <div className="flex items-center mb-4">
+                  <input type="checkbox" id="remember-me" className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked={rememberMe} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRememberMe(e.target.checked)} />
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">Recordarme</label>
+                </div>
+                {error && <div className="text-red-500 text-sm min-h-[20px] mb-4">{error}</div>}
+                <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">Ingresar</button>
+              </form>
+            </div>
+          );
+        
+          const renderRegisterForm = () => (
+            <div>
+              <h2 className="text-center text-2xl font-bold text-gray-800 mb-4">Crea tu Contraseña</h2>
+              <p className="text-center text-gray-600 mb-6">Por seguridad, debes establecer una nueva contraseña para activar tu cuenta.</p>
+              <form onSubmit={handleRegisterSubmit}>
+                <div className="mb-4">
+                  <label htmlFor="new-password" className="block font-semibold text-gray-700 mb-2">Nueva Contraseña</label>
+                  <div className="relative">
+                    <input type={isNewPasswordVisible ? 'text' : 'password'} id="new-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newPassword} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)} required />
+                    <button type="button" className="absolute inset-y-0 right-0 px-3 flex items-center" onClick={() => setIsNewPasswordVisible(!isNewPasswordVisible)}><EyeIcon visible={!isNewPasswordVisible} /></button>
+                  </div>
+                  {strength && <div className="text-sm text-gray-500 mt-2 min-h-[18px]" dangerouslySetInnerHTML={{ __html: strength }} />}
+                </div>
+                <div className="mb-6">
+                  <label htmlFor="confirm-password" className="block font-semibold text-gray-700 mb-2">Confirmar Contraseña</label>
+                  <div className="relative">
+                    <input type={isConfirmPasswordVisible ? 'text' : 'password'} id="confirm-password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={confirmPassword} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)} required />
+                    <button type="button" className="absolute inset-y-0 right-0 px-3 flex items-center" onClick={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}><EyeIcon visible={!isConfirmPasswordVisible} /></button>
+                  </div>
+                </div>
+                {registrationError && <div className="text-red-500 text-sm min-h-[20px] mb-4">{registrationError}</div>}
+                <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">Guardar y Continuar</button>
+              </form>
+            </div>
+          );
+        
+          const renderForceChangePasswordForm = () => (
+            <div>
+              <h2 className="text-center text-2xl font-bold text-gray-800 mb-4">Actualiza tu Contraseña</h2>
+              <p className="text-center text-gray-600 mb-6">Hemos reseteado tu cuenta. Por favor, establece una nueva contraseña personal para continuar.</p>
+              <form onSubmit={handleForceChangePasswordSubmit}>
+                <div className="mb-4">
+                  <label htmlFor="new-password-force" className="block font-semibold text-gray-700 mb-2">Nueva Contraseña</label>
+                  <div className="relative">
+                    <input type={isNewPasswordVisible ? 'text' : 'password'} id="new-password-force" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newPassword} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)} required />
+                    <button type="button" className="absolute inset-y-0 right-0 px-3 flex items-center" onClick={() => setIsNewPasswordVisible(!isNewPasswordVisible)}><EyeIcon visible={!isNewPasswordVisible} /></button>
+                  </div>
+                  {strength && <div className="text-sm text-gray-500 mt-2 min-h-[18px]" dangerouslySetInnerHTML={{ __html: strength }} />}
+                </div>
+                <div className="mb-6">
+                  <label htmlFor="confirm-password-force" className="block font-semibold text-gray-700 mb-2">Confirmar Contraseña</label>
+                  <div className="relative">
+                    <input type={isConfirmPasswordVisible ? 'text' : 'password'} id="confirm-password-force" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={confirmPassword} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)} required />
+                    <button type="button" className="absolute inset-y-0 right-0 px-3 flex items-center" onClick={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}><EyeIcon visible={!isConfirmPasswordVisible} /></button>
+                  </div>
+                </div>
+                {registrationError && <div className="text-red-500 text-sm min-h-[20px] mb-4">{registrationError}</div>}
+                <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">Actualizar y Continuar</button>
+              </form>
+            </div>
+          );
+        
+          const renderContent = () => {
+            switch (formToShow) {
+              case 'login':
+                return renderLoginForm();
+              case 'register':
+                return renderRegisterForm();
+              case 'forceChangePassword':
+                return renderForceChangePasswordForm();
+              default:
+                return renderLoginForm();
+            }
+          };
+        
+          return (
+            <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center p-4">
+              <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
+                {renderContent()}
+              </div>
+            </div>
+          );
+        };
+        
+        export default Login;
+        

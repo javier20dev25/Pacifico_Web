@@ -40,6 +40,62 @@ router.get('/profile', protect, async (req, res) => {
 });
 
 // ==========================================================
+// 1.5. ACTUALIZAR CONTRASEÑA (PARA CAMBIO FORZADO)
+// ==========================================================
+// Helper de validación de contraseña (puedes moverlo a un archivo de utils)
+function isPasswordStrong(password) {
+  const regex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).{8,}$/;
+  return regex.test(password);
+}
+
+router.post('/update-password', protect, async (req, res) => {
+  const { password } = req.body;
+  const userUuid = req.user.uuid;
+
+  if (!password || !isPasswordStrong(password)) {
+    return res.status(400).json({
+      error:
+        'La contraseña es débil. Debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo.',
+    });
+  }
+
+  try {
+    // 1. Actualizar la contraseña en Supabase Auth
+    const { error: authUpdateError } =
+      await supabaseAdmin.auth.admin.updateUserById(userUuid, {
+        password: password,
+      });
+
+    if (authUpdateError) {
+      console.error('Error al actualizar contraseña en Supabase Auth:', authUpdateError);
+      throw new Error('No se pudo actualizar la contraseña en el sistema de autenticación.');
+    }
+
+    // 2. Actualizar el estado en la tabla de perfiles
+    const { error: profileUpdateError } = await supabaseAdmin
+      .from('usuarios')
+      .update({
+        status: 'active',
+        temporary_password: null,
+        actualizado_at: new Date(),
+      })
+      .eq('uuid', userUuid);
+
+    if (profileUpdateError) {
+      console.error('Error al actualizar el perfil del usuario a activo:', profileUpdateError);
+      // En un escenario real, aquí podrías considerar revertir el cambio de contraseña.
+      throw new Error('No se pudo actualizar el estado del perfil del usuario.');
+    }
+
+    res.json({ message: 'Contraseña actualizada con éxito.' });
+  } catch (error) {
+    console.error('Error en el proceso de actualización de contraseña:', error);
+    res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.', details: error.message });
+  }
+});
+
+// ==========================================================
 // 2. OBTENER Y CREAR TIENDAS DEL USUARIO
 // ==========================================================
 
@@ -112,13 +168,12 @@ router.post('/stores', async (req, res) => {
     }
     const usuarioId = userRec.id;
 
-    // 2. Limpiar y preparar el payload
-    const cleanedData = cleanStoreDataUrls(storeData);
+    // 2. Preparar el payload (sin limpiar las URLs)
     const payload = {
       usuario_id: usuarioId,
-      nombre: cleanedData.store.nombre,
-      descripcion: cleanedData.store.descripcion,
-      data: cleanedData,
+      nombre: storeData.store.nombre,
+      descripcion: storeData.store.descripcion,
+      data: storeData,
     };
 
     // 3. Lógica de UPSERT: Buscar primero, luego decidir si crear o actualizar
@@ -335,65 +390,16 @@ router.get('/store-data', async (req, res) => {
   }
 });
 
-const BUCKET_NAME = process.env.STORAGE_BUCKET || 'imagenes';
-const STORAGE_URL_PART = `/storage/v1/object/public/${BUCKET_NAME}/`;
-
-function normalizeSupabaseUrl(url) {
-  if (typeof url !== 'string') return url;
-  const urlIndex = url.indexOf(STORAGE_URL_PART);
-  if (urlIndex > -1) {
-    return url.substring(urlIndex + STORAGE_URL_PART.length);
-  }
-  return url;
-}
-
-function cleanStoreDataUrls(data) {
-  if (typeof data !== 'object' || data === null) {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.map((item) => cleanStoreDataUrls(item));
-  }
-
-  return Object.keys(data).reduce((acc, key) => {
-    const value = data[key];
-    if (
-      typeof value === 'string' &&
-      (key.endsWith('Url') || key.endsWith('_url'))
-    ) {
-      acc[key] = normalizeSupabaseUrl(value);
-    } else {
-      acc[key] = cleanStoreDataUrls(value); // Recurse on nested objects
-    }
-    return acc;
-  }, {});
-}
-
-const multer = require('multer');
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
-}); // 10MB limit
-
-// PUT /api/user/store-data (Refactorizado con lógica UPSERT)
-router.put(
-  '/store-data',
-  upload.fields([
-    { name: 'logo', maxCount: 1 },
-    { name: 'products', maxCount: 70 },
-  ]),
-  async (req, res) => {
+// PUT /api/user/store-data (Refactorizado para no usar Multer)
+router.put('/store-data', async (req, res) => {
     try {
       const userUuid = req.user?.uuid;
       if (!userUuid) return res.status(401).json({ error: 'No autenticado.' });
 
-      const newStoreData = req.body.storeData
-        ? JSON.parse(req.body.storeData)
-        : {};
-      const launch = req.body.launch === 'true';
+      // Los datos ahora vienen en el cuerpo como JSON, no como FormData
+      const { storeData, launch } = req.body;
 
-      if (typeof newStoreData !== 'object' || newStoreData === null) {
+      if (typeof storeData !== 'object' || storeData === null || !storeData.store) {
         return res.status(400).json({ error: 'Payload de tienda inválido.' });
       }
 
@@ -408,61 +414,8 @@ router.put(
       }
       const usuarioId = userRec.id;
 
-      let cleanedData = newStoreData;
-
-      // --- Lógica de Subida de Archivos (si los hay) ---
-      if (req.files && req.files.logo) {
-        const logoFile = req.files.logo[0];
-        const fileExt = logoFile.originalname.split('.').pop();
-        const filePath = `${userUuid}/logo_${Date.now()}.${fileExt}`;
-
-        const { error: uploadError } = await supabaseAdmin.storage
-          .from(BUCKET_NAME) // CORREGIDO: Usar bucket de variable de entorno
-          .upload(filePath, logoFile.buffer, {
-            contentType: logoFile.mimetype,
-            upsert: true,
-          });
-
-        if (uploadError) {
-            console.error('Error subiendo logo:', uploadError);
-            throw new Error(`Error subiendo el logo: ${uploadError.message}`);
-        }
-
-        const { data: urlData } = supabaseAdmin.storage
-          .from(BUCKET_NAME) // CORREGIDO: Usar bucket de variable de entorno
-          .getPublicUrl(filePath);
-        cleanedData.store.logoUrl = urlData.publicUrl;
-      }
-      
-      if (req.files && req.files.products) {
-        for (const productFile of req.files.products) {
-          const idLocal = productFile.originalname;
-          const productIndex = cleanedData.products.findIndex(p => p.idLocal === idLocal);
-
-          if (productIndex > -1) {
-            const fileExt = productFile.mimetype.split('/')[1];
-            const filePath = `${userUuid}/product_${idLocal}_${Date.now()}.${fileExt}`;
-
-            const { error: uploadError } = await supabaseAdmin.storage
-              .from(BUCKET_NAME) // CORREGIDO: Usar bucket de variable de entorno
-              .upload(filePath, productFile.buffer, {
-                contentType: productFile.mimetype,
-                upsert: true,
-              });
-
-            if (uploadError) {
-              console.error(`Error subiendo imagen para producto ${idLocal}:`, uploadError);
-              continue; 
-            }
-
-            const { data: urlData } = supabaseAdmin.storage
-              .from(BUCKET_NAME) // CORREGIDO: Usar bucket de variable de entorno
-              .getPublicUrl(filePath);
-            
-            cleanedData.products[productIndex].imageUrl = urlData.publicUrl;
-          }
-        }
-      }
+      // La lógica de subida de archivos ya no es necesaria aquí.
+      // El payload `storeData` ya contiene las URLs finales.
 
       // --- Lógica UPSERT ---
       const { data: existingStore } = await supabaseAdmin
@@ -475,16 +428,15 @@ router.put(
       let statusCode;
       let message;
 
-      // CORREGIDO: Construir el payload plano para la BD
       const payload = {
         usuario_id: usuarioId,
-        nombre: cleanedData.store?.nombre || userRec.nombre,
-        descripcion: cleanedData.store?.descripcion,
-        logo_url: cleanedData.store?.logoUrl,
-        products: cleanedData.products || [],
+        nombre: storeData.store?.nombre || userRec.nombre,
+        descripcion: storeData.store?.descripcion,
+        logo_url: storeData.store?.logoUrl,
+        products: storeData.products || [],
         activa: launch,
-        slug: null, // CORREGIDO: Forzar la regeneración del slug
-        data: cleanedData,
+        slug: null, 
+        data: storeData,
       };
 
       if (existingStore) {
@@ -518,7 +470,6 @@ router.put(
       const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
       const shareableUrl = slug ? `${backendUrl}/store/${slug}` : null;
 
-      // CORREGIDO: Devolver una estructura consistente y limpia
       return res.status(statusCode).json({
         message,
         storeData: finalResult.data,

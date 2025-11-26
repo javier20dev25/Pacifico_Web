@@ -19,7 +19,16 @@ function isPasswordStrong(password) {
 router.post('/login', async (req, res) => {
   console.log('[DEBUG req.body]', req.body);
   const correo = (req.body.correo || req.body.email || '').trim();
-  const password = req.body.contrasena || req.body.password;
+  const password = (req.body.contrasena || req.body.password || '')
+    .trim()
+    .normalize('NFKC');
+
+  console.log(
+    '[DEBUG LOGIN] Intento de login para:',
+    correo,
+    'password_len:',
+    password.length
+  );
 
   if (!correo || !password) {
     return res
@@ -69,24 +78,29 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Si el usuario es temporal, debemos forzar el flujo de completar registro.
+    // Si el usuario es temporal, debe cambiar su contraseña.
+    // Le damos un token de sesión normal, pero con una bandera para forzar el cambio.
     if (userProfile.status === 'temporary') {
       console.log(
-        `[DEBUG LOGIN] Usuario ${correo} es temporal. Forzando flujo de registro.`
+        `[DEBUG LOGIN] Usuario ${correo} es temporal. Forzando cambio de contraseña.`
       );
 
-      // Generar un token temporal de corta duración para este propósito específico.
-      const tempToken = jwt.sign(
+      const sessionToken = jwt.sign(
         {
           uuid: userProfile.uuid,
-          purpose: 'complete-registration', // Usar un propósito claro
+          rol: userProfile.role,
+          email: correo,
         },
         process.env.JWT_SECRET,
-        { expiresIn: '15m' } // El usuario tiene 15 minutos para cambiar su contraseña
+        { expiresIn: '1d' }
       );
 
-      // Enviar solo el tempToken. El frontend sabrá qué hacer.
-      return res.json({ tempToken });
+      return res.json({
+        success: true,
+        sessionToken,
+        user: { rol: userProfile.role, nombre: userProfile.nombre },
+        mustChangePassword: true, // Bandera para el frontend
+      });
     }
 
     // Paso 3: Generar un token de sesión JWT propio con la información necesaria

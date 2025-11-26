@@ -28,69 +28,83 @@ function StoreEditor() {
 
   const handleSave = async (launch = false) => {
     setIsSaving(true);
-    setSavingMessage('Preparando datos para guardar...');
+    setSavingMessage('Iniciando proceso de guardado...');
 
     try {
-      const token = localStorage.getItem('sessionToken') || '';
+      const token = localStorage.getItem('sessionToken');
       if (!token) {
         alert('Sesión no encontrada. Por favor inicia sesión de nuevo.');
         setIsSaving(false);
         return;
       }
 
-      const formData = new FormData();
+      const currentState = useStore.getState();
+      const finalPayload = JSON.parse(JSON.stringify({
+        store: currentState.store,
+        products: currentState.products,
+      }));
 
-      // 1. Adjuntar el logo si ha sido modificado
-      const logoFile = useStore.getState().store.logoFile;
-      if (logoFile) {
-        formData.append('logo', logoFile);
+      // 1. Subir el logo si existe
+      if (currentState.store.logoFile) {
+        setSavingMessage('Subiendo logo...');
+        const logoFormData = new FormData();
+        logoFormData.append('image', currentState.store.logoFile);
+        
+        // Usamos axios directo para la subida de archivos
+        const uploadResponse = await axios.post('/api/uploads/upload-image', logoFormData);
+        if (uploadResponse.data.success) {
+          finalPayload.store.logoUrl = uploadResponse.data.url;
+        } else {
+          throw new Error('Falló la subida del logo.');
+        }
       }
 
-      // 2. Adjuntar imágenes de productos si han sido modificadas
-      const currentProducts = useStore.getState().products;
-      currentProducts.forEach(product => {
-        if (product.imageFile) {
-          formData.append('products', product.imageFile, product.idLocal);
-        }
+      // 2. Subir imágenes de productos si existen
+      const productsToUpload = currentState.products.filter(p => p.imageFile);
+      if (productsToUpload.length > 0) {
+        setSavingMessage(`Subiendo ${productsToUpload.length} imágenes de productos...`);
+        
+        const uploadPromises = productsToUpload.map(product => {
+          const productFormData = new FormData();
+          productFormData.append('image', product.imageFile!);
+          return axios.post('/api/uploads/upload-image', productFormData).then(response => ({
+            idLocal: product.idLocal,
+            url: response.data.url,
+          }));
+        });
+
+        const uploadedImages = await Promise.all(uploadPromises);
+        
+        uploadedImages.forEach(uploadedImage => {
+          const productIndex = finalPayload.products.findIndex((p:any) => p.idLocal === uploadedImage.idLocal);
+          if (productIndex > -1) {
+            finalPayload.products[productIndex].imageUrl = uploadedImage.url;
+          }
+        });
+      }
+
+      // 3. Limpiar el payload final de archivos locales
+      delete finalPayload.store.logoFile;
+      finalPayload.products.forEach((p: any) => delete p.imageFile);
+
+      // 4. Guardar los datos de la tienda (ahora como JSON)
+      setSavingMessage('Guardando datos de la tienda...');
+      const response = await apiClient.put('/user/store-data', {
+        storeData: finalPayload,
+        launch,
       });
-
-      // 3. Adjuntar los datos de la tienda y productos como un string JSON
-      const payload = {
-        store: { ...store },
-        products: [...products],
-      };
-      delete payload.store.logoFile;
-      payload.products.forEach(p => delete p.imageFile);
-
-      formData.append('storeData', JSON.stringify(payload));
-      formData.append('launch', String(launch));
-
-      setSavingMessage('Enviando datos al servidor...');
-
-      // 4. Enviar todo en una sola petición multipart
-      const response = await apiClient.put('/user/store-data', formData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      console.log('>>> Respuesta de la API de guardado:', response?.status, response?.data);
 
       // 5. Actualizar el estado local con la respuesta del servidor
       if (response.data && response.data.storeData) {
-        const { storeData, slug, shareableUrl } = response.data;
+        const { storeData, slug, shareableUrl: rawUrl } = response.data;
         
-        // Actualizar el estado de la tienda
-        setStore({ 
-          ...storeData.store, 
-          slug, 
-          shareableUrl 
-        });
-        
-        // Actualizar el estado de los productos
+        // Cache Busting: Añadir un timestamp a la URL para forzar la recarga
+        const shareableUrl = rawUrl ? `${rawUrl}?v=${Date.now()}` : '';
+
+        setStore({ ...storeData.store, slug, shareableUrl });
         setProducts(storeData.products || []);
         
-        // Limpiar los archivos de imagen del estado para evitar re-subidas innecesarias
+        // Limpiar los archivos del estado para evitar re-subidas
         useStore.getState().setLogoFile(null);
         useStore.getState().clearProductImageFiles();
       }
@@ -100,7 +114,9 @@ function StoreEditor() {
     } catch (err: unknown) {
       let serverMsg = 'Error desconocido';
       if (axios.isAxiosError(err) && err.response?.data) {
-        serverMsg = err.response.data.error || err.response.data.detail || serverMsg;
+        serverMsg = err.response.data.error || err.response.data.detail || err.message;
+      } else if (err instanceof Error) {
+        serverMsg = err.message;
       }
       console.error('Ocurrió un error durante el proceso de guardado:', err);
       alert('Error al guardar la tienda: ' + serverMsg);

@@ -11,9 +11,10 @@ type Store = {
 
 type StoreManagerProps = {
   stores: Store[];
+  className?: string; // Add className prop
 };
 
-const StoreManager: React.FC<StoreManagerProps> = ({ stores }) => {
+const StoreManager: React.FC<StoreManagerProps> = ({ stores, className }) => {
   const handleShare = (url: string) => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url)
@@ -34,7 +35,7 @@ const StoreManager: React.FC<StoreManagerProps> = ({ stores }) => {
   // Caso 1: No hay tiendas
   if (!stores || stores.length === 0) {
     return (
-      <div className="text-center bg-gray-100 shadow-md rounded-lg p-8 neumorphic-flat">
+      <div className={`text-center bg-gray-100 shadow-md rounded-lg p-8 neumorphic-flat ${className}`}>
         <h2 className="text-2xl font-bold mb-4 text-gray-800">Mi Tienda</h2>
         <p className="text-gray-600 mb-6">Aún no has creado tu tienda.</p>
         <Link to="/editor" className="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 inline-flex items-center justify-center neumorphic-button">
@@ -50,8 +51,8 @@ const StoreManager: React.FC<StoreManagerProps> = ({ stores }) => {
   const publicUrl = store.shareableUrl || '#';
 
   return (
-    <div className="mt-8">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">{storeName}</h2>
+    <div className={`${className}`}>
+      <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">{storeName}</h2>
       <div className="bg-gray-100 shadow-md rounded-lg p-4 neumorphic-flat">
         <div className="aspect-w-16 aspect-h-9 border-2 border-gray-200 rounded-lg overflow-hidden mb-4 bg-gray-50 neumorphic-flat-inner">
           {publicUrl !== '#' ? (
@@ -61,16 +62,16 @@ const StoreManager: React.FC<StoreManagerProps> = ({ stores }) => {
           )}
         </div>
         <div className="flex flex-wrap items-center justify-center gap-4 mt-4">
-            <Link to="/editor" className="flex-1 sm:flex-none text-center bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 inline-flex items-center justify-center neumorphic-button">
+            <Link to="/editor" className="flex-1 sm:flex-none text-center bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 inline-flex items-center justify-center">
               <PencilIcon className="h-5 w-5 mr-2" /> Editar Tienda
             </Link>
-          <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="flex-1 sm:flex-none text-center bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 inline-flex items-center justify-center neumorphic-button">
+          <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="flex-1 sm:flex-none text-center bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 inline-flex items-center justify-center">
             <EyeIcon className="h-5 w-5 mr-2" /> Ver Tienda
           </a>
-          <button onClick={() => handleShare(publicUrl)} className="flex-1 sm:flex-none bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 inline-flex items-center justify-center neumorphic-button">
+          <button onClick={() => handleShare(publicUrl)} className="flex-1 sm:flex-none bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 inline-flex items-center justify-center">
             <ShareIcon className="h-5 w-5 mr-2" /> Compartir
           </button>
-          <button onClick={handleDelete} className="flex-1 sm:flex-none bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 inline-flex items-center justify-center neumorphic-button">
+          <button onClick={handleDelete} className="flex-1 sm:flex-none bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 inline-flex items-center justify-center">
             <TrashIcon className="h-5 w-5 mr-2" /> Eliminar
           </button>
         </div>

@@ -74,7 +74,11 @@ function parseOrderText(text: string, storeProducts: Product[]): ProcessedOrder 
 
 // --- COMPONENTE PRINCIPAL ---
 
-const OrderProcessor = () => {
+type OrderProcessorProps = {
+  className?: string;
+};
+
+const OrderProcessor: React.FC<OrderProcessorProps> = ({ className }) => {
   const [orderText, setOrderText] = useState('');
   const [processedOrder, setProcessedOrder] = useState<ProcessedOrder | null>(null);
   const [error, setError] = useState('');
@@ -132,105 +136,135 @@ const OrderProcessor = () => {
   }, { totalWeight: 0, totalPrice: 0 }) : { totalWeight: 0, totalPrice: 0 };
 
   return (
-    <div className="mt-12">
-      <h2 className="text-2xl font-bold mb-6">Gestor de Pedidos</h2>
-      <div className="bg-white shadow-md rounded-lg p-6">
-        <div className="grid grid-cols-1 gap-8">
-          <div>
-            <h3 className="font-semibold mb-2">Pega aquí tu pedido de WhatsApp:</h3>
-            <textarea
-              className="w-full h-48 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-              placeholder="Pega el texto completo del mensaje de WhatsApp aquí..."
-              value={orderText}
-              onChange={(e) => setOrderText(e.target.value)}
-            />
-            <button onClick={handleProcessOrder} disabled={isLoading} className="mt-4 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
-              {isLoading ? 'Procesando...' : 'Procesar Pedido'}
-            </button>
-          </div>
-          
-          {error && <p className="text-red-500 text-center">{error}</p>}
+    <div className={`w-full max-w-xl mx-auto ${className}`}>
+      <header className="text-center mb-8 md:mb-12">
+        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800 tracking-tight">
+          Gestor de Pedidos
+        </h1>
+        <p className="text-gray-500 mt-2 text-lg">Optimiza tus ventas de WhatsApp</p>
+      </header>
 
-          {processedOrder && (
-            <div className="mt-4">
-              <h3 className="font-semibold mb-2">Pedido Procesado:</h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                <div ref={invoiceRef} className="p-4 bg-white border rounded-lg">
-                  <h4 className="font-bold text-lg mb-4">Factura de Pedido</h4>
-                  <div className="mb-2">
-                    <label className="font-bold text-sm">Cliente: </label>
-                    <input 
-                      type="text" 
-                      value={processedOrder.customer_name}
-                      onChange={(e) => handleHeaderChange(e, 'customer_name')}
-                      className="p-1 border rounded bg-gray-50 w-full"
-                    />
-                  </div>
-                  <p><b>Fecha:</b> {new Date(processedOrder.order_date).toLocaleString()}</p>
-                  <p><b>Método de Envío:</b> {processedOrder.shipping_method}</p>
-                  <p><b>Plan de Pago:</b> {processedOrder.payment_plan}</p>
-                  <p><b>Método de Pago:</b> {processedOrder.payment_method}</p>
-                  <table className="w-full mt-4 text-sm text-left">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="p-2">Producto</th>
-                        <th className="p-2">Cant.</th>
-                        <th className="p-2">P. Unit.</th>
-                        <th className="p-2">Peso Unit.</th>
-                        <th className="p-2">P. Total</th>
-                        <th className="p-2">Peso Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {processedOrder.products.map((p, index) => {
-                        const unitWeight = typeof p.foundProduct?.peso_lb === 'number' ? p.foundProduct.peso_lb : 0;
-                        const totalWeight = unitWeight * p.quantity;
-                        return (
-                          <tr key={index}>
-                            <td className="p-2 border-t">{p.name}</td>
-                            <td className="p-2 border-t">{p.quantity}</td>
-                            <td className="p-2 border-t">C${p.unit_price.toFixed(2)}</td>
-                            <td className="p-2 border-t">{unitWeight.toFixed(2)} lb</td>
-                            <td className="p-2 border-t">C${p.price.toFixed(2)}</td>
-                            <td className="p-2 border-t">{totalWeight.toFixed(2)} lb</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot className="font-bold bg-gray-50">
-                      <tr className="border-t-2">
-                        <td className="p-2" colSpan={4}>Totales Generales:</td>
-                        <td className="p-2">C${orderTotals.totalPrice.toFixed(2)}</td>
-                        <td className="p-2">{orderTotals.totalWeight.toFixed(2)} lb</td>
-                      </tr>
-                    </tfoot>
-                  </table>
+      <div className="bg-white p-6 sm:p-10 rounded-3xl shadow-2xl transition duration-500 hover:shadow-3xl border border-gray-100 neon-border">
+        <div className="flex items-center space-x-3 mb-6">
+          <svg className="w-8 h-8 text-emerald-500" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.52 3.42 1.51 4.86l-1.57 5.75 5.88-1.53c1.42.85 3.06 1.31 4.1 1.31h.01c5.46 0 9.91-4.45 9.91-9.91s-4.45-9.91-9.91-9.91zm0 18.06c-1.35 0-2.73-.37-3.91-1.09l-.28-.16-2.92.76.77-2.83-.18-.29c-.77-1.23-1.18-2.65-1.18-4.08 0-4.5 3.67-8.17 8.17-8.17 2.2 0 4.2.86 5.73 2.38 1.52 1.53 2.38 3.53 2.38 5.73s-.86 4.2-2.38 5.73c-1.53 1.52-3.53 2.38-5.73 2.38zm3.62-5.48c-.2-.09-1.2-.59-1.39-.66-.18-.08-.32-.12-.45.12-.13.25-.51.66-.63.79-.12.13-.25.14-.49.07-.23-.07-1.03-.38-1.96-1.21-.73-.65-1.22-1.46-1.36-1.7-.14-.23-.01-.36.1-.51.1-.14.23-.37.35-.55.12-.17.16-.32.25-.49.09-.17.04-.32-.02-.45-.06-.13-.45-1.07-.61-1.46-.15-.38-.3-.33-.45-.33-.14 0-.3.02-.45.02s-.39.06-.6.31c-.2.25-.76.75-.76 1.84 0 1.09.78 2.13.89 2.27.12.14 1.54 2.37 3.73 3.32 2.2.95 2.62.83 3.1.77.49-.06 1.2-.49 1.36-.96.16-.47.16-.87.11-.96-.06-.09-.2-.14-.4-.22z"/>
+          </svg>
+          <h2 className="text-2xl font-semibold text-gray-800">
+            Pega tu Pedido
+          </h2>
+        </div>
+
+        <p className="text-gray-600 mb-4">
+          Simplemente copia y pega el texto completo del chat de WhatsApp en el área de abajo.
+        </p>
+
+        <textarea
+          id="whatsapp-input"
+          rows={8}
+          className="w-full p-4 text-gray-800 bg-gray-50 border-2 border-gray-200 rounded-xl resize-none focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition duration-300 placeholder-gray-400"
+          placeholder="Ejemplo:
+Pedido de Juan Pérez (ID: 123)
+- 2x Tazas de Café Latte
+- 1x Croissant de Jamón y Queso
+- 1x Jugo de Naranja Natural
+Dirección: Calle Falsa 123, Ciudad"
+          value={orderText}
+          onChange={(e) => setOrderText(e.target.value)}
+        />
+
+        <button
+          type="button"
+          onClick={handleProcessOrder}
+          disabled={isLoading}
+          className="mt-6 w-full flex items-center justify-center px-6 py-3 border border-transparent text-lg font-bold rounded-xl shadow-lg text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500 focus:ring-opacity-50 transition transform duration-150 ease-in-out hover:scale-[1.01] active:scale-100"
+        >
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944c6.832 0 10.252 5.46 9.177 9.873a11.942 11.942 0 01-1.74 3.791m-14.734-.149A11.942 11.942 0 012.823 12.817C1.748 8.404 5.168 2.944 12 2.944m0 0v-2.016m0 20.016v-2.016"/>
+          </svg>
+          {isLoading ? 'Procesando...' : 'Procesar Pedido'}
+        </button>
+
+        {error && <p className="text-red-500 text-center mt-4">{error}</p>}
+
+        {processedOrder && (
+          <div className="mt-8 border-t border-gray-200 pt-8">
+            <h3 className="text-2xl font-bold text-gray-800 mb-4">Detalles del Pedido Procesado</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div ref={invoiceRef} className="p-6 bg-white border border-gray-200 rounded-lg shadow-md">
+                <h4 className="font-bold text-xl mb-4 text-center">Factura de Pedido</h4>
+                <div className="mb-3">
+                  <label className="font-bold text-sm text-gray-600">Cliente: </label>
+                  <input
+                    type="text"
+                    value={processedOrder.customer_name}
+                    onChange={(e) => handleHeaderChange(e, 'customer_name')}
+                    className="p-2 border rounded bg-gray-50 w-full focus:ring-2 focus:ring-emerald-400"
+                  />
                 </div>
-
-              <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-                <h4 className="font-semibold mb-2">Acciones del Pedido</h4>
-                <p className="text-xs text-gray-600 mb-3">Esta área sirve para que lleves un control del pedido y saber cuáles ya tienes encargados.</p>
-                <table className="w-full text-sm text-left">
+                <p className="text-gray-700"><b>Fecha:</b> {new Date(processedOrder.order_date).toLocaleString()}</p>
+                <p className="text-gray-700"><b>Método de Envío:</b> {processedOrder.shipping_method}</p>
+                <p className="text-gray-700"><b>Plan de Pago:</b> {processedOrder.payment_plan}</p>
+                <p className="text-gray-700"><b>Método de Pago:</b> {processedOrder.payment_method}</p>
+                <table className="w-full mt-4 text-sm text-left border-collapse">
                   <thead className="bg-gray-100">
                     <tr>
-                      <th className="p-2">Producto</th>
-                      <th className="p-2">Acción</th>
-                      <th className="p-2">Estado de Tarea</th>
+                      <th className="p-2 border-b-2 border-gray-300">Producto</th>
+                      <th className="p-2 border-b-2 border-gray-300">Cant.</th>
+                      <th className="p-2 border-b-2 border-gray-300">P. Unit.</th>
+                      <th className="p-2 border-b-2 border-gray-300">Peso Unit.</th>
+                      <th className="p-2 border-b-2 border-gray-300">P. Total</th>
+                      <th className="p-2 border-b-2 border-gray-300">Peso Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {processedOrder.products.map((p, index) => {
+                      const unitWeight = typeof p.foundProduct?.peso_lb === 'number' ? p.foundProduct.peso_lb : 0;
+                      const totalWeight = unitWeight * p.quantity;
+                      return (
+                        <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="p-2">{p.name}</td>
+                          <td className="p-2">{p.quantity}</td>
+                          <td className="p-2">C${p.unit_price.toFixed(2)}</td>
+                          <td className="p-2">{unitWeight.toFixed(2)} lb</td>
+                          <td className="p-2">C${p.price.toFixed(2)}</td>
+                          <td className="p-2">{totalWeight.toFixed(2)} lb</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="font-bold bg-gray-50">
+                    <tr className="border-t-2 border-gray-300">
+                      <td className="p-2" colSpan={4}>Totales Generales:</td>
+                      <td className="p-2">C${orderTotals.totalPrice.toFixed(2)}</td>
+                      <td className="p-2">{orderTotals.totalWeight.toFixed(2)} lb</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <div className="p-6 border border-gray-200 rounded-lg bg-gray-50 shadow-inner">
+                <h4 className="font-semibold text-xl mb-4">Acciones del Pedido</h4>
+                <p className="text-sm text-gray-600 mb-4">Esta área sirve para que lleves un control del pedido y saber cuáles ya tienes encargados.</p>
+                <table className="w-full text-sm text-left border-collapse">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="p-2 border-b-2 border-gray-300">Producto</th>
+                      <th className="p-2 border-b-2 border-gray-300">Acción</th>
+                      <th className="p-2 border-b-2 border-gray-300">Estado de Tarea</th>
                     </tr>
                   </thead>
                   <tbody>
                     {processedOrder.products.map((p, index) => (
                       p.foundProduct && p.foundProduct.distributorLink && (
-                        <tr key={index} className="border-t">
+                        <tr key={index} className="border-b border-gray-100 hover:bg-white">
                           <td className="p-2">{p.name}</td>
                           <td className="p-2">
-                            <a href={p.foundProduct.distributorLink} target="_blank" rel="noopener noreferrer" className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                            <a href={p.foundProduct.distributorLink} target="_blank" rel="noopener noreferrer" className="px-3 py-1 bg-emerald-500 text-white text-xs rounded-full hover:bg-emerald-600 transition-colors shadow-md">
                               Ir a encargo
                             </a>
                           </td>
                           <td className="p-2">
-                            <input type="checkbox" className="h-5 w-5 rounded border-gray-300" title="Marcar como encargado" />
+                            <input type="checkbox" className="h-5 w-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" title="Marcar como encargado" />
                           </td>
                         </tr>
                       )
@@ -238,13 +272,15 @@ const OrderProcessor = () => {
                   </tbody>
                 </table>
               </div>
-              </div>
-              <button onClick={handleDownloadInvoice} className="mt-4 bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600">
-                Descargar Factura como Imagen
-              </button>
             </div>
-          )}
-        </div>
+            <button onClick={handleDownloadInvoice} className="mt-8 w-full flex items-center justify-center px-6 py-3 border border-transparent text-lg font-bold rounded-xl shadow-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-500 focus:ring-opacity-50 transition transform duration-150 ease-in-out hover:scale-[1.01] active:scale-100">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              Descargar Factura como Imagen
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Clase para un sutil borde neón/degradado en el card, similar al original pero más limpio */
+.neon-border {
+    position: relative;
+    z-index: 10;
+}
+.neon-border::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(135deg, #34d399, #06b6d4, #10b981); /* Tonos esmeralda y cian */
+    border-radius: 1.75rem; /* Ajustar al border-radius del contenedor */
+    filter: blur(8px);
+    opacity: 0.5;
+    z-index: -1;
+    transition: all 0.3s ease;
+}
+.neon-border:hover::before {
+    filter: blur(12px);
+    opacity: 0.7;
+}
+
+/* Estilo para un efecto de card flotante con sombra elegante */
+.elegant-card {
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08), 0 5px 15px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+.elegant-card:hover {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12), 0 8px 20px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+/* Degradado para el botón de enviar */
+.send-button-gradient {
+    background: linear-gradient(45deg, #6b46c1, #805ad5); /* Púrpura suave */
+    transition: all 0.3s ease;
+}
+.send-button-gradient:hover {
+    background: linear-gradient(45deg, #7e57c2, #9f7aea); /* Más claro al pasar el mouse */
+    transform: scale(1.05);
+}
+.send-button-gradient:active {
+    transform: scale(0.98);
+}
+
+/* Estilo para los mensajes del usuario */
+.user-message {
+    background: linear-gradient(90deg, #a78bfa, #c4b5fd); /* Degradado lila para el usuario */
+    border-bottom-right-radius: 0 !important; /* Esquina aguda para el usuario */
+}
+
+/* Estilo para los mensajes del asistente */
+.ai-message {
+    background: linear-gradient(90deg, #e2e8f0, #f8fafc); /* Degradado gris claro para el asistente */
+    border-bottom-left-radius: 0 !important; /* Esquina aguda para el asistente */
+}
 
 /* Neumorphism Styles */
 .neumorphic-flat {
@@ -52,7 +114,27 @@
 }
 
 .neumorphic-input:focus {
+
   box-shadow: inset 2px 2px 5px #bebebe,
+
               inset -2px -2px 5px #ffffff,
+
               0 0 0 2px rgba(66, 153, 225, 0.5); /* Focus ring */
+
+}
+
+
+
+.glassmorphic-input {
+
+  background: rgba(107, 33, 168, 0.5); /* Purple with transparency */
+
+  backdrop-filter: blur(10px);
+
+  -webkit-backdrop-filter: blur(10px); /* For Safari */
+
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+
 }
