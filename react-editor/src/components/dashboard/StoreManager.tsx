@@ -15,13 +15,30 @@ type StoreManagerProps = {
 };
 
 const StoreManager: React.FC<StoreManagerProps> = ({ stores, className }) => {
-  const handleShare = (url: string) => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url)
-        .then(() => alert('¡Enlace de la tienda copiado al portapapeles!'))
-        .catch(() => alert('No se pudo copiar el enlace.'));
+  const handleShare = async (url: string, title: string) => {
+    const shareData = {
+      title: `¡Echa un vistazo a mi tienda: ${title}!`,
+      text: `Descubre los productos en ${title}.`,
+      url: url,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        console.log('Contenido compartido con éxito');
+      } catch (err) {
+        console.error('Error al compartir:', err);
+        // Opcional: podrías mostrar una notificación de que el usuario canceló la acción
+      }
     } else {
-      alert('La función de copiar no está disponible en tu navegador.');
+      // Fallback para navegadores que no soportan la Web Share API
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url)
+          .then(() => alert('¡Enlace de la tienda copiado al portapapeles!'))
+          .catch(() => alert('No se pudo copiar el enlace.'));
+      } else {
+        alert('La función de compartir no está disponible en tu navegador.');
+      }
     }
   };
 
@@ -68,7 +85,7 @@ const StoreManager: React.FC<StoreManagerProps> = ({ stores, className }) => {
           <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="flex-1 sm:flex-none text-center bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 inline-flex items-center justify-center">
             <EyeIcon className="h-5 w-5 mr-2" /> Ver Tienda
           </a>
-          <button onClick={() => handleShare(publicUrl)} className="flex-1 sm:flex-none bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 inline-flex items-center justify-center">
+          <button onClick={() => handleShare(publicUrl, storeName)} className="flex-1 sm:flex-none bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 inline-flex items-center justify-center">
             <ShareIcon className="h-5 w-5 mr-2" /> Compartir
           </button>
           <button onClick={handleDelete} className="flex-1 sm:flex-none bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 inline-flex items-center justify-center">

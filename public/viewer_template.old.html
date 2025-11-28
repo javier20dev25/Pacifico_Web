@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tienda</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    :root { --bg: #e9eef6; --card: #f6f8fb; --muted: #6b7280; --accent: #7ea1ff; }
+    html, body { scroll-behavior: smooth; }
+    body { background: linear-gradient(180deg, #e9eef6, #dfe8f8); font-family: 'Inter', sans-serif; color: #1a202c; }
+    .neumorphic-card { background: var(--card); border-radius: 14px; box-shadow: 8px 8px 20px rgba(170, 187, 204, 0.18), -8px -8px 20px rgba(255, 255, 255, 0.9); }
+    .btn { transition: transform 0.12s ease-in-out, box-shadow 0.12s ease-in-out; }
+    .btn:active { transform: translateY(1px); box-shadow: none; }
+    .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px); }
+    .tag-item { background-color: var(--accent); color: white; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; }
+    #cart-button-container { position: fixed; bottom: 20px; right: 20px; z-index: 40; }
+    #cart-count { position: absolute; top: -5px; right: -5px; background-color: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+    
+    /* Estilos para el Modal de Medios */
+    #media-modal { z-index: 100; }
+    .glass-background { background-color: rgba(30, 41, 59, 0.7); backdrop-filter: blur(8px); }
+    #media-modal-content iframe { max-width: 90vw; max-height: 80vh; }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+  <!-- Inyección de datos del servidor -->
+  __DATA_INJECTION_POINT__
+
+  <!-- Contenedor principal de la tienda -->
+  <div id="store-container" class="container mx-auto p-4 md:p-6 lg:p-8"></div>
+
+  <!-- Botón del carrito flotante -->
+  <div id="cart-button-container"></div>
+
+  <!-- Modales -->
+  <div id="modals-container"></div>
+  
+  <!-- Modal Universal para Imágenes y Videos -->
+  <div id="media-modal" class="fixed inset-0 hidden items-center justify-center">
+    <div id="media-modal-bg" class="absolute inset-0 glass-background cursor-pointer"></div>
+    <div id="media-modal-content" class="relative z-10 p-4">
+      <!-- Contenido (imagen o video) se inyectará aquí -->
+    </div>
+    <button id="media-modal-close" class="absolute top-4 right-4 text-white text-3xl font-bold z-20">&times;</button>
+  </div>
+
+  <script type="module">
+    // --- ESTADO GLOBAL ---
+    let store = {};
+    let products = [];
+    let shoppingCart = {};
+    window.iframeLoaded = false; // Flag global para el truco del onload
+    
+    // --- FUNCIONES DE UTILIDAD ---
+    const $ = id => document.getElementById(id);
+    const escapeHTML = (s) => (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+    function getPublicImageUrl(pathOrUrl) {
+        if (!pathOrUrl) return 'https://placehold.co/400x300/f6f8fb/6b7280?text=IMG';
+        if (pathOrUrl.startsWith('http') || pathOrUrl.startsWith('data:')) return pathOrUrl;
+        const config = window.SUPABASE_CONFIG;
+        if (!config || !config.url || !config.bucket) {
+            console.error("Supabase config is missing or incomplete.", config);
+            return 'https://placehold.co/400x300/f6f8fb/ff0000?text=CONFIG_ERROR';
+        }
+        const supabaseUrl = config.url.endsWith('/') ? config.url : `${config.url}/`;
+        return `${supabaseUrl}storage/v1/object/public/${config.bucket}/${pathOrUrl}`;
+    }
+
+    function getEmbedUrl(url) {
+        if (!url) return null;
+        let embedUrl = null;
+        let platform = null;
+
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            let videoId;
+            if (url.includes('youtu.be/')) {
+                videoId = url.split('youtu.be/')[1].split('?')[0];
+            } else if (url.includes('watch?v=')) {
+                videoId = url.split('watch?v=')[1].split('&')[0];
+            } else if (url.includes('/shorts/')) {
+                videoId = url.split('/shorts/')[1].split('?')[0];
+            }
+            if (videoId) {
+                embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+                platform = 'youtube';
+            }
+        } else if (url.includes('facebook.com/')) {
+            embedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&width=560&autoplay=1`;
+            platform = 'facebook';
+        } else if (url.includes('instagram.com/')) {
+            // Instagram embedding es más complejo, usualmente requiere oEmbed.
+            // Un truco simple es usar un iframe y esperar que funcione para posts públicos.
+            embedUrl = `${url.split('?')[0]}embed`;
+            platform = 'instagram';
+        } else if (url.includes('tiktok.com/')) {
+            // TikTok embedding también es complejo. Esto es un intento.
+            const videoId = url.match(/video\/(\d+)/);
+            if (videoId && videoId[1]) {
+                embedUrl = `https://www.tiktok.com/embed/v2/${videoId[1]}`;
+                platform = 'tiktok';
+            }
+        }
+        
+        return { embedUrl, platform };
+    }
+
+    // --- LÓGICA DEL MODAL ---
+    function openMediaModal(type, url) {
+        const modal = $('media-modal');
+        const contentContainer = $('media-modal-content');
+        contentContainer.innerHTML = '';
+        window.iframeLoaded = false; // Resetear el flag
+
+        if (type === 'image' && url) {
+            contentContainer.innerHTML = `<img src="${url}" class="max-w-[90vw] max-h-[80vh] rounded-lg shadow-xl" />`;
+        } else if (type === 'video' && url) {
+            const { embedUrl } = getEmbedUrl(url);
+            if (embedUrl) {
+                contentContainer.innerHTML = `<iframe width="560" height="315" src="${embedUrl}" onload="window.iframeLoaded = true;" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="rounded-lg shadow-xl bg-black"></iframe>`;
+                
+                // Iniciar el temporizador para detectar el fallo de carga
+                setTimeout(() => {
+                    if (!window.iframeLoaded) {
+                        console.warn('El iframe no cargó. Posible bloqueo de inserción. Redirigiendo...');
+                        closeMediaModal();
+                        window.open(url, '_blank');
+                    }
+                }, 2500); // 2.5 segundos de espera
+            } else {
+                 // Si no se puede generar una URL de embed, redirigir directamente
+                console.warn('No se pudo generar la URL de inserción. Redirigiendo directamente.');
+                window.open(url, '_blank');
+                return; // No mostrar el modal
+            }
+        }
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeMediaModal() {
+        const modal = $('media-modal');
+        const contentContainer = $('media-modal-content');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        contentContainer.innerHTML = ''; // Detiene la reproducción del video
+    }
+
+    // --- LÓGICA DE RENDERIZADO ---
+    function renderStoreView() {
+        document.title = store.nombre || 'Tienda';
+        const storeContainer = $('store-container');
+        
+        const storeLogoUrl = getPublicImageUrl(store.logoUrl);
+        const { platform: storeVideoPlatform } = getEmbedUrl(store.youtubeLink);
+        const storeVideoIcon = store.youtubeLink ? `<a href="#" data-action="open-media" data-type="video" data-url="${store.youtubeLink}" class="text-purple-600 text-xl ml-4 hover:text-purple-800 transition-colors"><i class="fab fa-${storeVideoPlatform || 'youtube'}"></i></a>` : '';
+        
+        const headerHtml = `
+          <div class="text-center mb-6">
+              <img src="${storeLogoUrl}" data-action="open-media" data-type="image" data-url="${storeLogoUrl}" class="w-20 h-20 rounded-full object-cover mx-auto mb-2 neumorphic-card cursor-pointer hover:scale-105 transition-transform" alt="Logo de la tienda">
+              <h3 class="text-2xl font-bold text-gray-800">${escapeHTML(store.nombre || 'Tienda Sin Nombre')}</h3>
+              <p class="text-sm text-gray-600 mt-1">${escapeHTML(store.descripcion)}</p>
+              <div class="flex justify-center items-center mt-2">
+                ${store.whatsapp ? `<a href="https://wa.me/${store.whatsapp.replace(/\s+|-/g, '')}" target="_blank" class="text-teal-600 text-xs font-semibold inline-flex items-center"><i class="fab fa-whatsapp mr-1"></i> Contactar</a>` : ''}
+                ${storeVideoIcon}
+              </div>
+          </div>`;
+        
+        const productsHtml = products.map((p) => {
+            const productImageUrl = getPublicImageUrl(p.imageUrl);
+            const id = p.idLocal;
+            const { price: priceDisplay, time: timeDisplay } = getCustomerPriceAndDelivery(p);
+            
+            const { platform: productVideoPlatform } = getEmbedUrl(p.youtubeLink);
+            const productVideoButton = p.youtubeLink ? `<a href="#" data-action="open-media" data-type="video" data-url="${p.youtubeLink}" class="btn bg-purple-600 text-white px-4 py-2 rounded-full font-semibold hover:bg-purple-700 text-sm flex items-center justify-center"><i class="fab fa-${productVideoPlatform || 'youtube'} mr-2"></i>Ver Video</a>` : '';
+
+            return `
+              <div class="neumorphic-card p-4 flex flex-col gap-3" data-id="${id}">
+                  <img src="${productImageUrl}" data-action="open-media" data-type="image" data-url="${productImageUrl}" class="w-full h-48 rounded-lg object-cover cursor-pointer" alt="${escapeHTML(p.nombre)}">
+                  <div class="flex-1">
+                      <h5 class="text-lg font-bold text-gray-800">${escapeHTML(p.nombre || 'Producto sin nombre')}</h5>
+                      <p class="text-xs text-gray-500 line-clamp-2 mt-1">${escapeHTML(p.descripcion || 'Sin descripción.')}</p>
+                  </div>
+                  <div class="border-t border-gray-100 pt-3 space-y-2">
+                      ${priceDisplay}
+                      <div class="text-xs text-gray-600 font-semibold pt-1">Tiempos de Entrega Estimados:</div>
+                      ${timeDisplay}
+                  </div>
+                  <div class="flex items-center justify-center gap-2 mt-auto pt-2 border-t">
+                    <button data-action="add-to-cart" data-product-id="${id}" class="btn bg-teal-500 text-white px-4 py-2 rounded-full font-semibold hover:bg-teal-600 text-sm flex items-center justify-center flex-grow"><i class="fas fa-cart-plus mr-2"></i>Añadir</button>
+                    ${productVideoButton}
+                  </div>
+              </div>
+          `;
+        }).join('');
+
+        storeContainer.innerHTML = `
+          <div class="text-left">
+            ${headerHtml}
+            <h4 class="text-xl font-bold mt-8 mb-4 border-t pt-4">Catálogo de Productos</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">${productsHtml}</div>
+          </div>`;
+    }
+
+    function getCustomerPriceAndDelivery(p) {
+        const c = store.currency || 'USD';
+        if (store.storeType === 'in_stock') {
+            return { price: `<div class="font-bold text-3xl text-indigo-700">${c} ${(p.precio_base || 0).toFixed(2)}</div>`, time: `<div class="text-sm text-green-600 font-semibold"><i class="fas fa-boxes"></i> Entrega Inmediata</div>` };
+        }
+        const shippingMethods = [];
+        if (store.isLogisticsDual) {
+            shippingMethods.push({ method: 'AÉREO', price: `${c} ${(p.precio_final_aereo || 0).toFixed(2)}`, days: `${store.airMinDays}-${store.airMaxDays} días` });
+            shippingMethods.push({ method: 'MARÍTIMO', price: `${c} ${(p.precio_final_maritimo || 0).toFixed(2)}`, days: `${store.seaMinDays}-${store.seaMaxDays} días` });
+        } else {
+            shippingMethods.push({ method: 'Precio Base', price: `${c} ${(p.precio_final_aereo || 0).toFixed(2)}`, days: 'Consultar' });
+        }
+        const priceDisplay = shippingMethods.map(m => `<div class="font-bold text-xl flex justify-between items-center text-gray-800"><span class="${m.method.includes('AÉREO') ? 'text-blue-700' : 'text-green-700'}">${m.method}:</span> <span>${m.price}</span></div>`).join('');
+        const timeDisplay = shippingMethods.map(m => `<div class="text-sm text-gray-600 flex justify-between"><span><i class="fas ${m.method.includes('AÉREO') ? 'fa-plane' : 'fa-ship'} mr-1"></i> ${m.method}:</span> <span class="font-semibold">${m.days}</span></div>`).join('');
+        return { price: `<div class="space-y-1">${priceDisplay}</div>`, time: `<div class="space-y-1 p-2 bg-gray-100 rounded-lg">${timeDisplay}</div>` };
+    }
+
+    function handleCartAction(productId, action) {
+        console.log(`[CARRITO] Acción: ${action}, Producto ID: ${productId}`);
+    }
+
+    // --- MANEJADOR DE EVENTOS GLOBAL ---
+    function attachGlobalListeners() {
+        document.body.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+
+            e.preventDefault(); // Prevenir comportamiento por defecto de los enlaces
+            const action = target.dataset.action;
+            
+            switch (action) {
+                case 'open-media':
+                    const type = target.dataset.type;
+                    const url = target.dataset.url;
+                    if (type && url) openMediaModal(type, url);
+                    break;
+                case 'add-to-cart':
+                    const productId = target.dataset.productId;
+                    if (productId) handleCartAction(productId, 'add');
+                    break;
+            }
+        });
+
+        $('media-modal-bg').addEventListener('click', closeMediaModal);
+        $('media-modal-close').addEventListener('click', closeMediaModal);
+    }
+    
+    // --- PUNTO DE ENTRADA ---
+    function main() {
+        if (!window.STORE_DATA || !window.STORE_DATA.store) {
+          console.error('FATAL: STORE_DATA no está disponible.');
+          return;
+        }
+        store = window.STORE_DATA.store;
+        products = window.STORE_DATA.products || [];
+
+        renderStoreView();
+        attachGlobalListeners();
+    }
+
+    main();
+  </script>
+</body>
+</html>

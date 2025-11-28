@@ -28,8 +28,9 @@ if (process.env.NODE_ENV !== 'test') {
           'frame-ancestors': ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173'],
           'script-src': ["'self'", "'unsafe-inline'", 'https://cdn.tailwindcss.com'],
           'style-src': ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com', 'https://ka-f.fontawesome.com'],
-          'img-src': ["'self'", "data:", "*.supabase.co"], // <-- AÑADIR ESTA LÍNEA
-          'connect-src': ["'self'", "https://ka-f.fontawesome.com"], // Necesario para Font Awesome v6
+          'img-src': ["'self'", "data:", "*.supabase.co"],
+          'connect-src': ["'self'", "https://ka-f.fontawesome.com"],
+          'frame-src': ["'self'", "https://www.youtube.com"], // <-- AÑADIDO
         },
       },
     })

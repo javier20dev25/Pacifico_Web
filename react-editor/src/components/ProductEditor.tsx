@@ -1,65 +1,108 @@
-import useAppStore, { type Product } from '@/stores/store';// Sub-componente para un único producto
+import useAppStore, { type Product } from '@/stores/store';
+import { Package, Plus, Edit2, Trash2, Plane, Anchor } from 'lucide-react';
+
 const ProductItem = ({ product }: { product: Product }) => {
   const storeType = useAppStore((state) => state.store.storeType);
   const deleteProduct = useAppStore((state) => state.deleteProduct);
-  const openModal = useAppStore((state) => state.openProductModal);  const handleDelete = () => {
+  const openModal = useAppStore((state) => state.openProductModal);
+
+  const handleDelete = () => {
     if (window.confirm('¿Estás seguro de que quieres eliminar "' + product.nombre + '"?')) {
       deleteProduct(product.idLocal);
     }
-  };  return (
-    <div className="p-4 border rounded-lg bg-white shadow-sm flex justify-between items-start">
-        <div className="flex-grow pr-4">
-          <h3 className="font-bold text-lg">{product.nombre}</h3>
-          <p className="text-sm text-gray-600 mb-2">{product.descripcion}</p>          {/* Display calculated prices for 'by_order' products */}
-          {storeType === 'by_order' && (
-            <div className="text-xs text-gray-500 space-y-1 mt-2 p-2 bg-gray-50 rounded-md border">
-              <div className="grid grid-cols-3 gap-x-4">
-                <span>Costo: <strong>${product.costo_base_final?.toFixed(2) || '0.00'}</strong></span>
-                <span>Peso: <strong>{product.peso_lb?.toFixed(2) || '0.00'} lb</strong></span>
-                <span>Margen: <strong>{product.margen_tipo === 'fixed' ? '$' + product.margen_valor?.toFixed(2) : product.margen_valor?.toFixed(2) + '%'}</strong></span>
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group hover:shadow-md transition-shadow">
+      <div className="p-4 flex items-start justify-between border-b border-slate-50">
+         <div>
+            <h3 className="font-bold text-slate-900 text-lg">{product.nombre}</h3>
+            <p className="text-slate-400 text-sm font-medium">{product.idLocal}</p>
+         </div>
+         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={() => openModal(product.idLocal)} className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" title="Editar">
+               <Edit2 className="w-4 h-4" />
+            </button>
+            <button onClick={handleDelete} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
+               <Trash2 className="w-4 h-4" />
+            </button>
+         </div>
+      </div>
+
+      {storeType === 'by_order' && (
+        <>
+          <div className="grid grid-cols-3 divide-x divide-slate-100 bg-slate-50/30">
+             <div className="p-3 text-center">
+                <span className="block text-xs uppercase text-slate-400 font-bold tracking-wider">Costo</span>
+                <span className="font-mono font-semibold text-slate-700">${product.costo_base_final?.toFixed(2) || '0.00'}</span>
+             </div>
+             <div className="p-3 text-center">
+                <span className="block text-xs uppercase text-slate-400 font-bold tracking-wider">Peso (lb)</span>
+                <span className="font-mono font-semibold text-slate-700">{product.peso_lb?.toFixed(2) || '0.00'}</span>
+             </div>
+             <div className="p-3 text-center">
+                <span className="block text-xs uppercase text-slate-400 font-bold tracking-wider">Margen</span>
+                <span className="font-mono font-semibold text-emerald-600">
+                  {product.margen_tipo === 'fixed' ? `+${(product.margen_valor || 0).toFixed(2)}` : `+${product.margen_valor || 0}%`}
+                </span>
+             </div>
+          </div>
+          <div className="p-3 bg-indigo-50/30 flex justify-between items-center text-sm border-t border-slate-100">
+              <div className="flex items-center gap-2 text-sky-700">
+                  <Plane className="w-4 h-4" /> 
+                  <span className="font-bold">${product.precio_final_aereo?.toFixed(2) || 'N/A'}</span>
+                  <span className="text-xs text-sky-400">Aéreo</span>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 pt-2 mt-2 border-t">
-                <p className="font-semibold text-blue-600">✈️ Aéreo: ${product.precio_final_aereo?.toFixed(2) || 'N/A'}</p>
-                <p className="font-semibold text-green-600">🚢 Marítimo: ${product.precio_final_maritimo?.toFixed(2) || 'N/A'}</p>
+              <div className="h-4 w-px bg-slate-200"></div>
+              <div className="flex items-center gap-2 text-teal-700">
+                  <Anchor className="w-4 h-4" />
+                  <span className="font-bold">${product.precio_final_maritimo?.toFixed(2) || 'N/A'}</span>
+                  <span className="text-xs text-teal-400">Marítimo</span>
               </div>
-            </div>
-          )}
-          {storeType === 'in_stock' && (
-            <div className="text-xs text-gray-500 space-y-1 mt-2 p-2 bg-gray-50 rounded-md border">
-                <p>Precio Base: <strong>${product.precio_base?.toFixed(2) || '0.00'}</strong></p>
-            </div>
-          )}
+          </div>
+        </>
+      )}
+      {storeType === 'in_stock' && (
+        <div className="p-3 text-center bg-slate-50/30">
+            <span className="block text-xs uppercase text-slate-400 font-bold tracking-wider">Precio de Venta</span>
+            <span className="font-mono font-semibold text-slate-700">${product.precio_base?.toFixed(2) || '0.00'}</span>
         </div>
-        <div className="flex-shrink-0 flex flex-col gap-2 ml-4">
-          <button onClick={() => openModal(product.idLocal)} className="px-3 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500 text-sm w-full text-center">Editar</button>
-          <button onClick={handleDelete} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm w-full text-center">Eliminar</button>
-        </div>
+      )}
     </div>
   );
-};const ProductEditor = () => {
-  // Patrón correcto de Zustand: seleccionar estado y acciones por separado
+};
+
+const ProductEditor = () => {
   const products = useAppStore((state) => state.products);
-  const openModal = useAppStore((state) => state.openProductModal);  const handleAddProduct = () => {
-    openModal(); // Abre el modal para un nuevo producto
-  };  return (
-    <div className="mt-8 p-4 border rounded-md bg-gray-50">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-700">Productos</h2>
-        <button
-          onClick={handleAddProduct}
-          className="px-4 py-2 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75"
-        >
-          Añadir Producto
+  const openModal = useAppStore((state) => state.openProductModal);
+  const store = useAppStore((state) => state.store);
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-sky-100 text-sky-600 font-bold text-sm"><Package className="w-4 h-4" /></span>
+          <h2 className="text-xl font-bold text-slate-900">Catálogo de Productos</h2>
+        </div>
+        <button onClick={() => openModal()} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-2.5 px-4 rounded-lg shadow-md shadow-emerald-200 transition-all active:scale-95">
+          <Plus className="w-4 h-4" /> Añadir Producto
         </button>
-      </div>      <div className="space-y-4">
+      </div>
+
+      <div className="grid gap-4">
         {products.length > 0 ? (
           products.map((product) => (
             <ProductItem key={product.idLocal} product={product} />
           ))
         ) : (
-          <p className="text-gray-500 text-center">No hay productos todavía. ¡Añade uno!</p>
+          <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+              <Package className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+              <p className="text-slate-500 font-medium">Aún no hay productos</p>
+              <p className="text-slate-400 text-sm mt-1">Haz clic en "Añadir Producto" para empezar.</p>
+          </div>
         )}
       </div>
-    </div>
+    </section>
   );
-};export default ProductEditor;
+};
+export default ProductEditor;

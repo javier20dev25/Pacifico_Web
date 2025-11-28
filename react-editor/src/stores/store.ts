@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
+export interface ExtraCost {
+  enabled: boolean;
+  value: number | string;
+  type: 'fixed_total' | 'fixed_per_product' | 'percentage_total' | 'percentage_per_product';
+  description: string;
+  currency: 'USD';
+}
+
 export interface StoreDetails {
   uuid?: string;
   storeType: 'by_order' | 'in_stock';
@@ -12,24 +20,29 @@ export interface StoreDetails {
   youtubeLink?: string;
   currency: 'USD' | 'NIO';
   isLogisticsDual: boolean;
-  airRate: number;
-  airMinDays: number;
-  airMaxDays: number;
-  seaRate: number;
-  seaMinDays: number;
-  seaMaxDays: number;
+  airRate: number | string;
+  airMinDays: number | string;
+  airMaxDays: number | string;
+  seaRate: number | string;
+  seaMinDays: number | string;
+  seaMaxDays: number | string;
   delivery_type: 'no' | 'fixed' | 'range' | 'included';
-  delivery_fixed_cost: number;
-  delivery_range_start: number;
-  delivery_range_end: number;
+  delivery_fixed_cost: number | string;
+  delivery_range_start: number | string;
+  delivery_range_end: number | string;
   delivery_note: string;
-  payment_methods: Record<string, boolean>;
+  acceptsCash: boolean;
+  acceptsTransfer: boolean;
+  transferDetails: string;
+  paypalLink: string;
+  stripeLink: string;
   accepts_full_payment: boolean;
   accepts_advance_payment: boolean;
   advance_options: Record<string, boolean>;
   accepts_installments: boolean;
   installment_options: { type: string, max: number }[];
   shareableUrl: string | null | undefined;
+  extraCost: ExtraCost;
 }
 
 export interface Product {
@@ -37,15 +50,15 @@ export interface Product {
   nombre: string;
   descripcion: string;
   youtubeLink?: string;
-  precio_base?: number;
-  impuesto_porcentaje?: number;
+  precio_base?: number | string;
+  impuesto_porcentaje?: number | string;
   impuestos_incluidos?: boolean;
   costo_base_final?: number;
-  margen_valor?: number;
+  margen_valor?: number | string;
   margen_tipo?: 'fixed' | 'percent';
   precio_final_aereo?: number;
   precio_final_maritimo?: number;
-  peso_lb?: number;
+  peso_lb?: number | string;
   tags?: string[];
   imageUrl: string | null;
   imageFile?: File | null;
@@ -93,19 +106,6 @@ export interface AppState {
   loadInitialData: (data: InitialDataPayload) => void;
 }
 
-export const availablePaymentMethods: Record<string, string> = {
-    'banpro': 'Banpro',
-    'lafise': 'LAFISE',
-    'bac': 'BAC',
-    'ficohsa': 'Ficohsa',
-    'billetera_movil': 'Billetera Móvil',
-    'envio_veloz': 'Envío Veloz',
-    'paypal': 'PayPal',
-    'payoneer': 'Payoneer',
-    'western_union': 'Western Union',
-    'efectivo': 'Efectivo'
-};
-
 const useAppStore = create<AppState>()(
   persist(
     (set) => ({
@@ -131,13 +131,24 @@ const useAppStore = create<AppState>()(
         delivery_range_start: 0,
         delivery_range_end: 0,
         delivery_note: '',
-        payment_methods: {},
+        acceptsCash: true,
+        acceptsTransfer: false,
+        transferDetails: '',
+        paypalLink: '',
+        stripeLink: '',
         accepts_full_payment: true,
         accepts_advance_payment: false,
         advance_options: { '50': false, '25': false, '10': false },
         accepts_installments: false,
         installment_options: [],
         shareableUrl: null,
+        extraCost: {
+          enabled: false,
+          value: 0,
+          type: 'fixed_total',
+          description: '',
+          currency: 'USD',
+        },
       },
       products: [],
       cart: {
