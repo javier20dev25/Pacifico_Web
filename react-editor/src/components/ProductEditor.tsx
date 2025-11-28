@@ -34,29 +34,29 @@ const ProductItem = ({ product }: { product: Product }) => {
           <div className="grid grid-cols-3 divide-x divide-slate-100 bg-slate-50/30">
              <div className="p-3 text-center">
                 <span className="block text-xs uppercase text-slate-400 font-bold tracking-wider">Costo</span>
-                <span className="font-mono font-semibold text-slate-700">${product.costo_base_final?.toFixed(2) || '0.00'}</span>
+                <span className="font-mono font-semibold text-slate-700">${(Number(product.costo_base_final) || 0).toFixed(2)}</span>
              </div>
              <div className="p-3 text-center">
                 <span className="block text-xs uppercase text-slate-400 font-bold tracking-wider">Peso (lb)</span>
-                <span className="font-mono font-semibold text-slate-700">{product.peso_lb?.toFixed(2) || '0.00'}</span>
+                <span className="font-mono font-semibold text-slate-700">{(Number(product.peso_lb) || 0).toFixed(2)}</span>
              </div>
              <div className="p-3 text-center">
                 <span className="block text-xs uppercase text-slate-400 font-bold tracking-wider">Margen</span>
                 <span className="font-mono font-semibold text-emerald-600">
-                  {product.margen_tipo === 'fixed' ? `+${(product.margen_valor || 0).toFixed(2)}` : `+${product.margen_valor || 0}%`}
+                  {product.margen_tipo === 'fixed' ? `+${(Number(product.margen_valor) || 0).toFixed(2)}` : `+${product.margen_valor || 0}%`}
                 </span>
              </div>
           </div>
           <div className="p-3 bg-indigo-50/30 flex justify-between items-center text-sm border-t border-slate-100">
               <div className="flex items-center gap-2 text-sky-700">
                   <Plane className="w-4 h-4" /> 
-                  <span className="font-bold">${product.precio_final_aereo?.toFixed(2) || 'N/A'}</span>
+                  <span className="font-bold">${(Number(product.precio_final_aereo) || 0).toFixed(2)}</span>
                   <span className="text-xs text-sky-400">Aéreo</span>
               </div>
               <div className="h-4 w-px bg-slate-200"></div>
               <div className="flex items-center gap-2 text-teal-700">
                   <Anchor className="w-4 h-4" />
-                  <span className="font-bold">${product.precio_final_maritimo?.toFixed(2) || 'N/A'}</span>
+                  <span className="font-bold">${(Number(product.precio_final_maritimo) || 0).toFixed(2)}</span>
                   <span className="text-xs text-teal-400">Marítimo</span>
               </div>
           </div>
@@ -65,7 +65,7 @@ const ProductItem = ({ product }: { product: Product }) => {
       {storeType === 'in_stock' && (
         <div className="p-3 text-center bg-slate-50/30">
             <span className="block text-xs uppercase text-slate-400 font-bold tracking-wider">Precio de Venta</span>
-            <span className="font-mono font-semibold text-slate-700">${product.precio_base?.toFixed(2) || '0.00'}</span>
+            <span className="font-mono font-semibold text-slate-700">${(Number(product.precio_base) || 0).toFixed(2)}</span>
         </div>
       )}
     </div>
@@ -75,7 +75,6 @@ const ProductItem = ({ product }: { product: Product }) => {
 const ProductEditor = () => {
   const products = useAppStore((state) => state.products);
   const openModal = useAppStore((state) => state.openProductModal);
-  const store = useAppStore((state) => state.store);
 
   return (
     <section className="space-y-4">

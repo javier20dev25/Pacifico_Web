@@ -1,6 +1,6 @@
 import React from 'react';
-import useAppStore, { ExtraCost } from '@/stores/store';
-import { Plane, Ship, Truck, MapPin, Anchor, ChevronDown, Percent, FilePlus } from 'lucide-react';
+import useAppStore from '@/stores/store';
+import { Plane, Truck, MapPin, Anchor, ChevronDown, Percent, FilePlus } from 'lucide-react';
 
 const LogisticsEditor = () => {
   const store = useAppStore((state) => state.store);

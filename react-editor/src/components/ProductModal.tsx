@@ -17,14 +17,14 @@ const ByOrderForm = ({ productData, handleFormChange, handleBlur }: { productDat
     <legend className="text-base font-semibold text-slate-800 mb-4">Cálculo de Precio (Por Encargo)</legend>
     <div className="space-y-6">
       <FormRow label="Costo Base ($)" htmlFor="costo_base_final" description="Lo que vale tu producto en la plataforma donde lo compras.">
-        <input id="costo_base_final" type="text" inputMode="decimal" value={productData.costo_base_final || ''} onChange={(e) => handleFormChange(e, 'costo_base_final')} onBlur={(e) => handleBlur(e, 'costo_base_final')} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
+        <input id="costo_base_final" type="text" inputMode="decimal" value={String(productData.costo_base_final ?? '')} onChange={(e) => handleFormChange(e, 'costo_base_final')} onBlur={(e) => handleBlur(e, 'costo_base_final')} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
       </FormRow>
       <FormRow label="Peso (Lb)" htmlFor="peso_lb" description="Revisa la info del producto en la web del proveedor.">
-        <input id="peso_lb" type="text" inputMode="decimal" value={productData.peso_lb || ''} onChange={(e) => handleFormChange(e, 'peso_lb')} onBlur={(e) => handleBlur(e, 'peso_lb')} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
+        <input id="peso_lb" type="text" inputMode="decimal" value={String(productData.peso_lb ?? '')} onChange={(e) => handleFormChange(e, 'peso_lb')} onBlur={(e) => handleBlur(e, 'peso_lb')} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
       </FormRow>
       <FormRow label="Margen de Ganancia" htmlFor="margen_valor" description="Tu ganancia, en monto fijo ($) o porcentaje (%).">
         <div className="flex items-center gap-2">
-          <input id="margen_valor" type="text" inputMode="decimal" value={productData.margen_valor || ''} onChange={(e) => handleFormChange(e, 'margen_valor')} onBlur={(e) => handleBlur(e, 'margen_valor')} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
+          <input id="margen_valor" type="text" inputMode="decimal" value={String(productData.margen_valor ?? '')} onChange={(e) => handleFormChange(e, 'margen_valor')} onBlur={(e) => handleBlur(e, 'margen_valor')} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
           <select id="margen_tipo" value={productData.margen_tipo || 'fixed'} onChange={(e) => handleFormChange(e, 'margen_tipo')} className="px-4 py-2.5 rounded-lg border border-slate-300 bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="fixed">$</option>
             <option value="percent">%</option>
@@ -43,10 +43,10 @@ const InStockForm = ({ productData, handleFormChange, handleBlur }: { productDat
     <legend className="text-base font-semibold text-slate-800 mb-4">Precio (Stock Local)</legend>
     <div className="space-y-6">
       <FormRow label="Precio Base ($)" htmlFor="precio_base" description="El precio de venta final del producto, con tu ganancia ya incluida.">
-        <input id="precio_base" type="text" inputMode="decimal" value={productData.precio_base || ''} onChange={(e) => handleFormChange(e, 'precio_base')} onBlur={(e) => handleBlur(e, 'precio_base')} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
+        <input id="precio_base" type="text" inputMode="decimal" value={String(productData.precio_base ?? '')} onChange={(e) => handleFormChange(e, 'precio_base')} onBlur={(e) => handleBlur(e, 'precio_base')} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
       </FormRow>
       <FormRow label="Impuestos (%)" htmlFor="impuesto_porcentaje" description="Opcional. Un porcentaje de impuestos que se añadirá al precio base.">
-        <input id="impuesto_porcentaje" type="text" inputMode="decimal" value={productData.impuesto_porcentaje || ''} onChange={(e) => handleFormChange(e, 'impuesto_porcentaje')} onBlur={(e) => handleBlur(e, 'impuesto_porcentaje')} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
+        <input id="impuesto_porcentaje" type="text" inputMode="decimal" value={String(productData.impuesto_porcentaje ?? '')} onChange={(e) => handleFormChange(e, 'impuesto_porcentaje')} onBlur={(e) => handleBlur(e, 'impuesto_porcentaje')} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
       </FormRow>
       <label className="flex items-center gap-3 cursor-pointer">
         <input id="impuestos_incluidos" type="checkbox" checked={productData.impuestos_incluidos || false} onChange={(e) => handleFormChange(e, 'impuestos_incluidos', true)} className="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
@@ -100,18 +100,36 @@ const ProductModal = () => {
 
   const handleSave = () => {
     if (!productData.nombre) { alert('El nombre del producto es obligatorio.'); return; }
-    const dataToSave: Partial<Product> = { ...productData };
+    
+    // Crea una copia limpia de los datos para guardar, asegurando que todos los valores numéricos sean números.
+    const dataToSave: Partial<Product> = {
+      ...productData,
+      costo_base_final: parseFloat(String(productData.costo_base_final)) || 0,
+      peso_lb: parseFloat(String(productData.peso_lb)) || 0,
+      margen_valor: parseFloat(String(productData.margen_valor)) || 0,
+      precio_base: parseFloat(String(productData.precio_base)) || 0,
+      impuesto_porcentaje: parseFloat(String(productData.impuesto_porcentaje)) || 0,
+    };
+
     if (store.storeType === 'by_order') {
-      const cost = parseFloat(dataToSave.costo_base_final as string) || 0;
-      const weight = parseFloat(dataToSave.peso_lb as string) || 0;
-      const margin = parseFloat(dataToSave.margen_valor as string) || 0;
-      const airShippingCost = (store.airRate as number) * weight;
-      const seaShippingCost = (store.seaRate as number) * weight;
+      const cost = dataToSave.costo_base_final as number;
+      const weight = dataToSave.peso_lb as number;
+      const margin = dataToSave.margen_valor as number;
+      const airRate = typeof store.airRate === 'string' ? parseFloat(store.airRate) || 0 : store.airRate;
+      const seaRate = typeof store.seaRate === 'string' ? parseFloat(store.seaRate) || 0 : store.seaRate;
+      
+      const airShippingCost = airRate * weight;
+      const seaShippingCost = seaRate * weight;
+
       dataToSave.precio_final_aereo = cost + airShippingCost + (dataToSave.margen_tipo === 'fixed' ? margin : (cost + airShippingCost) * (margin / 100));
       dataToSave.precio_final_maritimo = cost + seaShippingCost + (dataToSave.margen_tipo === 'fixed' ? margin : (cost + seaShippingCost) * (margin / 100));
     }
-    if (editingProductId) updateProduct(editingProductId, dataToSave);
-    else addProduct(dataToSave as Product);
+
+    if (editingProductId) {
+      updateProduct(editingProductId, dataToSave);
+    } else {
+      addProduct(dataToSave as Product);
+    }
     closeModal();
   };
 
