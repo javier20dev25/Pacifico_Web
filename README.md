@@ -153,4 +153,4 @@ Este proyecto está bajo la Licencia MIT. Consulta el archivo [LICENSE](LICENSE)
 
 ## Contacto
 
-Para cualquier pregunta o soporte, puedes contactar a [Tu Nombre/Email/GitHub Profile].
+Para cualquier pregunta o soporte, puedes contactar a [Tu Nombre/Email/GitHub Profile]. 
