@@ -111,6 +111,26 @@ async function fetchStoreWithRetries(slug, retries = 3, delay = 100) {
   }
 }
 
+// Función para sanear los datos de la tienda, especialmente los productos
+function sanitizeStoreData(data) {
+  if (!data) return { store: {}, products: [] };
+
+  const products = Array.isArray(data.products) ? data.products : [];
+
+  const sanitizedProducts = products.map(product => ({
+    ...product,
+    precio_base: Number(product.precio_base) || 0,
+    precio_final_aereo: Number(product.precio_final_aereo) || 0,
+    precio_final_maritimo: Number(product.precio_final_maritimo) || 0,
+    peso_lb: Number(product.peso_lb) || 0,
+  }));
+
+  return {
+    ...data,
+    products: sanitizedProducts,
+  };
+}
+
 app.get('/store/:slug', async (req, res, next) => {
   const storeSlug = req.params.slug;
   console.log(`[GET /store/:slug] 1. Iniciando proceso para slug: "${storeSlug}"`);
@@ -133,16 +153,18 @@ app.get('/store/:slug', async (req, res, next) => {
       return res.status(500).send('Los datos de la tienda están corruptos o vacíos.');
     }
 
-    console.log(`[GET /store/:slug] 4. Datos de la tienda validados. Procediendo a leer la plantilla HTML.`);
+    // SANITIZACIÓN DE DATOS (NUEVO)
+    const previewData = sanitizeStoreData(store.data);
+    
+    console.log(`[GET /store/:slug] 4. Datos de la tienda validados y saneados. Procediendo a leer la plantilla HTML.`);
     
     let viewerHtml = await fs.readFile(
       path.join(__dirname, 'public', 'viewer_template.html'),
       'utf8'
     );
 
-    const previewData = store.data;
     const supabaseConfig = {
-      url: process.env.VITE_SUPABASE_URL,
+      url: process.env.SUPABASE_URL, // Corregido para usar la variable correcta
       bucket: process.env.STORAGE_BUCKET || 'imagenes',
     };
 
@@ -152,6 +174,7 @@ app.get('/store/:slug', async (req, res, next) => {
     </script>`;
     
     viewerHtml = viewerHtml.replace('__DATA_INJECTION_POINT__', injectedScript);
+    viewerHtml = viewerHtml.replace('__CACHE_BUST_VERSION__', Date.now());
 
     console.log(`[GET /store/:slug] 5. Inyección de datos completada. Enviando HTML al cliente.`);
     res.send(viewerHtml);
@@ -163,8 +186,9 @@ app.get('/store/:slug', async (req, res, next) => {
 });
 
 // =========================================================
-// SERVE STATIC FILES (Vite dev server handles this, but good for prod)
+// SERVE STATIC FILES
 // =========================================================
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'react-editor')));
 
 

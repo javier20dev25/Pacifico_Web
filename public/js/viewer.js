@@ -1,0 +1,748 @@
+// --- ESTADO GLOBAL ---
+let store = {};
+let products = [];
+let shoppingCart = {}; // { productId: quantity }
+let orderSelections = {
+  shippingMethod: null,
+  paymentMethod: null,
+  paymentPlan: null,
+  wantsDelivery: false,
+};
+
+// --- FUNCIONES DE UTILIDAD ---
+const $ = id => document.getElementById(id);
+const escapeHTML = (s) => (s || '').replace(/[&<"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+function getPublicImageUrl(pathOrUrl) {
+  if (!pathOrUrl) return 'https://placehold.co/400x300/f4f7fa/6b7280?text=IMG';
+  if (pathOrUrl.startsWith('http') || pathOrUrl.startsWith('data:')) return pathOrUrl;
+  const config = window.SUPABASE_CONFIG;
+  if (!config || !config.url || !config.bucket) {
+      console.error("Supabase config is missing or incomplete.", config);
+      return 'https://placehold.co/400x300/f4f7fa/ff0000?text=CONFIG_ERROR';
+  }
+  const supabaseUrl = config.url.endsWith('/') ? config.url : `${config.url}/`;
+  return `${supabaseUrl}storage/v1/object/public/${config.bucket}/${pathOrUrl}`;
+}
+
+function getEmbedUrl(url) {
+  if (!url) return null;
+  let embedUrl = null;
+  if (url.includes('youtube.com/watch?v=')) {
+      const videoId = url.split('watch?v=')[1].split('&')[0];
+      embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  } else if (url.includes('youtu.be/')) {
+      const videoId = url.split('youtu.be/')[1].split('?')[0];
+      embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  }
+  return embedUrl;
+}
+
+// --- LÓGICA DE MODALES ---
+function openMediaModal(type, url) {
+    const modal = $('media-modal');
+    const contentContainer = $('media-modal-content');
+    if (type === 'image') {
+        contentContainer.innerHTML = `<img src="${url}" class="max-w-[90vw] max-h-[80vh] rounded-lg shadow-xl" />`;
+        modal.classList.remove('hidden');
+    } else if (type === 'video') {
+        const embedUrl = getEmbedUrl(url);
+        if (embedUrl) {
+            contentContainer.innerHTML = `<iframe width="560" height="315" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="rounded-lg shadow-xl bg-black max-w-[90vw] max-h-[80vh]"></iframe>`;
+            modal.classList.remove('hidden');
+        } else {
+            window.open(url, '_blank');
+        }
+    }
+}
+
+function closeMediaModal() {
+    const modal = $('media-modal');
+    const contentContainer = $('media-modal-content');
+    modal.classList.add('hidden');
+    contentContainer.innerHTML = '';
+}
+
+function openCartModal() {
+    const modal = $('cart-modal');
+    renderCartSummary();
+    modal.classList.remove('hidden');
+}
+
+function closeCartModal() {
+    const modal = $('cart-modal');
+    modal.classList.add('hidden');
+}
+
+// --- LÓGICA DEL CARRITO Y RESUMEN ---
+function renderCartSummary() {
+    const body = $('cart-modal-body');
+    const cartItems = Object.keys(shoppingCart);
+    const c = store.currency || 'USD';
+
+    if (cartItems.length === 0) {
+      body.innerHTML = `
+        <p class="text-center text-slate-500 py-10">Tu carrito de compras está vacío.</p>
+        <div class="mt-6 text-right">
+          <button id="confirm-order-button" disabled class="bg-indigo-300 text-white font-bold py-3 px-6 rounded-lg cursor-not-allowed">
+            Confirmar Pedido
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    let totalUnits = 0;
+    let totalWeight = 0;
+    let subtotalAir = 0;
+    let subtotalSea = 0;
+
+    const productRows = cartItems.map(productId => {
+      const product = products.find(p => p.idLocal === productId);
+      if (!product) return '';
+
+      const quantity = shoppingCart[productId];
+      const unitWeight = product.peso_lb; // Ya saneado desde el servidor
+      const unitAirPrice = store.storeType === 'in_stock' ? product.precio_base : product.precio_final_aereo;
+      const unitSeaPrice = store.storeType === 'in_stock' ? product.precio_base : product.precio_final_maritimo;
+      
+      const totalProductWeight = unitWeight * quantity;
+      const totalProductAirPrice = unitAirPrice * quantity;
+      const totalProductSeaPrice = unitSeaPrice * quantity;
+
+      totalUnits += quantity;
+      totalWeight += totalProductWeight;
+      subtotalAir += totalProductAirPrice;
+      subtotalSea += totalProductSeaPrice;
+
+      return `
+        <tr class="border-b border-slate-100">
+          <td class="p-3 font-medium text-slate-800">
+${escapeHTML(product.nombre)}</td>
+          <td class="p-3 text-center">
+${quantity}</td>
+          <td class="p-3 text-center">
+${unitWeight.toFixed(2)} lb</td>
+          <td class="p-3 text-center text-sky-600">
+${c} ${unitAirPrice.toFixed(2)}</td>
+          <td class="p-3 text-center text-teal-600">
+${c} ${unitSeaPrice.toFixed(2)}</td>
+          <td class="p-3 text-center font-semibold">
+${totalProductWeight.toFixed(2)} lb</td>
+          <td class="p-3 text-center font-bold text-sky-700">
+${c} ${totalProductAirPrice.toFixed(2)}</td>
+          <td class="p-3 text-center font-bold text-teal-700">
+${c} ${totalProductSeaPrice.toFixed(2)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    // --- Renderizado de Opciones ---
+    
+    // 1. Selector de Envío
+    let shippingSelectorHtml = '';
+    if (store.storeType === 'on_demand') {
+        if (!orderSelections.shippingMethod) {
+            orderSelections.shippingMethod = 'air';
+        }
+        shippingSelectorHtml = `
+            <div>
+                <h4 class="text-md font-bold text-slate-700 mb-2">1. Elige el método de envío</h4>
+                <div class="flex gap-4">
+                    <label class="flex-1 p-4 border rounded-lg cursor-pointer ${orderSelections.shippingMethod === 'air' ? 'border-sky-500 bg-sky-50' : 'border-slate-200'}">
+                        <input type="radio" name="shippingMethod" value="air" class="hidden" ${orderSelections.shippingMethod === 'air' ? 'checked' : ''}>
+                        <span class="font-bold text-sky-600">✈️ Envío Aéreo</span>
+                        <span class="block text-sm text-slate-500">Rápido y seguro</span>
+                    </label>
+                    <label class="flex-1 p-4 border rounded-lg cursor-pointer ${orderSelections.shippingMethod === 'sea' ? 'border-teal-500 bg-teal-50' : 'border-slate-200'}">
+                        <input type="radio" name="shippingMethod" value="sea" class="hidden" ${orderSelections.shippingMethod === 'sea' ? 'checked' : ''}>
+                        <span class="font-bold text-teal-600">🚢 Envío Marítimo</span>
+                        <span class="block text-sm text-slate-500">Económico y para grandes volúmenes</span>
+                    </label>
+                </div>
+            </div>
+        `;
+    } else {
+        orderSelections.shippingMethod = 'stock';
+    }
+
+    // 2. Selector de Método de Pago
+    let paymentMethodSelectorHtml = '';
+    const paymentOptions = [];
+    if (store.acceptsCash) paymentOptions.push({ value: 'cash', label: 'Efectivo', icon: '💵' });
+    if (store.acceptsTransfer) paymentOptions.push({ value: 'transfer', label: 'Transferencia', icon: '🏦' });
+    if (store.paypalLink) paymentOptions.push({ value: 'paypal', label: 'PayPal', icon: '🅿️' });
+    if (store.stripeLink) paymentOptions.push({ value: 'stripe', label: 'Stripe', icon: '💳' });
+
+    if (paymentOptions.length > 0) {
+        if (!orderSelections.paymentMethod || !paymentOptions.find(p => p.value === orderSelections.paymentMethod)) {
+            orderSelections.paymentMethod = paymentOptions[0].value;
+        }
+        const paymentRadios = paymentOptions.map(opt => `
+            <label class="flex-1 p-4 border rounded-lg cursor-pointer ${orderSelections.paymentMethod === opt.value ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}">
+                <input type="radio" name="paymentMethod" value="${opt.value}" class="hidden" ${orderSelections.paymentMethod === opt.value ? 'checked' : ''}>
+                <span class="font-bold text-indigo-600">${opt.icon} ${opt.label}</span>
+            </label>
+        `).join('');
+
+        paymentMethodSelectorHtml = `
+            <div>
+                <h4 class="text-md font-bold text-slate-700 mb-2">2. Elige el método de pago</h4>
+                <div class="flex flex-wrap gap-4">
+                    ${paymentRadios}
+                </div>
+            </div>
+        `;
+    }
+
+    // 3. Selector de Plan de Pago
+    let paymentPlanSelectorHtml = '';
+    const planOptions = [];
+    if (store.accepts_full_payment) planOptions.push({ value: '100', label: 'Pagar 100% ahora' });
+    if (store.accepts_advance_payment && store.advance_options && store.advance_options.length > 0) {
+        store.advance_options.forEach(adv => {
+            planOptions.push({ value: adv, label: `Abonar ${adv}%` });
+        });
+    }
+
+    if (planOptions.length > 0) {
+        if (!orderSelections.paymentPlan || !planOptions.find(p => p.value === orderSelections.paymentPlan)) {
+            orderSelections.paymentPlan = planOptions[0].value;
+        }
+        const planRadios = planOptions.map(opt => `
+            <label class="flex-1 p-4 border rounded-lg cursor-pointer ${orderSelections.paymentPlan === opt.value ? 'border-green-500 bg-green-50' : 'border-slate-200'}">
+                <input type="radio" name="paymentPlan" value="${opt.value}" class="hidden" ${orderSelections.paymentPlan === opt.value ? 'checked' : ''}>
+                <span class="font-bold text-green-600">${opt.label}</span>
+            </label>
+        `).join('');
+
+        paymentPlanSelectorHtml = `
+            <div>
+                <h4 class="text-md font-bold text-slate-700 mb-2">3. Elige tu plan de pago</h4>
+                <div class="flex flex-wrap gap-4">
+                    ${planRadios}
+                </div>
+            </div>
+        `;
+    } else {
+        orderSelections.paymentPlan = '100'; // Si no hay opciones, es 100% por defecto
+    }
+
+    // 4. Selector de Delivery
+    let deliverySelectorHtml = '';
+    if (store.delivery_type && store.delivery_type !== 'none') {
+        let deliveryText = '';
+        switch(store.delivery_type) {
+            case 'included':
+                deliveryText = '<span class="font-medium text-green-600">Delivery incluido en su orden.</span>';
+                orderSelections.wantsDelivery = true; // Se asume que lo quiere si está incluido
+                break;
+            case 'not_included':
+                deliveryText = '<span class="font-medium text-red-600">Delivery NO incluido.</span>';
+                orderSelections.wantsDelivery = false;
+                break;
+            case 'fixed':
+                deliveryText = `Costo fijo de ${c} ${(Number(store.delivery_fixed_cost) || 0).toFixed(2)}`;
+                break;
+            case 'range':
+                deliveryText = `Costo entre ${c} ${(Number(store.delivery_range_start) || 0).toFixed(2)} y ${c} ${(Number(store.delivery_range_end) || 0).toFixed(2)}`;
+                break;
+        }
+
+        const deliveryCheckbox = (store.delivery_type === 'fixed' || store.delivery_type === 'range') ? `
+            <label class="flex items-center p-4 border rounded-lg cursor-pointer ${orderSelections.wantsDelivery ? 'border-blue-500 bg-blue-50' : 'border-slate-200'}">
+                <input type="checkbox" name="wantsDelivery" class="h-5 w-5 rounded text-blue-600" ${orderSelections.wantsDelivery ? 'checked' : ''}>
+                <span class="ml-3 font-bold text-blue-600">Sí, deseo solicitar el delivery</span>
+            </label>
+        ` : '';
+
+        deliverySelectorHtml = `
+            <div>
+                <h4 class="text-md font-bold text-slate-700 mb-2">4. Delivery</h4>
+                <div class="p-4 bg-slate-100 rounded-lg space-y-2">
+                    <p class="text-sm text-slate-800">${deliveryText}</p>
+                    ${deliveryCheckbox}
+                </div>
+            </div>
+        `;
+    }
+
+
+    // --- Cálculo de Totales ---
+    const selectedSubtotal = orderSelections.shippingMethod === 'sea' ? subtotalSea : subtotalAir;
+    let extraCost = 0;
+    let extraCostText = '';
+    if (store.extraCost && store.extraCost.enabled) {
+        const { value, type, description } = store.extraCost;
+        if (type === 'percentage') {
+            extraCost = selectedSubtotal * (Number(value) / 100);
+        } else {
+            extraCost = Number(value);
+        }
+        extraCostText = `<p class="text-xs text-slate-500">${escapeHTML(store.extraCost.description)}</p>`;
+    }
+    const grandTotal = selectedSubtotal + extraCost;
+    const amountToPay = grandTotal * (Number(orderSelections.paymentPlan) / 100);
+
+    // --- Renderizado del Resumen de Costos ---
+    const summaryHtml = `
+        <div class="mt-6 p-4 bg-slate-50 rounded-lg space-y-2">
+            <div class="flex justify-between">
+                <span class="text-slate-600">Subtotal de productos:</span>
+                <span class="font-semibold text-slate-800">
+${c} ${selectedSubtotal.toFixed(2)}</span>
+            </div>
+            ${extraCost > 0 ? `
+            <div class="flex justify-between items-start">
+                <div>
+                    <span class="text-slate-600">Costo extra:</span>
+                    ${extraCostText}
+                </div>
+                <span class="font-semibold text-slate-800">
+${c} ${extraCost.toFixed(2)}</span>
+            </div>
+            ` : ''}
+            <div class="flex justify-between font-bold text-slate-800 border-t pt-2 mt-2">
+                <span>Total del Pedido:</span>
+                <span>
+${c} ${grandTotal.toFixed(2)}</span>
+            </div>
+            <div class="flex justify-between text-xl font-bold text-indigo-700 border-t-2 border-dashed pt-2 mt-2">
+                <span>MONTO A PAGAR (${orderSelections.paymentPlan}%):</span>
+                <span>
+${c} ${amountToPay.toFixed(2)}</span>
+            </div>
+        </div>
+    `;
+
+    // --- Lógica para activar el botón ---
+    const isReady = orderSelections.shippingMethod && orderSelections.paymentMethod && orderSelections.paymentPlan;
+
+    body.innerHTML = `
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50">
+            <tr class="text-left text-slate-600">
+              <th class="p-3 font-semibold">Producto</th>
+              <th class="p-3 font-semibold text-center">Cant.</th>
+              <th class="p-3 text-center">Peso U.</th>
+              <th class="p-3 text-center text-sky-600">Valor U. (Aéreo)</th>
+              <th class="p-3 text-center text-teal-600">Valor U. (Marítimo)</th>
+              <th class="p-3 font-semibold text-center">Peso Total</th>
+              <th class="p-3 font-bold text-center">Total (Aéreo)</th>
+              <th class="p-3 font-bold text-center">Total (Marítimo)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${productRows}
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-6 p-4 bg-slate-50 rounded-lg grid grid-cols-2 gap-4">
+        <div>
+          <p class="text-sm text-slate-600">Unidades Totales:</p>
+          <p class="text-2xl font-bold text-slate-800">${totalUnits}</p>
+        </div>
+        <div>
+          <p class="text-sm text-slate-600">Peso Total Estimado:</p>
+          <p class="text-2xl font-bold text-slate-800">
+${totalWeight.toFixed(2)} lb</p>
+        </div>
+      </div>
+      
+      <div id="cart-options" class="mt-6 space-y-6">
+        ${shippingSelectorHtml}
+        ${paymentMethodSelectorHtml}
+        ${paymentPlanSelectorHtml}
+        ${deliverySelectorHtml}
+      </div>
+      
+      ${summaryHtml}
+
+      <div class="mt-6 text-right">
+        <button id="confirm-order-button" data-action="confirm-order" ${!isReady ? 'disabled' : ''} 
+                class="${isReady ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-300 cursor-not-allowed'} text-white font-bold py-3 px-6 rounded-lg transition">
+          Confirmar Pedido
+        </button>
+      </div>
+    `;
+}
+
+function generateWhatsAppMessage() {
+    const c = store.currency || 'USD';
+    let message = `*¡Hola! 👋 Quiero confirmar mi pedido:*
+
+*Resumen de Productos:*
+`;
+
+    Object.keys(shoppingCart).forEach(productId => {
+        const product = products.find(p => p.idLocal === productId);
+        const quantity = shoppingCart[productId];
+        if (product) {
+            message += `• ${product.nombre} (x${quantity})
+`;
+        }
+    });
+
+    const selectedSubtotal = Object.keys(shoppingCart).reduce((total, productId) => {
+        const product = products.find(p => p.idLocal === productId);
+        const quantity = shoppingCart[productId];
+        if (!product) return total;
+        const price = orderSelections.shippingMethod === 'sea' 
+            ? product.precio_final_maritimo 
+            : (store.storeType === 'in_stock' ? product.precio_base : product.precio_final_aereo);
+        return total + (price * quantity);
+    }, 0);
+
+    let extraCost = 0;
+    if (store.extraCost && store.extraCost.enabled) {
+        const { value, type } = store.extraCost;
+        extraCost = type === 'percentage' ? selectedSubtotal * (Number(value) / 100) : Number(value);
+    }
+    const grandTotal = selectedSubtotal + extraCost;
+    const amountToPay = grandTotal * (Number(orderSelections.paymentPlan) / 100);
+
+    message += `
+*Detalles del Pedido:*
+`;
+    if (store.storeType === 'on_demand') {
+        message += `- *Método de Envío:* ${orderSelections.shippingMethod === 'air' ? 'Aéreo ✈️' : 'Marítimo 🚢'}
+`;
+    }
+    message += `- *Método de Pago:* ${orderSelections.paymentMethod}
+`;
+    message += `- *Plan de Pago:* ${orderSelections.paymentPlan}%
+`;
+    
+    if (orderSelections.wantsDelivery) {
+        message += `- *Delivery:* Solicitado
+`;
+    } else {
+        message += `- *Delivery:* No solicitado
+`;
+    }
+
+    if (extraCost > 0) {
+        message += `
+*Nota sobre Costo Extra:*
+_${escapeHTML(store.extraCost.description)}_
+`;
+    }
+
+    message += `
+*Resumen de Costos:*
+`;
+    message += `*- Subtotal:* ${c} ${selectedSubtotal.toFixed(2)}
+`;
+    if (extraCost > 0) {
+        message += `*- Costo Extra:* ${c} ${extraCost.toFixed(2)}
+`;
+    }
+    message += `*- TOTAL DEL PEDIDO:* *
+${c} ${grandTotal.toFixed(2)}*
+`;
+    message += `*- MONTO A PAGAR (${orderSelections.paymentPlan}%):* *
+${c} ${amountToPay.toFixed(2)}*
+`;
+
+    message += `
+¡Gracias! Espero su respuesta.`;
+
+    const phoneNumber = store.whatsapp.replace(/\s+|-/g, '');
+    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    
+    window.open(url, '_blank');
+}
+
+// --- LÓGICA DE RENDERIZADO PRINCIPAL ---
+function renderHeader() {
+    const headerContainer = $('store-header');
+    if(!headerContainer) return;
+    headerContainer.innerHTML = ''; // Limpiamos el header para un look más limpio
+
+    const cartContainer = $('cart-button-container');
+    if(!cartContainer) return;
+    cartContainer.innerHTML = `
+        <button id="cart-button" data-action="open-cart" class="fixed bottom-5 right-5 w-16 h-16 bg-indigo-500 text-white rounded-full font-semibold text-sm hover:bg-indigo-600 transition shadow-lg flex items-center justify-center z-40">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            <span id="cart-count" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center border-2 border-white hidden">0</span>
+        </button>
+    `;
+}
+
+function renderVendorProfile() {
+    const profileContainer = $('vendor-profile');
+    if(!profileContainer) return;
+    const logoUrl = getPublicImageUrl(store.logoUrl);
+    const storeName = store.nombre || 'Tienda Ejemplo';
+    const description = store.descripcion || 'La mejor selección de productos de calidad garantizada.';
+    
+    const contactButton = store.whatsapp ? `
+        <a href="https://wa.me/${store.whatsapp.replace(/\s+|-/g, '')}" target="_blank" class="text-indigo-600 font-semibold hover:text-indigo-700 transition flex items-center">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-2 4v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7"></path></svg>
+            Contactar
+        </a>` : '';
+
+    const videoButton = store.youtubeLink ? `
+        <a href="#" data-action="view-media" data-type="video" data-url="${escapeHTML(store.youtubeLink)}" class="text-purple-600 font-semibold hover:text-purple-700 transition flex items-center">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            Ver Video
+        </a>` : '';
+
+    profileContainer.innerHTML = `
+      <div class="flex flex-col items-center">
+          <div class="w-20 h-20 rounded-full header-gradient flex items-center justify-center mb-3 overflow-hidden">
+              <img src="${logoUrl}" alt="Logo de ${escapeHTML(storeName)}" class="w-full h-full object-cover cursor-pointer" data-action="view-media" data-type="image" data-url="${logoUrl}">
+          </div>
+          <h2 class="text-3xl font-extrabold text-gray-800">${escapeHTML(storeName)}</h2>
+          <p class="text-gray-500 text-lg mt-1">${escapeHTML(description)}</p>
+          <div class="flex items-center justify-center space-x-6 mt-4">
+            ${contactButton}
+            ${videoButton}
+          </div>
+      </div>
+    `;
+}
+
+function renderProducts() {
+    const gridContainer = $('products-grid');
+    if (!gridContainer) return;
+    try {
+        if (!products || products.length === 0) {
+            console.warn("No se encontraron productos para renderizar.");
+            gridContainer.innerHTML = '<p class="text-gray-500 col-span-full text-center">No hay productos en esta tienda todavía.</p>';
+            return;
+        }
+        console.log(`Renderizando ${products.length} producto(s).`);
+        gridContainer.innerHTML = products.map(renderProductCard).join('');
+        console.log("Grid de productos actualizado.");
+    } catch (error) {
+        console.error("Error crítico durante el renderizado de productos:", error);
+        gridContainer.innerHTML = '<p class="text-red-500 col-span-full text-center">Ocurrió un error al mostrar los productos. Revisa la consola.</p>';
+    }
+}
+
+function renderProductCard(product) {
+    const imageUrl = getPublicImageUrl(product.imageUrl);
+    const id = product.idLocal;
+    const c = store.currency || 'USD';
+
+    // Precios (ahora seguros gracias a la sanitización del servidor)
+    let pricesHtml = '';
+    if (store.storeType === 'in_stock') {
+        pricesHtml = `<div class="flex justify-between items-end">
+                        <span class="text-base font-semibold text-gray-700 uppercase">Precio:</span>
+                        <span class="text-2xl font-extrabold text-indigo-800">
+${c} ${product.precio_base.toFixed(2)}</span>
+                      </div>`;
+    } else {
+        pricesHtml = `
+          <div class="flex justify-between items-end border-b pb-2 mb-2">
+              <span class="text-base font-semibold text-blue-600 uppercase">AÉREO:</span>
+              <span class="text-2xl font-extrabold text-blue-800">
+${c} ${product.precio_final_aereo.toFixed(2)}</span>
+          </div>
+          <div class="flex justify-between items-end">
+              <span class="text-base font-semibold text-green-600 uppercase">MARÍTIMO:</span>
+              <span class="text-xl font-bold text-green-700">
+${c} ${product.precio_final_maritimo.toFixed(2)}</span>
+          </div>`;
+    }
+
+    // Tiempos de entrega
+    let deliveryHtml = '';
+    if (store.storeType === 'in_stock') {
+        deliveryHtml = `<div class="flex items-center text-green-600"><svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span class="font-medium">Disponible</span></div>`;
+    } else {
+        deliveryHtml = `
+          <div class="flex items-center text-blue-600">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <span class="font-medium">AÉREO:</span>
+              <span class="ml-auto text-gray-600 font-bold">${store.airMinDays || '7'}-${store.airMaxDays || '15'} días</span>
+          </div>
+          <div class="flex items-center text-green-600">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+              <span class="font-medium">MARÍTIMO:</span>
+              <span class="ml-auto text-gray-600 font-bold">${store.seaMinDays || '30'}-${store.seaMaxDays || '45'} días</span>
+          </div>
+        `;
+    }
+
+    const videoButtonHtml = product.youtubeLink ? `
+      <button data-action="view-media" data-type="video" data-url="${escapeHTML(product.youtubeLink)}" class="flex-1 px-4 py-3 bg-purple-500 text-white rounded-lg font-bold hover:bg-purple-600 transition transform hover:scale-[1.02] shadow-md shadow-purple-300">
+          <svg class="w-5 h-5 inline-block mr-2 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+          Ver Video
+      </button>` : '';
+
+    return `
+      <div class="product-card bg-white rounded-xl overflow-hidden p-5 flex flex-col justify-between" data-product-id="${id}">
+          <div>
+              <div class="h-48 bg-gray-100 rounded-lg mb-4 flex items-center justify-center border border-gray-200 overflow-hidden">
+                  <img src="${imageUrl}" alt="Imagen de ${escapeHTML(product.nombre)}" class="w-full h-full object-cover cursor-pointer" data-action="view-media" data-type="image" data-url="${imageUrl}">
+              </div>
+              <h4 class="text-xl font-bold text-gray-800">${escapeHTML(product.nombre)}</h4>
+              <p class="text-sm text-gray-500 mb-4">${escapeHTML(product.descripcion)}</p>
+              <div class="mb-4">
+                  ${pricesHtml}
+              </div>
+              <p class="text-xs font-semibold text-gray-700 mb-3">Tiempos de Entrega Estimados:</p>
+              <div class="space-y-1 text-sm mb-6">
+                  ${deliveryHtml}
+              </div>
+          </div>
+          <div class="flex space-x-3 pt-4 border-t border-gray-100">
+              <div id="add-to-cart-container-${id}" class="flex-1">
+                  <button data-action="add-to-cart" data-product-id="${id}" class="w-full px-4 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition transform hover:scale-[1.02] shadow-md shadow-green-300">
+                      <svg class="w-5 h-5 inline-block mr-2 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                      Añadir
+                  </button>
+              </div>
+              ${videoButtonHtml}
+          </div>
+      </div>
+    `;
+}
+
+// --- LÓGICA DEL CARRITO ---
+function handleCartClick(productId, operation) {
+    console.log(`handleCartClick llamado con productId: ${productId}, operacion: ${operation}`);
+    const currentQuantity = shoppingCart[productId] || 0;
+
+    if (operation === 'add') {
+        if (currentQuantity === 0) {
+            shoppingCart[productId] = 1;
+        }
+    } else if (operation === 'increment') {
+        shoppingCart[productId] = currentQuantity + 1;
+    } else if (operation === 'decrement') {
+        if (currentQuantity > 1) {
+            shoppingCart[productId] = currentQuantity - 1;
+        } else {
+            delete shoppingCart[productId];
+        }
+    }
+    
+    updateProductButton(productId);
+    updateCartTotal();
+}
+
+function updateProductButton(productId) {
+    const container = $(`add-to-cart-container-${productId}`);
+    if (!container) return;
+
+    const quantity = shoppingCart[productId];
+
+    if (!quantity) {
+        container.innerHTML = `
+          <button data-action="add-to-cart" data-product-id="${productId}" class="w-full px-4 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition transform hover:scale-[1.02] shadow-md shadow-green-300">
+              <svg class="w-5 h-5 inline-block mr-2 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+              Añadir
+          </button>
+        `;
+    } else {
+        container.innerHTML = `
+          <div class="flex items-center justify-center w-full">
+              <button data-action="decrement" data-product-id="${productId}" class="px-4 py-3 bg-gray-300 text-gray-800 rounded-l-lg font-bold hover:bg-gray-400 transition">-</button>
+              <span class="px-4 py-3 bg-gray-100 text-gray-800 font-bold text-lg">${quantity}</span>
+              <button data-action="increment" data-product-id="${productId}" class="px-4 py-3 bg-gray-300 text-gray-800 rounded-r-lg font-bold hover:bg-gray-400 transition">+</button>
+          </div>
+        `;
+    }
+}
+
+function updateCartTotal() {
+      const cartCount = $('cart-count');
+      if (!cartCount) return;
+
+      const totalItems = Object.values(shoppingCart).reduce((sum, quantity) => sum + quantity, 0);
+      
+      cartCount.textContent = totalItems;
+      cartCount.classList.toggle('hidden', totalItems === 0);
+}
+
+// --- MANEJADOR DE EVENTOS ---
+function attachEventListeners() {
+      document.body.addEventListener('click', function(event) {
+          const target = event.target.closest('[data-action]');
+          if (!target) return;
+
+          console.log("Click detectado en un elemento de acción:", target);
+
+          const { action, productId, url, type } = target.dataset;
+          
+          console.log(`Acción: ${action}, Producto ID: ${productId}`);
+
+          switch(action) {
+            case 'add-to-cart':
+              console.log("Llamando a handleCartClick con 'add'");
+              handleCartClick(productId, 'add');
+              break;
+            case 'increment':
+              console.log("Llamando a handleCartClick con 'increment'");
+              handleCartClick(productId, 'increment');
+              break;
+            case 'decrement':
+              console.log("Llamando a handleCartClick con 'decrement'");
+              handleCartClick(productId, 'decrement');
+              break;
+            case 'view-media':
+              console.log(`Llamando a openMediaModal con tipo: ${type}`);
+              if (url && type) openMediaModal(type, url);
+              break;
+            case 'open-cart':
+              console.log("Llamando a openCartModal");
+              openCartModal();
+              break;
+            case 'confirm-order':
+              console.log("Llamando a generateWhatsAppMessage");
+              generateWhatsAppMessage();
+              break;
+          }
+      });
+
+      if($('cart-modal-body')) {
+        $('cart-modal-body').addEventListener('change', function(event) {
+            const target = event.target;
+            console.log(`Cambio detectado en el modal del carrito:`, target);
+            if (target.name === 'shippingMethod') orderSelections.shippingMethod = target.value;
+            if (target.name === 'paymentMethod') orderSelections.paymentMethod = target.value;
+            if (target.name === 'paymentPlan') orderSelections.paymentPlan = target.value;
+            if (target.name === 'wantsDelivery') orderSelections.wantsDelivery = target.checked;
+            renderCartSummary();
+        });
+      }
+
+      if($('media-modal-close')) $('media-modal-close').addEventListener('click', closeMediaModal);
+      if($('media-modal')) $('media-modal').addEventListener('click', e => e.target.id === 'media-modal' && closeMediaModal());
+      if($('cart-modal-close')) $('cart-modal-close').addEventListener('click', closeCartModal);
+      if($('cart-modal')) $('cart-modal').addEventListener('click', e => e.target.id === 'cart-modal' && closeCartModal());
+}
+
+// --- PUNTO DE ENTRADA ---
+function main() {
+  try {
+    console.log("Viewer script iniciando...");
+    if (!window.STORE_DATA || !window.STORE_DATA.store) {
+      console.error('FATAL: STORE_DATA no está disponible o está malformado.');
+      document.body.innerHTML = '<p class="text-red-500 text-center mt-10">Error: No se pudieron cargar los datos de la tienda.</p>';
+      return;
+    }
+    console.log("STORE_DATA recibido del servidor:", window.STORE_DATA);
+    
+    store = window.STORE_DATA.store;
+    products = window.STORE_DATA.products || [];
+    console.log(`Tienda "${store.nombre}" cargada con ${products.length} productos.`);
+
+    renderHeader();
+    renderVendorProfile();
+    renderProducts();
+    attachEventListeners();
+    updateCartTotal();
+    console.log("Script del visualizador finalizado con éxito.");
+  } catch (error) {
+    console.error("Error fatal durante la inicialización del visualizador:", error);
+    document.body.innerHTML = `<p class="text-red-500 text-center mt-10">Ocurrió un error al cargar la tienda. Revisa la consola para más detalles.</p>`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', main);
