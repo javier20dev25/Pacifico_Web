@@ -13,16 +13,18 @@ export default [
       globals: {
         ...globals.node,
         ...globals.commonjs,
+        ...globals.browser,
       },
     },
     rules: {
         "no-unused-vars": ["error", { "caughtErrorsIgnorePattern": "^_" }],
+        "no-useless-escape": "off",
     },
     ignores: [
         "node_modules/", 
         "dist/", 
         "build/", 
-        "react-editor/", 
+        // "react-editor/", // Habilitado para linting
         "react-editor.bak/", 
         "backups/", 
         "db/", 
