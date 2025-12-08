@@ -6,6 +6,7 @@ let orderSelections = {
   shippingMethod: null,
   paymentMethod: null,
   paymentPlan: null,
+  selectedInstallment: null,
   wantsDelivery: false,
 };
 
@@ -82,15 +83,19 @@ function closeCartModal() {
 
 function generateWhatsAppMessage() {
     const c = store.currency || 'USD';
-    let message = `*¡Hola! 👋 Quiero confirmar mi pedido:*\n\n*Resumen de Productos:*\n`;
+    let message = `*¡Hola! 👋 Quiero confirmar mi pedido:*
+
+*Resumen de Productos:*
+`;
 
     Object.keys(shoppingCart).forEach(productId => {
         const product = products.find(p => p.idLocal === productId);
         const quantity = shoppingCart[productId];
-        if (product) message += `• ${product.nombre} (x${quantity})\n`;
+        if (product) message += `• ${product.nombre} (x${quantity})
+`;
     });
 
-    const selectedSubtotal = Object.keys(shoppingCart).reduce((total, productId) => {
+    const productSubtotal = Object.keys(shoppingCart).reduce((total, productId) => {
         const product = products.find(p => p.idLocal === productId);
         const quantity = shoppingCart[productId];
         if (!product) return total;
@@ -103,52 +108,73 @@ function generateWhatsAppMessage() {
     let extraCost = 0;
     if (store.extra_cost && store.extra_cost.enabled && store.extra_cost.value > 0) {
         const { value, type } = store.extra_cost;
-        if (type && type.startsWith('percentage')) {
-            extraCost = selectedSubtotal * (Number(value) / 100);
-        } else {
-            extraCost = Number(value);
-        }
+        if (type && type.startsWith('percentage')) extraCost = productSubtotal * (Number(value) / 100);
+        else extraCost = Number(value);
     }
     
     const deliveryTotalCost = (orderSelections.wantsDelivery && store.delivery_type === 'fixed') ? (Number(store.delivery_fixed_cost) || 0) : 0;
-    const grandTotal = selectedSubtotal + extraCost + deliveryTotalCost;
-    const amountToPay = grandTotal * (Number(orderSelections.paymentPlan) / 100);
-    const pendingAmount = grandTotal - amountToPay;
+    
+    // --- LÓGICA DE PAGO ACTUALIZADA ---
+    const upfrontCosts = extraCost + deliveryTotalCost;
+    const productDownPayment = productSubtotal * (Number(orderSelections.paymentPlan) / 100);
+    const amountToPay = productDownPayment + upfrontCosts;
+    const pendingAmount = productSubtotal - productDownPayment;
+    const grandTotal = productSubtotal + upfrontCosts;
+    // --- FIN ---
 
-    message += `\n*Detalles del Pedido:*\n`;
+    message += `
+*Detalles del Pedido:*
+`;
     if (store.store_type === 'by_order') {
-        message += `- *Método de Envío:* ${orderSelections.shippingMethod === 'air' ? 'Aéreo ✈️' : 'Marítimo 🚢'}\n`;
+        message += `- *Método de Envío:* ${orderSelections.shippingMethod === 'air' ? 'Aéreo ✈️' : 'Marítimo 🚢'}
+`;
     }
-    message += `- *Método de Pago:* ${orderSelections.paymentMethod}\n`;
-    message += `- *Plan de Pago:* Abono del ${orderSelections.paymentPlan}%\n`;
+    message += `- *Método de Pago:* ${orderSelections.paymentMethod}
+`;
+    message += `- *Plan de Pago:* Abono del ${orderSelections.paymentPlan}% sobre productos
+`;
     
     if (orderSelections.wantsDelivery) {
-        message += `- *Delivery:* Solicitado\n`;
+        message += `- *Delivery:* Solicitado
+`;
     }
 
     if (pendingAmount > 0.01 && orderSelections.selectedInstallment) {
         const installmentOption = store.installment_options.find(opt => opt.max == orderSelections.selectedInstallment);
         if (installmentOption) {
             const installmentValue = (pendingAmount / installmentOption.max).toFixed(2);
-            message += `- *Cuotas para Saldo:* ${installmentOption.max} ${installmentOption.type} de ${c} ${installmentValue}\n`;
+            message += `- *Cuotas para Saldo:* ${installmentOption.max} ${translateInstallmentType(installmentOption.type)} de ${c} ${installmentValue}
+`;
         }
     }
 
     if (extraCost > 0) {
-        message += `\n*Nota sobre Costo Extra:*\n_${escapeHTML(store.extra_cost.description)}_\n`;
+        message += `
+*Nota sobre Costo Extra:*
+_${escapeHTML(store.extra_cost.description)}_
+`;
     }
 
-    message += `\n*Resumen de Costos:*\n`;
-    message += `*- Subtotal:* ${c} ${selectedSubtotal.toFixed(2)}\n`;
-    if (extraCost > 0) message += `*- Costo Extra:* ${c} ${extraCost.toFixed(2)}\n`;
-    if (deliveryTotalCost > 0) message += `*- Delivery:* ${c} ${deliveryTotalCost.toFixed(2)}\n`;
-    message += `*- TOTAL DEL PEDIDO:* *${c} ${grandTotal.toFixed(2)}*\n`;
-    message += `*- MONTO A PAGAR (${orderSelections.paymentPlan}%):* *${c} ${amountToPay.toFixed(2)}*\n`;
+    message += `
+*Resumen de Costos:*
+`;
+    message += `*- Subtotal de Productos:* ${c} ${productSubtotal.toFixed(2)}
+`;
+    if (extraCost > 0) message += `*- Costo Extra:* ${c} ${extraCost.toFixed(2)}
+`;
+    if (deliveryTotalCost > 0) message += `*- Delivery:* ${c} ${deliveryTotalCost.toFixed(2)}
+`;
+    message += `*- TOTAL DEL PEDIDO:* *${c} ${grandTotal.toFixed(2)}*
+`;
+    message += `*- MONTO A PAGAR HOY:* *${c} ${amountToPay.toFixed(2)}*
+`;
     if (pendingAmount > 0.01) {
-        message += `*- SALDO PENDIENTE:* *${c} ${pendingAmount.toFixed(2)}*\n`;
+        message += `*- SALDO PENDIENTE (sobre productos):* *${c} ${pendingAmount.toFixed(2)}*
+`;
     }
 
-    message += `\n¡Gracias! Espero su respuesta.`;
+    message += `
+¡Gracias! Espero su respuesta.`;
 
     const phoneNumber = store.whatsapp.replace(/\s+|-/g, '');
     const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
@@ -157,6 +183,9 @@ function generateWhatsAppMessage() {
 }
 
 // --- LÓGICA DE RENDERIZADO PRINCIPAL ---
+// ... (resto del archivo sin cambios) ...
+// (El resto de las funciones como renderHeader, renderVendorProfile, etc. permanecen igual)
+
 function renderHeader() {
     const headerContainer = $('store-header');
     if(!headerContainer) return;
@@ -408,7 +437,7 @@ function attachEventListeners() {
             if (target.name === 'shippingMethod') orderSelections.shippingMethod = target.value;
             if (target.name === 'paymentMethod') orderSelections.paymentMethod = target.value;
             if (target.name === 'paymentPlan') orderSelections.paymentPlan = target.value;
-            if (target.name === 'selectedInstallment') orderSelections.selectedInstallment = target.value; // AÑADIDO
+            if (target.name === 'selectedInstallment') orderSelections.selectedInstallment = target.value;
             if (target.name === 'wantsDelivery') orderSelections.wantsDelivery = target.checked;
             window.renderCartSummary();
         });

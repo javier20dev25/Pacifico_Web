@@ -1,9 +1,19 @@
 /* global $, shoppingCart, store, products, orderSelections, escapeHTML */
 
+// FUNCIÓN DE TRADUCCIÓN (MEDIDA DE SEGURIDAD PARA DATOS ANTIGUOS)
+function translateInstallmentType(type) {
+    const translations = {
+        monthly: 'meses',
+        biweekly: 'quincenas',
+        weekly: 'semanas',
+    };
+    return translations[type] || type; // Devuelve la traducción o el valor original si no hay coincidencia
+}
+
 /* Este archivo ahora contiene la lógica de renderizado del carrito.
    Se asume que viewer.js ya ha sido cargado y ha expuesto sus dependencias en window. */
 window.renderCartSummary = function() {
-    console.log('cart.summary.js v20251208 — renderCartSummary loaded'); // MARCADOR DE VERSIÓN
+    console.log('cart.summary.js v20251208.4 — renderCartSummary loaded'); // MARCADOR DE VERSIÓN
     const body = $('cart-modal-body');
     const cartItems = Object.keys(shoppingCart);
     const c = store.currency || 'USD';
@@ -22,7 +32,7 @@ window.renderCartSummary = function() {
 
     // --- INICIALIZACIÓN DEFENSIVA DE VARIABLES ---
     let totalUnits = 0, totalWeight = 0, subtotalAir = 0, subtotalSea = 0;
-    let shippingSelectorHtml = '', paymentMethodSelectorHtml = '', paymentPlanSelectorHtml = '', installmentsSelectorHtml = '', deliverySelectorHtml = '', summaryHtml = '';
+    let shippingSelectorHtml = '', paymentMethodSelectorHtml = '', paymentPlanSelectorHtml = '', installmentsSelectorHtml = '', deliverySelectorHtml = '';
 
     const productRows = cartItems.map(productId => {
       const product = products.find(p => p.idLocal === productId);
@@ -82,6 +92,9 @@ window.renderCartSummary = function() {
             if (store.advance_options[advKey]) planOptions.push({ value: advKey, label: `Abonar ${advKey}%` });
         });
     }
+
+    planOptions.sort((a, b) => Number(b.value) - Number(a.value));
+
     if (planOptions.length > 0) {
         if (!orderSelections.paymentPlan || !planOptions.find(p => p.value === orderSelections.paymentPlan)) orderSelections.paymentPlan = planOptions[0].value;
         const planRadios = planOptions.map(opt => `<label class="flex-1 p-4 border rounded-lg cursor-pointer ${orderSelections.paymentPlan === opt.value ? 'border-green-500 bg-green-50' : 'border-slate-200'}"><input type="radio" name="paymentPlan" value="${opt.value}" class="hidden" ${orderSelections.paymentPlan === opt.value ? 'checked' : ''}><span class="font-bold text-green-600">${opt.label}</span></label>`).join('');
@@ -90,26 +103,41 @@ window.renderCartSummary = function() {
         orderSelections.paymentPlan = '100';
     }
 
-    const selectedSubtotal = orderSelections.shippingMethod === 'sea' ? subtotalSea : subtotalAir;
+    // --- CÁLCULO DE TOTALES CON NUEVA LÓGICA DE NEGOCIO ---
+    const productSubtotal = orderSelections.shippingMethod === 'sea' ? subtotalSea : subtotalAir;
     let extraCost = 0;
     if (store.extra_cost && store.extra_cost.enabled && store.extra_cost.value > 0) {
         const { value, type } = store.extra_cost;
-        if (type && type.startsWith('percentage')) extraCost = selectedSubtotal * (Number(value) / 100);
+        if (type && type.startsWith('percentage')) extraCost = productSubtotal * (Number(value) / 100);
         else extraCost = Number(value);
     }
     const deliveryTotalCost = (orderSelections.wantsDelivery && store.delivery_type === 'fixed') ? (Number(store.delivery_fixed_cost) || 0) : 0;
-    const grandTotal = selectedSubtotal + extraCost + deliveryTotalCost;
-    const amountToPay = grandTotal * (Number(orderSelections.paymentPlan) / 100);
-    const pendingAmount = grandTotal - amountToPay;
+    
+    // Costos que no se financian
+    const upfrontCosts = extraCost + deliveryTotalCost;
+    
+    // Monto del subtotal de productos que se abona
+    const productDownPayment = productSubtotal * (Number(orderSelections.paymentPlan) / 100);
+    
+    // El monto a pagar es el abono de los productos MÁS todos los costos extra
+    const amountToPay = productDownPayment + upfrontCosts;
+
+    // El saldo pendiente es SÓLO sobre los productos
+    const pendingAmount = productSubtotal - productDownPayment;
+
+    // El total del pedido sigue siendo la suma de todo
+    const grandTotal = productSubtotal + upfrontCosts;
+    
+    // --- FIN DE NUEVA LÓGICA DE CÁLCULO ---
 
     if (store.accepts_installments && pendingAmount > 0.01 && Array.isArray(store.installment_options) && store.installment_options.length > 0) {
         if (!orderSelections.selectedInstallment) orderSelections.selectedInstallment = store.installment_options[0].max;
         const installmentRadios = store.installment_options.map(opt => {
             const installmentValue = (pendingAmount / opt.max).toFixed(2);
-            return `<label class="flex-1 p-4 border rounded-lg cursor-pointer ${orderSelections.selectedInstallment == opt.max ? 'border-purple-500 bg-purple-50' : 'border-slate-200'}"><input type="radio" name="selectedInstallment" value="${opt.max}" class="hidden" ${orderSelections.selectedInstallment == opt.max ? 'checked' : ''}><span class="font-bold text-purple-600">${opt.max} ${opt.type}</span><span class="block text-sm text-slate-500">Pagarías ${c} ${installmentValue} por cuota</span></label>`;
+            const translatedType = translateInstallmentType(opt.type);
+            return `<label class="flex-1 p-4 border rounded-lg cursor-pointer ${orderSelections.selectedInstallment == opt.max ? 'border-purple-500 bg-purple-50' : 'border-slate-200'}"><input type="radio" name="selectedInstallment" value="${opt.max}" class="hidden" ${orderSelections.selectedInstallment == opt.max ? 'checked' : ''}><span class="font-bold text-purple-600">${opt.max} ${translatedType}</span><span class="block text-sm text-slate-500">Pagarías ${c} ${installmentValue} por cuota</span></label>`;
         }).join('');
-        // CORREGIDO: Usar installmentRadios (singular) consistentemente
-        installmentsSelectorHtml = `<div><h4 class="text-md font-bold text-slate-700 mb-2">4. Paga el resto en cuotas</h4><div class="p-4 bg-slate-50 rounded-lg"><p class="text-sm text-slate-600 mb-3">Saldo pendiente: <span class="font-bold">${c} ${pendingAmount.toFixed(2)}</span></p><div class="flex flex-wrap gap-4">${installmentRadios}</div></div></div>`;
+        installmentsSelectorHtml = `<div><h4 class="text-md font-bold text-slate-700 mb-2">4. Paga el resto en cuotas</h4><div class="p-4 bg-slate-50 rounded-lg"><p class="text-sm text-slate-600 mb-3">Saldo pendiente a financiar: <span class="font-bold">${c} ${pendingAmount.toFixed(2)}</span></p><div class="flex flex-wrap gap-4">${installmentRadios}</div></div></div>`;
     }
 
     if (store.delivery_type && store.delivery_type !== 'no') {
@@ -123,13 +151,24 @@ window.renderCartSummary = function() {
         deliverySelectorHtml = `<div><h4 class="text-md font-bold text-slate-700 mb-2">5. Delivery</h4><div class="p-4 bg-slate-50 rounded-lg space-y-3"><p class="text-sm text-slate-800">${deliveryText}</p>${deliveryCheckbox}</div></div>`;
     }
 
+    let installmentSummary = '';
+    if (store.accepts_installments && pendingAmount > 0.01 && orderSelections.selectedInstallment) {
+        const selectedOption = store.installment_options.find(opt => opt.max == orderSelections.selectedInstallment);
+        if (selectedOption) {
+            const installmentValue = (pendingAmount / selectedOption.max).toFixed(2);
+            installmentSummary = `<div class="flex justify-between text-sm mt-1"><span class="text-slate-600">Plan de cuotas:</span><span class="font-semibold text-slate-800">Pagarás ${c} ${installmentValue} durante ${selectedOption.max} ${translateInstallmentType(selectedOption.type)}</span></div>`;
+        }
+    }
+
     const extraCostText = (store.extra_cost && store.extra_cost.enabled && store.extra_cost.value > 0) ? `<p class="text-xs text-slate-500">${escapeHTML(store.extra_cost.description)}</p>` : '';
-    summaryHtml = `<div class="mt-6 p-4 bg-slate-50 rounded-lg space-y-2">
-            <div class="flex justify-between"><span class="text-slate-600">Subtotal:</span><span class="font-semibold text-slate-800">${c} ${selectedSubtotal.toFixed(2)}</span></div>
+    const summaryHtml = `<div class="mt-6 p-4 bg-slate-50 rounded-lg space-y-2">
+            <div class="flex justify-between"><span class="text-slate-600">Subtotal de productos:</span><span class="font-semibold text-slate-800">${c} ${productSubtotal.toFixed(2)}</span></div>
             ${extraCost > 0 ? `<div class="flex justify-between items-start"><div><span class="text-slate-600">Costo extra:</span>${extraCostText}</div><span class="font-semibold text-slate-800">${c} ${extraCost.toFixed(2)}</span></div>` : ''}
             ${deliveryTotalCost > 0 ? `<div class="flex justify-between"><span class="text-slate-600">Costo de delivery:</span><span class="font-semibold text-slate-800">${c} ${deliveryTotalCost.toFixed(2)}</span></div>` : ''}
             <div class="flex justify-between font-bold text-slate-800 border-t pt-2 mt-2"><span>Total del Pedido:</span><span>${c} ${grandTotal.toFixed(2)}</span></div>
-            <div class="flex justify-between text-xl font-bold text-indigo-700 border-t-2 border-dashed pt-2 mt-2"><span>MONTO A PAGAR (${orderSelections.paymentPlan}%):</span><span>${c} ${amountToPay.toFixed(2)}</span></div>
+            <div class="flex justify-between text-xl font-bold text-indigo-700 border-t-2 border-dashed pt-2 mt-2"><span>MONTO A PAGAR HOY:</span><span>${c} ${amountToPay.toFixed(2)}</span></div>
+            ${pendingAmount > 0.01 ? `<div class="flex justify-between text-sm mt-1"><span class="text-slate-600">Saldo pendiente a financiar:</span><span class="font-semibold text-slate-800">${c} ${pendingAmount.toFixed(2)}</span></div>` : ''}
+            ${installmentSummary}
         </div>`;
 
     const isReady = orderSelections.shippingMethod && orderSelections.paymentMethod && orderSelections.paymentPlan;
