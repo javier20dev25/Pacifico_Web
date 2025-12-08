@@ -13,24 +13,17 @@ function translateInstallmentType(type) {
 /* Este archivo ahora contiene la lógica de renderizado del carrito.
    Se asume que viewer.js ya ha sido cargado y ha expuesto sus dependencias en window. */
 window.renderCartSummary = function() {
-    console.log('cart.summary.js v20251208.4 — renderCartSummary loaded'); // MARCADOR DE VERSIÓN
+    console.log('cart.summary.js v20251208.final — renderCartSummary loaded'); // MARCADOR DE VERSIÓN
     const body = $('cart-modal-body');
     const cartItems = Object.keys(shoppingCart);
     const c = store.currency || 'USD';
 
     if (cartItems.length === 0) {
-      body.innerHTML = `
-        <p class="text-center text-slate-500 py-10">Tu carrito de compras está vacío.</p>
-        <div class="mt-6 text-right">
-          <button id="confirm-order-button" disabled class="bg-indigo-300 text-white font-bold py-3 px-6 rounded-lg cursor-not-allowed">
-            Confirmar Pedido
-          </button>
-        </div>
-      `;
+      body.innerHTML = `<p class="text-center text-slate-500 py-10">Tu carrito de compras está vacío.</p>`;
       return;
     }
 
-    // --- INICIALIZACIÓN DEFENSIVA DE VARIABLES ---
+    // --- INICIALIZACIÓN ---
     let totalUnits = 0, totalWeight = 0, subtotalAir = 0, subtotalSea = 0;
     let shippingSelectorHtml = '', paymentMethodSelectorHtml = '', paymentPlanSelectorHtml = '', installmentsSelectorHtml = '', deliverySelectorHtml = '';
 
@@ -112,30 +105,26 @@ window.renderCartSummary = function() {
         else extraCost = Number(value);
     }
     const deliveryTotalCost = (orderSelections.wantsDelivery && store.delivery_type === 'fixed') ? (Number(store.delivery_fixed_cost) || 0) : 0;
-    
-    // Costos que no se financian
     const upfrontCosts = extraCost + deliveryTotalCost;
-    
-    // Monto del subtotal de productos que se abona
     const productDownPayment = productSubtotal * (Number(orderSelections.paymentPlan) / 100);
-    
-    // El monto a pagar es el abono de los productos MÁS todos los costos extra
     const amountToPay = productDownPayment + upfrontCosts;
-
-    // El saldo pendiente es SÓLO sobre los productos
     const pendingAmount = productSubtotal - productDownPayment;
-
-    // El total del pedido sigue siendo la suma de todo
     const grandTotal = productSubtotal + upfrontCosts;
     
-    // --- FIN DE NUEVA LÓGICA DE CÁLCULO ---
-
+    // --- LÓGICA DE OPCIONES DE CUOTAS ---
     if (store.accepts_installments && pendingAmount > 0.01 && Array.isArray(store.installment_options) && store.installment_options.length > 0) {
-        if (!orderSelections.selectedInstallment) orderSelections.selectedInstallment = store.installment_options[0].max;
+        const uniqueDefaultValue = `${store.installment_options[0].max}-${store.installment_options[0].type}`;
+        if (!orderSelections.selectedInstallment) orderSelections.selectedInstallment = uniqueDefaultValue;
+        
         const installmentRadios = store.installment_options.map(opt => {
             const installmentValue = (pendingAmount / opt.max).toFixed(2);
             const translatedType = translateInstallmentType(opt.type);
-            return `<label class="flex-1 p-4 border rounded-lg cursor-pointer ${orderSelections.selectedInstallment == opt.max ? 'border-purple-500 bg-purple-50' : 'border-slate-200'}"><input type="radio" name="selectedInstallment" value="${opt.max}" class="hidden" ${orderSelections.selectedInstallment == opt.max ? 'checked' : ''}><span class="font-bold text-purple-600">${opt.max} ${translatedType}</span><span class="block text-sm text-slate-500">Pagarías ${c} ${installmentValue} por cuota</span></label>`;
+            const uniqueValue = `${opt.max}-${opt.type}`;
+            return `<label class="flex-1 p-4 border rounded-lg cursor-pointer ${orderSelections.selectedInstallment === uniqueValue ? 'border-purple-500 bg-purple-50' : 'border-slate-200'}">
+                        <input type="radio" name="selectedInstallment" value="${uniqueValue}" class="hidden" ${orderSelections.selectedInstallment === uniqueValue ? 'checked' : ''}>
+                        <span class="font-bold text-purple-600">${opt.max} ${translatedType}</span>
+                        <span class="block text-sm text-slate-500">Pagarías ${c} ${installmentValue} por cuota</span>
+                    </label>`;
         }).join('');
         installmentsSelectorHtml = `<div><h4 class="text-md font-bold text-slate-700 mb-2">4. Paga el resto en cuotas</h4><div class="p-4 bg-slate-50 rounded-lg"><p class="text-sm text-slate-600 mb-3">Saldo pendiente a financiar: <span class="font-bold">${c} ${pendingAmount.toFixed(2)}</span></p><div class="flex flex-wrap gap-4">${installmentRadios}</div></div></div>`;
     }
@@ -153,11 +142,9 @@ window.renderCartSummary = function() {
 
     let installmentSummary = '';
     if (store.accepts_installments && pendingAmount > 0.01 && orderSelections.selectedInstallment) {
-        const selectedOption = store.installment_options.find(opt => opt.max == orderSelections.selectedInstallment);
-        if (selectedOption) {
-            const installmentValue = (pendingAmount / selectedOption.max).toFixed(2);
-            installmentSummary = `<div class="flex justify-between text-sm mt-1"><span class="text-slate-600">Plan de cuotas:</span><span class="font-semibold text-slate-800">Pagarás ${c} ${installmentValue} durante ${selectedOption.max} ${translateInstallmentType(selectedOption.type)}</span></div>`;
-        }
+        const [max, type] = orderSelections.selectedInstallment.split('-');
+        const installmentValue = (pendingAmount / Number(max)).toFixed(2);
+        installmentSummary = `<div class="flex justify-between text-sm mt-1"><span class="text-slate-600">Plan de cuotas:</span><span class="font-semibold text-slate-800">${max} ${translateInstallmentType(type)} de ${c} ${installmentValue}</span></div>`;
     }
 
     const extraCostText = (store.extra_cost && store.extra_cost.enabled && store.extra_cost.value > 0) ? `<p class="text-xs text-slate-500">${escapeHTML(store.extra_cost.description)}</p>` : '';

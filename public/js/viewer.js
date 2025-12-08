@@ -80,7 +80,6 @@ function closeCartModal() {
 }
 
 // --- LÓGICA DEL CARRITO Y RESUMEN ---
-
 function generateWhatsAppMessage() {
     const c = store.currency || 'USD';
     let message = `*¡Hola! 👋 Quiero confirmar mi pedido:*
@@ -120,7 +119,6 @@ function generateWhatsAppMessage() {
     const amountToPay = productDownPayment + upfrontCosts;
     const pendingAmount = productSubtotal - productDownPayment;
     const grandTotal = productSubtotal + upfrontCosts;
-    // --- FIN ---
 
     message += `
 *Detalles del Pedido:*
@@ -140,10 +138,10 @@ function generateWhatsAppMessage() {
     }
 
     if (pendingAmount > 0.01 && orderSelections.selectedInstallment) {
-        const installmentOption = store.installment_options.find(opt => opt.max == orderSelections.selectedInstallment);
-        if (installmentOption) {
-            const installmentValue = (pendingAmount / installmentOption.max).toFixed(2);
-            message += `- *Cuotas para Saldo:* ${installmentOption.max} ${translateInstallmentType(installmentOption.type)} de ${c} ${installmentValue}
+        const [max, type] = orderSelections.selectedInstallment.split('-');
+        if (max && type) {
+            const installmentValue = (pendingAmount / Number(max)).toFixed(2);
+            message += `- *Cuotas para Saldo:* ${max} ${translateInstallmentType(type)} de ${c} ${installmentValue}
 `;
         }
     }
@@ -183,9 +181,6 @@ _${escapeHTML(store.extra_cost.description)}_
 }
 
 // --- LÓGICA DE RENDERIZADO PRINCIPAL ---
-// ... (resto del archivo sin cambios) ...
-// (El resto de las funciones como renderHeader, renderVendorProfile, etc. permanecen igual)
-
 function renderHeader() {
     const headerContainer = $('store-header');
     if(!headerContainer) return;
