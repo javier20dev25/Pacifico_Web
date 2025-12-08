@@ -93,42 +93,36 @@ app.use('/api/chat', protect, chatRoutes);
 async function fetchStoreWithRetries(slug, retries = 3, delay = 100) {
   for (let i = 0; i < retries; i++) {
     try {
+      // CORREGIDO: Seleccionar todas las columnas para tener toda la información.
       const { data, error } = await supabaseAdmin
         .from('stores')
-        .select('data')
+        .select('*') 
         .eq('slug', slug)
         .single();
       
-      if (error && error.code !== 'PGRST116') { // PGRST116 es "not found", lo cual no es un error de red
+      if (error && error.code !== 'PGRST116') { // PGRST116 es "not found"
         throw error;
       }
       return { data, error };
     } catch (e) {
       console.error(`Intento ${i + 1} fallido para obtener slug '${slug}':`, e.message);
-      if (i === retries - 1) throw e; // Lanzar el error en el último intento
+      if (i === retries - 1) throw e;
       await new Promise(res => setTimeout(res, delay));
     }
   }
 }
 
-// Función para sanear los datos de la tienda, especialmente los productos
-function sanitizeStoreData(data) {
-  if (!data) return { store: {}, products: [] };
+// Función para sanear los datos de la tienda (ahora solo sanea productos)
+function sanitizeStoreData(products) {
+  if (!Array.isArray(products)) return [];
 
-  const products = Array.isArray(data.products) ? data.products : [];
-
-  const sanitizedProducts = products.map(product => ({
+  return products.map(product => ({
     ...product,
     precio_base: Number(product.precio_base) || 0,
     precio_final_aereo: Number(product.precio_final_aereo) || 0,
     precio_final_maritimo: Number(product.precio_final_maritimo) || 0,
     peso_lb: Number(product.peso_lb) || 0,
   }));
-
-  return {
-    ...data,
-    products: sanitizedProducts,
-  };
 }
 
 app.get('/store/:slug', async (req, res, next) => {
@@ -136,35 +130,42 @@ app.get('/store/:slug', async (req, res, next) => {
   console.log(`[GET /store/:slug] 1. Iniciando proceso para slug: "${storeSlug}"`);
 
   try {
-    const { data: store, error } = await fetchStoreWithRetries(storeSlug);
-    console.log(`[GET /store/:slug] 2. Resultado de fetchStoreWithRetries:`, { store, error: error ? { message: error.message, code: error.code } : null });
+    // 1. Obtener los datos completos de la tienda
+    const { data: storeRecord, error } = await fetchStoreWithRetries(storeSlug);
+    console.log(`[GET /store/:slug] 2. Resultado de fetchStoreWithRetries:`, { store: storeRecord, error: error ? { message: error.message, code: error.code } : null });
 
-    // Verificación explícita de los datos
     if (error) {
       console.error(`[GET /store/:slug] 3a. Error de base de datos detectado:`, error.message);
       return res.status(500).send('Error al consultar la base de datos.');
     }
-    if (!store) {
+    if (!storeRecord) {
       console.error(`[GET /store/:slug] 3b. La consulta no devolvió una tienda (slug no encontrado).`);
       return res.status(404).send(`Tienda con slug "${storeSlug}" no encontrada.`);
     }
-    if (!store.data || typeof store.data !== 'object') {
-      console.error(`[GET /store/:slug] 3c. La tienda se encontró, pero la columna 'data' está vacía, nula o no es un objeto.`);
-      return res.status(500).send('Los datos de la tienda están corruptos o vacíos.');
-    }
 
-    // SANITIZACIÓN DE DATOS (NUEVO)
-    const previewData = sanitizeStoreData(store.data);
+    // 2. Construir el objeto 'previewData' que el frontend espera
+    const products = storeRecord.products || []; // CORREGIDO: Usar la columna 'products'
+    const sanitizedProducts = sanitizeStoreData(products);
     
-    console.log(`[GET /store/:slug] 4. Datos de la tienda validados y saneados. Procediendo a leer la plantilla HTML.`);
+    // Separamos el resto de las propiedades para el objeto 'store'
+    const { products: productsColumn, ...storeDataForClient } = storeRecord;
+
+    const previewData = {
+      store: storeDataForClient,
+      products: sanitizedProducts,
+    };
     
+    console.log(`[GET /store/:slug] 4. Datos de la tienda validados y reestructurados. Procediendo a leer la plantilla HTML.`);
+    
+    // 3. Leer la plantilla HTML
     let viewerHtml = await fs.readFile(
       path.join(__dirname, 'public', 'viewer_template.html'),
       'utf8'
     );
 
+    // 4. Inyectar los datos en la plantilla
     const supabaseConfig = {
-      url: process.env.SUPABASE_URL, // Corregido para usar la variable correcta
+      url: process.env.SUPABASE_URL,
       bucket: process.env.STORAGE_BUCKET || 'imagenes',
     };
 
@@ -174,7 +175,7 @@ app.get('/store/:slug', async (req, res, next) => {
     </script>`;
     
     viewerHtml = viewerHtml.replace('__DATA_INJECTION_POINT__', injectedScript);
-    viewerHtml = viewerHtml.replace('__CACHE_BUST_VERSION__', Date.now());
+    viewerHtml = viewerHtml.replace(/__CACHE_BUST_VERSION__/g, Date.now());
 
     console.log(`[GET /store/:slug] 5. Inyección de datos completada. Enviando HTML al cliente.`);
     res.send(viewerHtml);
