@@ -77,6 +77,88 @@ const { protect, isAdmin } = require('./backend/middleware/auth');
 app.use('/api/auth', authRoutes);
 app.use('/api/uploads', uploadRoutes); // La ruta de prueba de subida es pública
 
+// --- NUEVO ENDPOINT PÚBLICO PARA EXPLICACIÓN DE PEDIDOS CON IA ---
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+app.post('/api/explain-order', async (req, res) => {
+  const { cart, selections, totals, store } = req.body;
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+
+  if (!geminiApiKey) {
+    return res.status(500).json({ error: 'La clave de API para el servicio de IA no está configurada.' });
+  }
+  if (!cart || !selections || !totals || !store) {
+    return res.status(400).json({ error: 'Faltan datos del pedido para generar la explicación.' });
+  }
+
+  try {
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+    const systemPrompt = `Eres un asistente de compras experto, amigable y profesional. Tu tarea es explicar un resumen de pedido a un cliente de forma clara, humana y tranquilizadora, siguiendo estrictamente el siguiente formato y tono.
+
+**Formato OBLIGATORIO:**
+
+¡Hola! Aquí tienes un resumen claro de tu pedido:
+
+👉 **Monto a pagar hoy:** [MONTO_HOY]
+Explica brevemente qué incluye este pago (ej. "Este es el primer pago de tu compra más los costos iniciales.").
+
+🧾 **Total de tu pedido:** [MONTO_TOTAL]
+
+💰 **Saldo pendiente:** [MONTO_PENDIENTE]
+Si hay saldo pendiente, explica que se pagará con el plan elegido (ej. "Este monto lo pagarás más adelante con el plan que elegiste:"). Si no hay saldo pendiente, omite esta sección.
+
+📅 **Plan seleccionado:**
+Si hay plan de cuotas, detállalo aquí (ej. "3 quincenas de [MONTO_CUOTA] cada una."). Si no hay plan de cuotas, omite esta sección.
+
+---
+Si todo está claro y estás de acuerdo, puedes hacer clic en 'Confirmar Pedido' para finalizar tu compra.
+
+**Reglas CRÍTICAS:**
+- **NO USES MARKDOWN.** No uses asteriscos (*) para negritas ni ningún otro formato. Toda la salida debe ser texto plano.
+- Usa exactamente los emojis y la estructura de la plantilla.
+- Sé conciso y directo, mantén un tono amigable y profesional.
+- Responde siempre en español latinoamericano.`;
+
+    // Formatear el resumen del pedido para que la IA lo entienda
+    let orderSummary = 'Resumen del Pedido:\n';
+    orderSummary += `Moneda: ${store.currency || 'USD'}\n`;
+    for (const item of cart) {
+        orderSummary += `- Producto: ${item.name}, Cantidad: ${item.quantity}\n`;
+    }
+    orderSummary += `\nOpciones seleccionadas:\n`;
+    orderSummary += `- Método de envío: ${selections.shippingMethod || 'No especificado'}\n`;
+    orderSummary += `- Método de pago: ${selections.paymentMethod || 'No especificado'}\n`;
+    orderSummary += `- Plan de pago: ${selections.paymentPlan ? `Adelanto del ${selections.paymentPlan}%` : 'Pago completo'}\n`;
+    if (selections.wantsDelivery) {
+        orderSummary += `- Solicita delivery.\n`;
+    }
+    if (selections.selectedInstallment) {
+        const [cuotas, tipo] = selections.selectedInstallment.split('-');
+        orderSummary += `- Plan de cuotas para el saldo: ${cuotas} ${tipo}.\n`;
+    }
+
+    orderSummary += `\nTotales:\n`;
+    orderSummary += `- Total del Pedido: ${totals.grandTotal}\n`;
+    orderSummary += `- Monto a Pagar Hoy: ${totals.amountToPay}\n`;
+    orderSummary += `- Saldo Pendiente: ${totals.pendingAmount}\n`;
+    
+    const finalPrompt = `${systemPrompt}\n\nAquí está el pedido del cliente para que lo expliques:\n${orderSummary}`;
+
+    const result = await model.generateContent(finalPrompt);
+    const response = await result.response;
+    const text = response.text();
+
+    res.json({ explanation: text });
+
+  } catch (error) {
+    console.error('Error en /api/explain-order:', error);
+    res.status(500).json({ error: 'No se pudo generar la explicación. Por favor, inténtalo de nuevo.' });
+  }
+});
+
+
 // --- Rutas Protegidas de la API (requieren autenticación) ---
 app.use('/api/stats', protect, statisticsRoutes);
 app.use('/api/orders', protect, orderRoutes);

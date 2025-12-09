@@ -171,8 +171,66 @@ window.renderCartSummary = function() {
       </div>
       <div id="cart-options" class="mt-6 space-y-6">${shippingSelectorHtml}${paymentMethodSelectorHtml}${paymentPlanSelectorHtml}${installmentsSelectorHtml}${deliverySelectorHtml}</div>
       ${summaryHtml}
-      <div class="mt-6 text-right">
+      
+      <!-- Contenedor para la respuesta de la IA -->
+      <div id="ai-response-container" class="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-indigo-800 text-sm hidden">
+          <p id="ai-response-content">Cargando explicación...</p>
+      </div>
+
+      <div class="mt-6 flex justify-end items-center gap-4">
+        <button id="ai-explain-button" class="bg-purple-100 text-purple-700 font-bold py-3 px-6 rounded-lg hover:bg-purple-200 transition">
+            ✨ Explicar con IA
+        </button>
         <button id="confirm-order-button" data-action="confirm-order" ${!isReady ? 'disabled' : ''} class="${isReady ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-300 cursor-not-allowed'} text-white font-bold py-3 px-6 rounded-lg transition">Confirmar Pedido</button>
       </div>
     `;
+
+    // Adjuntar el listener para el botón de IA
+    const aiButton = document.getElementById('ai-explain-button');
+    if (aiButton) {
+        aiButton.addEventListener('click', () => handleAIExplainClick({
+            cart: cartItems.map(id => ({ name: products.find(p => p.idLocal === id).nombre, quantity: shoppingCart[id] })),
+            selections: orderSelections,
+            totals: {
+                grandTotal: grandTotal.toFixed(2),
+                amountToPay: amountToPay.toFixed(2),
+                pendingAmount: pendingAmount.toFixed(2)
+            },
+            store: { currency: c }
+        }));
+    }
+};
+
+async function handleAIExplainClick(orderData) {
+    const container = document.getElementById('ai-response-container');
+    const content = document.getElementById('ai-response-content');
+    if (!container || !content) return;
+
+    container.classList.remove('hidden');
+    content.innerHTML = '<p class="animate-pulse">Estoy analizando tu pedido para darte una explicación sencilla...</p>';
+
+    try {
+        const response = await fetch('/api/explain-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderData)
+        });
+
+        if (!response.ok) {
+            throw new Error('La respuesta del servidor no fue la esperada.');
+        }
+
+        const data = await response.json();
+        
+        if (data.explanation) {
+            // Usamos innerHTML porque la respuesta puede tener saltos de línea que queremos respetar
+            content.innerHTML = data.explanation.replace(/\n/g, '<br>');
+        } else {
+            throw new Error('No se recibió una explicación.');
+        }
+
+    } catch (error) {
+        console.error('Error al obtener la explicación de la IA:', error);
+        content.innerHTML = '<p class="text-red-600">¡Uy! Hubo un problema al generar la explicación. Por favor, revisa el resumen manualmente o inténtalo de nuevo.</p>';
+    }
 }
