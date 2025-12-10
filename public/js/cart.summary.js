@@ -13,7 +13,7 @@ function translateInstallmentType(type) {
 /* Este archivo ahora contiene la lógica de renderizado del carrito.
    Se asume que viewer.js ya ha sido cargado y ha expuesto sus dependencias en window. */
 window.renderCartSummary = function() {
-    console.log('cart.summary.js v20251208.final — renderCartSummary loaded'); // MARCADOR DE VERSIÓN
+    console.log('cart.summary.js v20251209.final_fix — renderCartSummary loaded'); // MARCADOR DE VERSIÓN
     const body = $('cart-modal-body');
     const cartItems = Object.keys(shoppingCart);
     const c = store.currency || 'USD';
@@ -23,13 +23,30 @@ window.renderCartSummary = function() {
       return;
     }
 
-    // --- INICIALIZACIÓN ---
+    // --- INICIALIZACIÓN Y CÁLCULO DE TOTALES (REFACTORIZADO) ---
     let totalUnits = 0, totalWeight = 0, subtotalAir = 0, subtotalSea = 0;
-    let shippingSelectorHtml = '', paymentMethodSelectorHtml = '', paymentPlanSelectorHtml = '', installmentsSelectorHtml = '', deliverySelectorHtml = '';
+    
+    // 1. Bucle de cálculo: Primero, calculamos todos los totales de forma robusta.
+    cartItems.forEach(productId => {
+        const product = products.find(p => p.idLocal === productId);
+        if (!product) return; // Si el producto no se encuentra, se omite.
 
+        const quantity = shoppingCart[productId];
+        const unitWeight = product.peso_lb || 0;
+        const unitAirPrice = store.store_type === 'in_stock' ? (product.precio_base || 0) : (product.precio_final_aereo || 0);
+        const unitSeaPrice = store.store_type === 'in_stock' ? (product.precio_base || 0) : (product.precio_final_maritimo || 0);
+
+        totalUnits += quantity;
+        totalWeight += unitWeight * quantity;
+        subtotalAir += unitAirPrice * quantity;
+        subtotalSea += unitSeaPrice * quantity;
+    });
+
+    // 2. Bucle de renderizado: Ahora, generamos el HTML de las filas de productos.
     const productRows = cartItems.map(productId => {
       const product = products.find(p => p.idLocal === productId);
       if (!product) return '';
+      
       const quantity = shoppingCart[productId];
       const unitWeight = product.peso_lb || 0;
       const unitAirPrice = store.store_type === 'in_stock' ? (product.precio_base || 0) : (product.precio_final_aereo || 0);
@@ -37,10 +54,7 @@ window.renderCartSummary = function() {
       const totalProductWeight = unitWeight * quantity;
       const totalProductAirPrice = unitAirPrice * quantity;
       const totalProductSeaPrice = unitSeaPrice * quantity;
-      totalUnits += quantity;
-      totalWeight += totalProductWeight;
-      subtotalAir += totalProductAirPrice;
-      subtotalSea += totalProductSeaPrice;
+
       return `
         <tr class="border-b border-slate-100">
           <td class="p-3 font-medium text-slate-800">${escapeHTML(product.nombre)}</td>
@@ -54,7 +68,8 @@ window.renderCartSummary = function() {
         </tr>`;
     }).join('');
 
-    // --- RENDERIZADO DE OPCIONES ---
+    // --- LÓGICA PARA RENDERIZAR OPCIONES ---
+    let shippingSelectorHtml = '', paymentMethodSelectorHtml = '', paymentPlanSelectorHtml = '', installmentsSelectorHtml = '', deliverySelectorHtml = '';
     
     if (store.store_type === 'by_order') {
         if (!orderSelections.shippingMethod) orderSelections.shippingMethod = 'air';
@@ -85,9 +100,7 @@ window.renderCartSummary = function() {
             if (store.advance_options[advKey]) planOptions.push({ value: advKey, label: `Abonar ${advKey}%` });
         });
     }
-
     planOptions.sort((a, b) => Number(b.value) - Number(a.value));
-
     if (planOptions.length > 0) {
         if (!orderSelections.paymentPlan || !planOptions.find(p => p.value === orderSelections.paymentPlan)) orderSelections.paymentPlan = planOptions[0].value;
         const planRadios = planOptions.map(opt => `<label class="flex-1 p-4 border rounded-lg cursor-pointer ${orderSelections.paymentPlan === opt.value ? 'border-green-500 bg-green-50' : 'border-slate-200'}"><input type="radio" name="paymentPlan" value="${opt.value}" class="hidden" ${orderSelections.paymentPlan === opt.value ? 'checked' : ''}><span class="font-bold text-green-600">${opt.label}</span></label>`).join('');
@@ -126,7 +139,7 @@ window.renderCartSummary = function() {
                         <span class="block text-sm text-slate-500">Pagarías ${c} ${installmentValue} por cuota</span>
                     </label>`;
         }).join('');
-        installmentsSelectorHtml = `<div><h4 class="text-md font-bold text-slate-700 mb-2">4. Paga el resto en cuotas</h4><div class="p-4 bg-slate-50 rounded-lg"><p class="text-sm text-slate-600 mb-3">Saldo pendiente a financiar: <span class="font-bold">${c} ${pendingAmount.toFixed(2)}</span></p><div class="flex flex-wrap gap-4">${installmentRadios}</div></div></div>`;
+        installmentsSelectorHtml = `<div><h4 class="text-md font-bold text-slate-700 mb-2">4. Paga el resto en cuotas</h4><div class="p-4 bg-slate-50 rounded-lg"><p class="text-sm text-slate-600 mb-3">Saldo pendiente a financiar: <span class="font-bold">${c} ${pendingAmount.toFixed(2)}</span></p><div class="flex flex-wrap gap-4">${installmentsSelectorHtml}</div></div></div>`;
     }
 
     if (store.delivery_type && store.delivery_type !== 'no') {
@@ -140,20 +153,45 @@ window.renderCartSummary = function() {
         deliverySelectorHtml = `<div><h4 class="text-md font-bold text-slate-700 mb-2">5. Delivery</h4><div class="p-4 bg-slate-50 rounded-lg space-y-3"><p class="text-sm text-slate-800">${deliveryText}</p>${deliveryCheckbox}</div></div>`;
     }
 
+    // --- RENDERIZADO DEL RESUMEN FINAL ---
     let installmentSummary = '';
     if (store.accepts_installments && pendingAmount > 0.01 && orderSelections.selectedInstallment) {
         const [max, type] = orderSelections.selectedInstallment.split('-');
         const installmentValue = (pendingAmount / Number(max)).toFixed(2);
         installmentSummary = `<div class="flex justify-between text-sm mt-1"><span class="text-slate-600">Plan de cuotas:</span><span class="font-semibold text-slate-800">${max} ${translateInstallmentType(type)} de ${c} ${installmentValue}</span></div>`;
     }
-
     const extraCostText = (store.extra_cost && store.extra_cost.enabled && store.extra_cost.value > 0) ? `<p class="text-xs text-slate-500">${escapeHTML(store.extra_cost.description)}</p>` : '';
+    
+    // --- Lógica de etiquetas para mayor claridad (UX Improvement) ---
+    let shippingMethodLabel = '';
+    if (store.store_type === 'by_order') {
+        shippingMethodLabel = orderSelections.shippingMethod === 'sea' ? ' (Marítimo)' : ' (Aéreo)';
+    }
+    const paymentPlanLabel = orderSelections.paymentPlan === '100' ? 'Total de productos' : `${orderSelections.paymentPlan}% de abono sobre productos`;
+
     const summaryHtml = `<div class="mt-6 p-4 bg-slate-50 rounded-lg space-y-2">
-            <div class="flex justify-between"><span class="text-slate-600">Subtotal de productos:</span><span class="font-semibold text-slate-800">${c} ${productSubtotal.toFixed(2)}</span></div>
+            <div class="flex justify-between"><span class="text-slate-600">Subtotal de productos${shippingMethodLabel}:</span><span class="font-semibold text-slate-800">${c} ${productSubtotal.toFixed(2)}</span></div>
             ${extraCost > 0 ? `<div class="flex justify-between items-start"><div><span class="text-slate-600">Costo extra:</span>${extraCostText}</div><span class="font-semibold text-slate-800">${c} ${extraCost.toFixed(2)}</span></div>` : ''}
-            ${deliveryTotalCost > 0 ? `<div class="flex justify-between"><span class="text-slate-600">Costo de delivery:</span><span class="font-semibold text-slate-800">${c} ${deliveryTotalCost.toFixed(2)}</span></div>` : ''}
+            ${deliveryTotalCost > 0 ? `<div class="flex justify-between"><span class="text-slate-600">Costo de delivery (pago inicial):</span><span class="font-semibold text-slate-800">${c} ${deliveryTotalCost.toFixed(2)}</span></div>` : ''}
+            
             <div class="flex justify-between font-bold text-slate-800 border-t pt-2 mt-2"><span>Total del Pedido:</span><span>${c} ${grandTotal.toFixed(2)}</span></div>
-            <div class="flex justify-between text-xl font-bold text-indigo-700 border-t-2 border-dashed pt-2 mt-2"><span>MONTO A PAGAR HOY:</span><span>${c} ${amountToPay.toFixed(2)}</span></div>
+            
+            <!-- Desglose del Monto a Pagar Hoy (UX Improvement) -->
+            <div class="border-t-2 border-dashed pt-2 mt-2 space-y-1">
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-600">${paymentPlanLabel}:</span>
+                    <span class="font-medium text-slate-700">${c} ${productDownPayment.toFixed(2)}</span>
+                </div>
+                ${upfrontCosts > 0 ? `<div class="flex justify-between text-sm">
+                    <span class="text-slate-600">Costos iniciales (extras + delivery):</span>
+                    <span class="font-medium text-slate-700">${c} ${upfrontCosts.toFixed(2)}</span>
+                </div>` : ''}
+                <div class="flex justify-between text-xl font-bold text-indigo-700 mt-1 pt-1 border-t border-slate-200">
+                    <span>MONTO A PAGAR HOY:</span>
+                    <span>${c} ${amountToPay.toFixed(2)}</span>
+                </div>
+            </div>
+            
             ${pendingAmount > 0.01 ? `<div class="flex justify-between text-sm mt-1"><span class="text-slate-600">Saldo pendiente a financiar:</span><span class="font-semibold text-slate-800">${c} ${pendingAmount.toFixed(2)}</span></div>` : ''}
             ${installmentSummary}
         </div>`;

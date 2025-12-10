@@ -433,6 +433,8 @@ router.put('/store-data', async (req, res) => {
         nombre: storeData.store?.nombre || userRec.nombre,
         descripcion: storeData.store?.descripcion,
         logo_url: storeData.store?.logoUrl,
+        video_url: storeData.store?.video_url, // <-- CORRECCIÓN AÑADIDA
+        installment_options: storeData.store?.installment_options || [], // <-- CORRECCIÓN AÑADIDA
         products: storeData.products || [],
         activa: launch,
         slug: null, 

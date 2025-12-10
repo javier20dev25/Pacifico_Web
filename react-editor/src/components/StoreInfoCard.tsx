@@ -114,15 +114,15 @@ const StoreInfoCard = () => {
           </div>
 
           <div>
-            <label htmlFor="youtubeLink" className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1">
+            <label htmlFor="video_url" className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1">
               <Video className="w-3.5 h-3.5" /> Video Principal <span className="text-slate-400 font-normal">(Opcional)</span>
             </label>
             <input 
-              id="youtubeLink"
+              id="video_url"
               type="url" 
               placeholder="Enlace de YouTube, Facebook, Instagram o TikTok" 
               className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-              value={store.youtubeLink || ''}
+              value={store.video_url || ''}
               onChange={handleInputChange}
             />
             <div className="mt-3 bg-blue-50 text-blue-700 text-xs p-3 rounded-lg flex gap-2 items-start">

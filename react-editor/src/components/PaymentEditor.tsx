@@ -175,7 +175,7 @@ const PaymentEditor = () => {
                 <div className="flex gap-2 items-end">
                   <div className="flex-1">
                     <label className="text-xs font-bold text-slate-500 mb-1 block">Frecuencia</label>
-                    <select value={newInstallment.type} onChange={(e) => setNewInstallment(p => ({...p, type: e.target.value}))} className="w-full p-2.5 rounded-lg border border-slate-300 bg-white text-sm outline-none focus:border-indigo-500"><option value="meses">Mensual</option><option value="quincenas">Quincenal</option><option value="semanas">Semanal</option></select>
+                    <select value={newInstallment.type} onChange={(e) => setNewInstallment(p => ({...p, type: e.target.value}))} className="w-full p-2.5 rounded-lg border border-slate-300 bg-white text-sm outline-none focus:border-indigo-500"><option value="monthly">Mensual</option><option value="biweekly">Quincenal</option><option value="weekly">Semanal</option></select>
                   </div>
                   <div className="w-24">
                     <label className="text-xs font-bold text-slate-500 mb-1 block">Cantidad</label>
