@@ -29,13 +29,40 @@ function getPublicImageUrl(pathOrUrl) {
 function getEmbedUrl(url) {
   if (!url) return null;
   let embedUrl = null;
-  if (url.includes('youtube.com/watch?v=')) {
-      const videoId = url.split('watch?v=')[1].split('&')[0];
-      embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-  } else if (url.includes('youtu.be/')) {
-      const videoId = url.split('youtu.be/')[1].split('?')[0];
-      embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+
+  try {
+    const videoUrl = new URL(url);
+    const hostname = videoUrl.hostname.toLowerCase();
+    const pathname = videoUrl.pathname;
+
+    if (hostname.includes('youtube.com')) {
+      if (pathname.includes('/watch')) {
+        const videoId = videoUrl.searchParams.get('v');
+        if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+      } else if (pathname.includes('/shorts/')) {
+        const videoId = pathname.split('/shorts/')[1].split('/')[0];
+        if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+      }
+    } else if (hostname.includes('youtu.be')) {
+      const videoId = pathname.substring(1).split('/')[0];
+      if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+    } else if (hostname.includes('instagram.com')) {
+      if (pathname.includes('/p/') || pathname.includes('/reel/')) {
+        const cleanPathname = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+        embedUrl = `https://www.instagram.com${cleanPathname}/embed`;
+      }
+    } else if (hostname.includes('facebook.com') || hostname.includes('fb.watch')) {
+      // For Facebook, using their video plugin is the most reliable way.
+      embedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&autoplay=1`;
+    }
+    // For TikTok and other platforms, this function will return null,
+    // which triggers the fallback `window.open(url, '_blank')` in openMediaModal.
+
+  } catch (error) {
+    console.error("Error parsing video URL:", url, error);
+    return null; // If URL is invalid, fallback to the default behavior.
   }
+
   return embedUrl;
 }
 

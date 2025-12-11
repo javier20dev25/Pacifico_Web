@@ -13,7 +13,9 @@ function translateInstallmentType(type) {
 /* Este archivo ahora contiene la lógica de renderizado del carrito.
    Se asume que viewer.js ya ha sido cargado y ha expuesto sus dependencias en window. */
 window.renderCartSummary = function() {
-    console.log('cart.summary.js v20251209.final_fix — renderCartSummary loaded'); // MARCADOR DE VERSIÓN
+    console.log('cart.summary.js v20251210.debug — renderCartSummary loaded'); // MARCADOR DE VERSIÓN
+    console.log('[DEBUG] Estado de orderSelections al INICIO:', JSON.parse(JSON.stringify(orderSelections)));
+
     const body = $('cart-modal-body');
     const cartItems = Object.keys(shoppingCart);
     const c = store.currency || 'USD';
@@ -119,7 +121,10 @@ window.renderCartSummary = function() {
     }
     const deliveryTotalCost = (orderSelections.wantsDelivery && store.delivery_type === 'fixed') ? (Number(store.delivery_fixed_cost) || 0) : 0;
     const upfrontCosts = extraCost + deliveryTotalCost;
+    
+    console.log(`[DEBUG] Calculando abono con paymentPlan: "${orderSelections.paymentPlan}"`);
     const productDownPayment = productSubtotal * (Number(orderSelections.paymentPlan) / 100);
+    
     const amountToPay = productDownPayment + upfrontCosts;
     const pendingAmount = productSubtotal - productDownPayment;
     const grandTotal = productSubtotal + upfrontCosts;
@@ -139,7 +144,7 @@ window.renderCartSummary = function() {
                         <span class="block text-sm text-slate-500">Pagarías ${c} ${installmentValue} por cuota</span>
                     </label>`;
         }).join('');
-        installmentsSelectorHtml = `<div><h4 class="text-md font-bold text-slate-700 mb-2">4. Paga el resto en cuotas</h4><div class="p-4 bg-slate-50 rounded-lg"><p class="text-sm text-slate-600 mb-3">Saldo pendiente a financiar: <span class="font-bold">${c} ${pendingAmount.toFixed(2)}</span></p><div class="flex flex-wrap gap-4">${installmentsSelectorHtml}</div></div></div>`;
+        installmentsSelectorHtml = `<div><h4 class="text-md font-bold text-slate-700 mb-2">4. Paga el resto en cuotas</h4><div class="p-4 bg-slate-50 rounded-lg"><p class="text-sm text-slate-600 mb-3">Saldo pendiente a financiar: <span class="font-bold">${c} ${pendingAmount.toFixed(2)}</span></p><div class="flex flex-wrap gap-4">${installmentRadios}</div></div></div>`;
     }
 
     if (store.delivery_type && store.delivery_type !== 'no') {
