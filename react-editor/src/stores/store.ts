@@ -17,7 +17,7 @@ export interface StoreDetails {
   logoUrl: string | null;
   logoFile?: File | null;
   whatsapp?: string;
-  youtubeLink?: string;
+  video_url?: string;
   currency: 'USD' | 'NIO';
   isLogisticsDual: boolean;
   airRate: number | string;
@@ -43,6 +43,8 @@ export interface StoreDetails {
   installment_options: { type: string, max: number }[];
   shareableUrl: string | null | undefined;
   extraCost: ExtraCost;
+  planName?: string;
+  productLimit?: number;
 }
 
 export interface Product {
@@ -95,6 +97,7 @@ export interface AppState {
   setLogoFile: (file: File | null) => void;
   clearProductImageFiles: () => void;
   setStoreDetails: (details: Partial<StoreDetails>) => void;
+  setPlanInfo: (planInfo: { plan: string; product_limit: number }) => void;
   setProducts: (products: Product[]) => void;
   addProduct: (product: Product) => void;
   updateProduct: (productId: string, updates: Partial<Product>) => void;
@@ -117,7 +120,7 @@ const useAppStore = create<AppState>()(
         logoUrl: null,
         logoFile: null,
         whatsapp: '',
-        youtubeLink: '',
+        video_url: '',
         currency: 'USD',
         isLogisticsDual: true,
         airRate: 5.5,
@@ -149,6 +152,8 @@ const useAppStore = create<AppState>()(
           description: '',
           currency: 'USD',
         },
+        planName: 'emprendedor', // Valor por defecto
+        productLimit: 20, // Valor por defecto
       },
       products: [],
       cart: {
@@ -167,6 +172,13 @@ const useAppStore = create<AppState>()(
         })
       })),
       setStoreDetails: (_details) => set((state) => ({ store: { ...state.store, ..._details } })),
+      setPlanInfo: (planInfo) => set((state) => ({
+        store: {
+          ...state.store,
+          planName: planInfo.plan,
+          productLimit: planInfo.product_limit,
+        }
+      })),
       setProducts: (_products) => set({ products: _products }),
       addProduct: (_product) => set((state) => ({ products: [...state.products, _product] })),
       updateProduct: (_productId, _updates) =>

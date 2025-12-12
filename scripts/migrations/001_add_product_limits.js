@@ -38,18 +38,25 @@ async function runMigration() {
 
     // Paso 3: Recrear la vista 'vw_usuarios_planes' para incluir la nueva columna
     console.log("3. Recreando la vista 'vw_usuarios_planes'...");
-    const viewDefinition = `
-      CREATE OR REPLACE VIEW public.vw_usuarios_planes AS
+    
+    // Primero, eliminamos la vista existente para evitar conflictos de columnas.
+    const dropViewSql = `DROP VIEW IF EXISTS public.vw_usuarios_planes;`;
+    const { error: dropError } = await supabaseAdmin.rpc('execute_sql', { sql: dropViewSql });
+    if (dropError) throw dropError;
+    console.log("   - Vista antigua eliminada (si existía).");
+
+    // Ahora, creamos la vista nueva con la estructura correcta.
+    const createViewSql = `
+      CREATE VIEW public.vw_usuarios_planes AS
       SELECT
           u.id AS usuario_id,
           u.uuid AS usuario_uuid,
           u.nombre,
           u.correo,
           u.status,
-          u.created_at AS creado_at,
           c.id AS contrato_id,
           p.nombre AS plan,
-          p.product_limit, // <--- COLUMNA AÑADIDA
+          p.product_limit,
           c.fecha_inicio,
           c.fecha_expiracion,
           c.activo
@@ -57,9 +64,9 @@ async function runMigration() {
       LEFT JOIN public.contratos c ON u.uuid = c.usuario_uuid
       LEFT JOIN public.planes p ON c.plan_id = p.id;
     `;
-    const { error: viewError } = await supabaseAdmin.rpc('execute_sql', { sql: viewDefinition });
-    if (viewError) throw viewError;
-    console.log("   ... Vista 'vw_usuarios_planes' actualizada con éxito.");
+    const { error: createError } = await supabaseAdmin.rpc('execute_sql', { sql: createViewSql });
+    if (createError) throw createError;
+    console.log("   ... Vista 'vw_usuarios_planes' creada con éxito con el esquema correcto.");
 
     // NOTA: Para que rpc('execute_sql', ...) funcione, necesitas una función en tu BD que ejecute SQL.
     // Si no la tienes, créala en el editor SQL de Supabase:

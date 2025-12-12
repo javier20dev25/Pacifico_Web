@@ -336,7 +336,7 @@ router.get('/store-data', async (req, res) => {
 
     const { data: userProfile, error: userErr } = await supabaseAdmin
       .from('vw_usuarios_planes')
-      .select('usuario_id, plan')
+      .select('plan, product_limit')
       .eq('usuario_uuid', userUuid)
       .single();
 
@@ -351,11 +351,18 @@ router.get('/store-data', async (req, res) => {
       );
       return res.status(404).json({ error: 'Usuario no encontrado.' });
     }
-    const usuarioId = userProfile.usuario_id;
-    console.log(`[DEBUG /store-data] ID de usuario resuelto: ${usuarioId}`);
+    
+    // NOTA: El usuario_id ya no es necesario aquí, se obtiene en el endpoint PUT /store-data
+    // const usuarioId = userProfile.usuario_id;
 
     let storeQuery = supabaseAdmin.from('stores').select('data, slug');
-    storeQuery = storeQuery.eq('usuario_id', usuarioId).limit(1);
+    // La consulta de tienda ya no necesita el usuario_id aquí, asumiendo que el RLS (Row Level Security) se encarga de la autorización.
+    // Para ser más explícitos y seguros, lo ideal sería resolver el usuario_id de todas formas.
+    // Por ahora, el flujo depende de que el GET de /user/store-data y el PUT de /user/store-data se basen en el mismo userUuid del token.
+    const { data: userForStore, error: userForStoreErr } = await supabaseAdmin.from('usuarios').select('id').eq('uuid', userUuid).single();
+    if(userForStoreErr || !userForStore) return res.status(404).json({error: "Usuario no encontrado para la tienda."});
+
+    storeQuery = storeQuery.eq('usuario_id', userForStore.id).limit(1);
 
     console.log('[DEBUG /store-data] Ejecutando consulta de tienda...');
     const { data: stores, error: storeError } = await storeQuery;
@@ -380,7 +387,7 @@ router.get('/store-data', async (req, res) => {
 
     res.json({
       storeData: store ? store.data : {},
-      plan: userProfile.plan,
+      planInfo: userProfile, // <-- CORRECCIÓN: Enviar el objeto completo del plan
       slug: slug,
       shareableUrl: shareableUrl,
     });
@@ -413,6 +420,32 @@ router.put('/store-data', async (req, res) => {
         return res.status(401).json({ error: 'Usuario de sesión no válido.' });
       }
       const usuarioId = userRec.id;
+
+      // ==========================================================
+      // INICIO: Lógica de Validación de Límite de Productos
+      // ==========================================================
+      const { data: planInfo, error: planError } = await supabaseAdmin
+        .from('vw_usuarios_planes')
+        .select('plan, product_limit')
+        .eq('usuario_uuid', userUuid)
+        .single();
+
+      if (planError || !planInfo) {
+        return res.status(500).json({ error: 'No se pudo verificar el plan del usuario.' });
+      }
+
+      const productLimit = planInfo.product_limit;
+      const incomingProductCount = storeData.products?.length || 0;
+
+      if (incomingProductCount > productLimit) {
+        return res.status(403).json({
+          error: 'Límite de productos excedido.',
+          message: `Tu plan '${planInfo.plan}' solo permite un máximo de ${productLimit} productos. Estás intentando guardar ${incomingProductCount}.`
+        });
+      }
+      // ==========================================================
+      // FIN: Lógica de Validación de Límite de Productos
+      // ==========================================================
 
       // La lógica de subida de archivos ya no es necesaria aquí.
       // El payload `storeData` ya contiene las URLs finales.

@@ -3,7 +3,7 @@ import useStore from '@/stores/store';
 import apiClient from '../api/axiosConfig';
 
 export function useInitialData() {
-  const { setStoreDetails, setProducts } = useStore();
+  const { setStoreDetails, setProducts, setPlanInfo } = useStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
 
@@ -14,7 +14,7 @@ export function useInitialData() {
         setIsError(false);
 
         const response = await apiClient.get('/user/store-data');
-        const { storeData, shareableUrl: rawUrl } = response.data;
+        const { storeData, shareableUrl: rawUrl, planInfo } = response.data;
 
         if (storeData && storeData.store) {
           // Cache Busting: Añadir un timestamp a la URL para forzar la recarga
@@ -23,6 +23,9 @@ export function useInitialData() {
         }
         if (storeData && storeData.products) {
           setProducts(storeData.products);
+        }
+        if (planInfo) {
+          setPlanInfo(planInfo);
         }
       } catch (error) {
         console.error('Error al cargar los datos iniciales de la tienda:', error);
@@ -33,7 +36,7 @@ export function useInitialData() {
     };
 
     fetchInitialData();
-  }, [setStoreDetails, setProducts]);
+  }, [setStoreDetails, setProducts, setPlanInfo]);
 
   return { isLoading, isError };
 }

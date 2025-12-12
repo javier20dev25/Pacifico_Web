@@ -75,6 +75,12 @@ const ProductItem = ({ product }: { product: Product }) => {
 const ProductEditor = () => {
   const products = useAppStore((state) => state.products);
   const openModal = useAppStore((state) => state.openProductModal);
+  const productLimit = useAppStore((state) => state.store.productLimit);
+  const planName = useAppStore((state) => state.store.planName);
+
+  // Consider a limit of 0 or undefined as unlimited.
+  const hasLimit = productLimit && productLimit > 0;
+  const limitReached = hasLimit && products.length >= productLimit;
 
   return (
     <section className="space-y-4">
@@ -83,10 +89,20 @@ const ProductEditor = () => {
           <span className="flex items-center justify-center w-8 h-8 rounded-full bg-sky-100 text-sky-600 font-bold text-sm"><Package className="w-4 h-4" /></span>
           <h2 className="text-xl font-bold text-slate-900">Catálogo de Productos</h2>
         </div>
-        <button onClick={() => openModal()} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-2.5 px-4 rounded-lg shadow-md shadow-emerald-200 transition-all active:scale-95">
+        <button 
+          onClick={() => openModal()} 
+          disabled={limitReached}
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-2.5 px-4 rounded-lg shadow-md shadow-emerald-200 transition-all active:scale-95 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none"
+        >
           <Plus className="w-4 h-4" /> Añadir Producto
         </button>
       </div>
+
+      {hasLimit && (
+        <div className={`p-3 rounded-lg text-sm font-medium text-center ${limitReached ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
+          <span>Has usado <strong>{products.length}</strong> de <strong>{productLimit}</strong> productos permitidos en tu plan <strong>'{planName}'</strong>.</span>
+        </div>
+      )}
 
       <div className="grid gap-4">
         {products.length > 0 ? (
