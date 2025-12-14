@@ -71,11 +71,13 @@ const chatRoutes = require('./backend/api/chat');
 const uploadRoutes = require('./backend/api/uploads');
 const statisticsRoutes = require('./backend/api/statistics');
 const orderRoutes = require('./backend/api/orders');
+const rielRoutes = require('./backend/api/riel'); // <-- AÑADIDO
 const { protect, isAdmin } = require('./backend/middleware/auth');
 
 // --- Rutas Públicas de la API (sin autenticación) ---
 app.use('/api/auth', authRoutes);
 app.use('/api/uploads', uploadRoutes); // La ruta de prueba de subida es pública
+app.use('/api/riel', rielRoutes); // <-- AÑADIDO
 
 // --- NUEVO ENDPOINT PÚBLICO PARA EXPLICACIÓN DE PEDIDOS CON IA ---
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -239,11 +241,14 @@ app.get('/store/:slug', async (req, res, next) => {
     
     console.log(`[GET /store/:slug] 4. Datos de la tienda validados y reestructurados. Procediendo a leer la plantilla HTML.`);
     
-    // 3. Leer la plantilla HTML
-    let viewerHtml = await fs.readFile(
-      path.join(__dirname, 'public', 'viewer_template.html'),
-      'utf8'
-    );
+    // 3. Determinar qué plantilla usar y leer el archivo HTML
+    let templatePath;
+    if (storeRecord.store_type === 'riel') {
+      templatePath = path.join(__dirname, 'public', 'riel_viewer_template.html');
+    } else {
+      templatePath = path.join(__dirname, 'public', 'viewer_template.html');
+    }
+    let viewerHtml = await fs.readFile(templatePath, 'utf8');
 
     // 4. Inyectar los datos en la plantilla
     const supabaseConfig = {
@@ -251,7 +256,7 @@ app.get('/store/:slug', async (req, res, next) => {
       bucket: process.env.STORAGE_BUCKET || 'imagenes',
     };
 
-    const injectedScript = `<script type="module">
+    const injectedScript = `<script>
       window.STORE_DATA = ${JSON.stringify(previewData).replace(/<\/script/gi, '<\\/script')};
       window.SUPABASE_CONFIG = ${JSON.stringify(supabaseConfig).replace(/<\/script/gi, '<\\/script')};
     </script>`;

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import apiClient from '@/api/axiosConfig';
+import { Link } from 'react-router-dom';
+import { Rocket } from 'lucide-react';
 import AdminStats from '@/components/admin/AdminStats';
 import CreateUserForm from '@/components/admin/CreateUserForm';
 import UsersTable from '@/components/admin/UsersTable';
@@ -50,6 +52,22 @@ const AdminDashboard = () => {
     <div className="container mx-auto p-4 md:p-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Panel de Administrador</h1>
         <AdminStats stats={stats} />
+        
+        {/* Card de Navegación a Riel Admin */}
+        <div className="my-8">
+          <Link to="/admin/riel" className="block p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-indigo-300 transition-all">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-indigo-100 rounded-lg">
+                <Rocket className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <h2 className="font-bold text-lg text-slate-800">Gestionar Cuentas "Riel"</h2>
+                <p className="text-sm text-slate-500">Revisa las solicitudes de prueba gratuita y crea las cuentas para los nuevos usuarios.</p>
+              </div>
+            </div>
+          </Link>
+        </div>
+
         <CreateUserForm onUserCreated={fetchUsers} />
         <UsersTable users={users} onUserAction={fetchUsers} />
         <RegistrationChart />

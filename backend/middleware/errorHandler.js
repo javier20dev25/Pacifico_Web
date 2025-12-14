@@ -5,7 +5,7 @@
  * Captura todos los errores pasados a través de next(error) y los formatea
  * en una respuesta JSON consistente y segura.
  */
-function errorHandler(err, req, res) {
+function errorHandler(err, req, res, next) {
   // Loggear el error completo en la consola del servidor para debugging.
   // Es importante no exponer el stack trace al cliente en producción.
   console.error('[ERROR HANDLER]', err.stack || err);
