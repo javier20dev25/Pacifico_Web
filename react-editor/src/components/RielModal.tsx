@@ -7,6 +7,7 @@ import Cookies from 'js-cookie';
 
 const RielModal: React.FC = () => {
   const { isRielModalOpen, closeRielModal } = useAppStore();
+  const [name, setName] = useState(''); // <-- AÑADIDO
   const [whatsappNumber, setWhatsappNumber] = useState('+505');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,19 +18,17 @@ const RielModal: React.FC = () => {
     setError(null);
 
     try {
-      // Normalizar el número para eliminar CUALQUIER carácter no numérico.
       const normalizedNumber = whatsappNumber.replace(/\D/g, '');
       const response = await apiClient.post('/riel/preregister', {
+        name: name, // <-- AÑADIDO
         whatsapp_number: normalizedNumber,
       });
 
       if (response.status === 201 && response.data.identifier) {
-        // Guardar el identificador en una cookie por 30 días
         Cookies.set('riel_identifier', response.data.identifier, { expires: 30 });
         
-        // Redirigir a WhatsApp
-        const ownerNumber = '50588378547'; // Número de atención al cliente
-        const message = encodeURIComponent('Hola quiero una cuenta Riel gratuita para crear mi tienda online');
+        const ownerNumber = '50588378547';
+        const message = encodeURIComponent(`Hola, mi nombre es ${name}. Quiero una cuenta Riel gratuita para crear mi tienda online.`);
         window.location.href = `https://wa.me/${ownerNumber}?text=${message}`;
         
         closeRielModal();
@@ -57,6 +56,20 @@ const RielModal: React.FC = () => {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">
+              Tu Nombre
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+              placeholder="Ej: Astaroth"
+              required
+            />
+          </div>
           <div>
             <label htmlFor="whatsapp" className="block text-sm font-medium text-slate-700 mb-1">
               Tu número de WhatsApp

@@ -19,8 +19,11 @@ function nombreToSlug(nombre) {
 // ENDPOINT 1: PRE-REGISTRO DE RIEL
 // ==========================================================
 router.post('/preregister', async (req, res) => {
-  const { whatsapp_number } = req.body;
+  const { whatsapp_number, name } = req.body;
 
+  if (!name || name.trim() === '') {
+    return res.status(400).json({ error: 'Se requiere un nombre.' });
+  }
   if (!whatsapp_number || !/^\+?[1-9]\d{1,14}$/.test(whatsapp_number)) {
     return res.status(400).json({ error: 'Se requiere un número de WhatsApp válido.' });
   }
@@ -30,6 +33,7 @@ router.post('/preregister', async (req, res) => {
       .from('riel_preregistrations')
       .upsert({ 
         whatsapp_number: whatsapp_number,
+        name: name.trim(), // Guardar el nombre
         status: 'pending',
        }, {
         onConflict: 'whatsapp_number',
@@ -72,7 +76,7 @@ router.get('/verify-token', async (req, res) => {
     try {
         const { data: user, error: userError } = await supabaseAdmin
             .from('usuarios')
-            .select('uuid, activation_token_expires_at')
+            .select('uuid, nombre, activation_token_expires_at') // <-- OBTENER NOMBRE
             .eq('activation_token', token)
             .eq('status', 'temporary')
             .single();
@@ -85,17 +89,12 @@ router.get('/verify-token', async (req, res) => {
             return res.status(410).json({ error: 'El enlace de activación ha expirado.' });
         }
 
-        const { data: preReg, error: preRegError } = await supabaseAdmin
-            .from('riel_preregistrations')
-            .select('whatsapp_number')
-            .eq('user_uuid', user.uuid)
-            .single();
-
-        if (preRegError || !preReg) {
-            return res.status(404).json({ error: 'No se pudo encontrar el pre-registro asociado.' });
-        }
-
-        res.status(200).json({ whatsapp_number: preReg.whatsapp_number });
+        // El número de WhatsApp ya no es necesario aquí, ya que el usuario lo confirmará.
+        // Solo necesitamos devolver el nombre para la bienvenida.
+        res.status(200).json({ 
+            name: user.nombre, 
+            whatsapp_number: '' // El usuario lo llenará
+        });
 
     } catch (error) {
         console.error('[FATAL] /api/riel/verify-token:', error.message);

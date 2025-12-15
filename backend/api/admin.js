@@ -212,13 +212,20 @@ router.post('/create-riel-account', async (req, res, next) => {
     return res.status(400).json({ error: 'Se requiere el ID del pre-registro.' });
   }
   try {
-    const { data: preReg, error: preRegError } = await supabaseAdmin.from('riel_preregistrations').select('id, whatsapp_number, status').eq('id', preregistration_id).single();
+    // Paso 1: Validar el pre-registro y obtener el nombre
+    const { data: preReg, error: preRegError } = await supabaseAdmin
+      .from('riel_preregistrations')
+      .select('id, whatsapp_number, status, name') // <-- OBTENER NOMBRE
+      .eq('id', preregistration_id)
+      .single();
+
     if (preRegError) throw new Error('Pre-registro no encontrado o error en la consulta.');
     if (preReg.status === 'claimed') return res.status(409).json({ error: 'Esta solicitud ya ha sido procesada.' });
 
+    // Paso 2: Generar credenciales únicas usando el nombre
     const whatsapp = preReg.whatsapp_number.replace(/\D/g, '');
     const email = `${whatsapp}@riel.pacificoweb.com`;
-    const nombre = `Usuario Riel ${whatsapp.slice(-4)}`;
+    const nombre = preReg.name || `Usuario Riel ${whatsapp.slice(-4)}`; // Usar el nombre guardado
     const temporaryPassword = generateTemporaryPassword(12);
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({ email, password: temporaryPassword, email_confirm: true });
@@ -230,7 +237,7 @@ router.post('/create-riel-account', async (req, res, next) => {
 
     const { data: userProfile, error: profileError } = await supabaseAdmin.from('usuarios').insert({
       uuid: newAuthUser.id,
-      nombre: nombre,
+      nombre: nombre, // <-- USAR NOMBRE
       correo: email,
       status: 'temporary',
       activation_token_expires_at: activationTokenExpires.toISOString(),
@@ -259,7 +266,7 @@ router.post('/create-riel-account', async (req, res, next) => {
 
     const { error: storeError } = await supabaseAdmin.from('stores').insert({
         usuario_id: userProfile.id,
-        nombre: `Tienda de ${nombre}`,
+        nombre: `Tienda de ${nombre}`, // <-- USAR NOMBRE
         whatsapp: whatsapp,
         store_type: 'riel',
     });

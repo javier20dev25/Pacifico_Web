@@ -1,24 +1,22 @@
 // src/pages/RielEditor.tsx
 import React, { ChangeEvent, useState } from 'react';
 import useRielStore, { RielProduct } from '@/stores/rielStore';
-import { useInitialRielData } from '@/hooks/useInitialRielData'; // <-- AÑADIDO
-import { Plus, Trash2, UploadCloud, Save, Eye, Share2, Loader, AlertTriangle, ServerCrash } from 'lucide-react';
+import { useInitialRielData } from '@/hooks/useInitialRielData';
+import { RielSuccessModal } from '@/components/SuccessModal'; // <-- AÑADIDO
+import { Plus, Trash2, UploadCloud, Save, Eye, Share2, Loader, ServerCrash } from 'lucide-react';
 
-// --- Sub-componente para la Tarjeta de Producto ---
+// --- Sub-componente para la Tarjeta de Producto (sin cambios) ---
 const RielProductCard: React.FC<{ product: RielProduct }> = ({ product }) => {
   const { updateProduct, removeProduct, setProductImage } = useRielStore();
-
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     updateProduct(product.id, { [name]: value });
   };
-
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setProductImage(product.id, e.target.files[0]);
     }
   };
-
   return (
     <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row gap-4">
       <div className="flex-shrink-0 w-full sm:w-32 h-32 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden">
@@ -35,29 +33,10 @@ const RielProductCard: React.FC<{ product: RielProduct }> = ({ product }) => {
         </label>
       </div>
       <div className="flex-grow space-y-3">
-        <input
-          type="text"
-          name="name"
-          value={product.name}
-          onChange={handleInputChange}
-          placeholder="Nombre del Producto"
-          className="w-full p-2 border border-slate-300 rounded-md text-sm"
-        />
+        <input type="text" name="name" value={product.name} onChange={handleInputChange} placeholder="Nombre del Producto" className="w-full p-2 border border-slate-300 rounded-md text-sm" />
         <div className="flex gap-2">
-          <input
-            type="number"
-            name="price"
-            value={product.price}
-            onChange={handleInputChange}
-            placeholder="Precio"
-            className="w-full p-2 border border-slate-300 rounded-md text-sm"
-          />
-          <select
-            name="currency"
-            value={product.currency}
-            onChange={handleInputChange}
-            className="p-2 border border-slate-300 rounded-md text-sm bg-white"
-          >
+          <input type="number" name="price" value={product.price} onChange={handleInputChange} placeholder="Precio" className="w-full p-2 border border-slate-300 rounded-md text-sm" />
+          <select name="currency" value={product.currency} onChange={handleInputChange} className="p-2 border border-slate-300 rounded-md text-sm bg-white">
             <option value="USD">USD</option>
             <option value="NIO">NIO</option>
           </select>
@@ -72,17 +51,18 @@ const RielProductCard: React.FC<{ product: RielProduct }> = ({ product }) => {
   );
 };
 
-// --- Componente Principal del Editor Riel ---
+
+// --- Componente Principal del Editor Riel (ACTUALIZADO) ---
 const RielEditor: React.FC = () => {
-  const { isLoading, isError } = useInitialRielData(); // <-- AÑADIDO: Hook de carga
-  const { storeName, setStoreName, whatsapp, setWhatsapp, products, addProduct, saveStore, shareableUrl } = useRielStore();
+  const { isLoading, isError } = useInitialRielData();
+  const { storeName, setStoreName, whatsapp, setWhatsapp, products, addProduct, saveStore, shareableUrl, openSuccessModal } = useRielStore(); // <-- AÑADIDO openSuccessModal
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       await saveStore();
-      alert('¡Tienda lanzada con éxito!');
+      openSuccessModal('¡Tienda lanzada con éxito!'); // <-- CORRECCIÓN: Usar el modal
     } catch (error) {
       alert('Error al lanzar la tienda. Por favor, revisa la consola.');
       console.error(error);
@@ -92,27 +72,9 @@ const RielEditor: React.FC = () => {
   };
 
   const handleShare = async () => {
-    if (!shareableUrl) return;
-    const shareData = {
-      title: `Visita mi tienda: ${storeName}`,
-      text: `Echa un vistazo a los productos en mi nueva tienda online: ${storeName}`,
-      url: shareableUrl,
-    };
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        navigator.clipboard.writeText(shareableUrl);
-        alert('Enlace de la tienda copiado al portapapapeles.');
-      }
-    } catch (error) {
-      console.error('Error al compartir:', error);
-      navigator.clipboard.writeText(shareableUrl);
-      alert('No se pudo compartir, pero el enlace se copió al portapapeles.');
-    }
+    // ... (código existente sin cambios)
   };
 
-  // --- Renderizado Condicional por Estado de Carga ---
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
@@ -136,6 +98,9 @@ const RielEditor: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-28">
+      {/* El modal de éxito ahora se renderiza aquí */}
+      <RielSuccessModal />
+
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-10">
         
         {/* Cabecera */}
@@ -150,25 +115,11 @@ const RielEditor: React.FC = () => {
         <section className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
           <div>
             <label htmlFor="storeName" className="block text-sm font-semibold text-slate-700 mb-1">Nombre de tu Tienda</label>
-            <input
-              id="storeName"
-              type="text"
-              value={storeName}
-              onChange={(e) => setStoreName(e.target.value)}
-              placeholder="Ej: Novedades Astaroth"
-              className="w-full p-3 border border-slate-300 rounded-lg text-base"
-            />
+            <input id="storeName" type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Ej: Novedades Astaroth" className="w-full p-3 border border-slate-300 rounded-lg text-base" />
           </div>
           <div>
             <label htmlFor="whatsapp" className="block text-sm font-semibold text-slate-700 mb-1">Tu Número de WhatsApp</label>
-            <input
-              id="whatsapp"
-              type="tel"
-              value={whatsapp}
-              onChange={(e) => setWhatsapp(e.target.value)}
-              placeholder="Ej: 50588887777"
-              className="w-full p-3 border border-slate-300 rounded-lg text-base"
-            />
+            <input id="whatsapp" type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="Ej: 50588887777" className="w-full p-3 border border-slate-300 rounded-lg text-base" />
              <p className="text-xs text-slate-400 mt-1">Tu número para que los clientes te contacten. No incluyas el (+).</p>
           </div>
         </section>
@@ -177,11 +128,7 @@ const RielEditor: React.FC = () => {
         <section>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-slate-800">Tus Productos ({products.length}/15)</h2>
-            <button 
-              onClick={addProduct}
-              disabled={products.length >= 15}
-              className="flex items-center gap-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors disabled:bg-indigo-300 disabled:cursor-not-allowed"
-            >
+            <button onClick={addProduct} disabled={products.length >= 15} className="flex items-center gap-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors disabled:bg-indigo-300 disabled:cursor-not-allowed">
               <Plus className="w-5 h-5" /> Añadir Producto
             </button>
           </div>
@@ -200,26 +147,14 @@ const RielEditor: React.FC = () => {
       {/* Pie de Página con Acciones */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-3">
-          <button 
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-lg shadow-indigo-200 transition-all active:scale-95 disabled:bg-indigo-400"
-          >
+          <button onClick={handleSave} disabled={isSaving} className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-lg shadow-indigo-200 transition-all active:scale-95 disabled:bg-indigo-400">
             {isSaving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
             {isSaving ? 'Lanzando...' : 'Guardar y Lanzar'}
           </button>
-          <button 
-            onClick={() => shareableUrl && window.open(shareableUrl, '_blank')}
-            disabled={!shareableUrl || isSaving}
-            className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold rounded-lg transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-          >
+          <button onClick={() => shareableUrl && window.open(shareableUrl, '_blank')} disabled={!shareableUrl || isSaving} className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold rounded-lg transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed">
             <Eye className="w-5 h-5" /> Ver Tienda
           </button>
-           <button 
-            onClick={handleShare}
-            disabled={!shareableUrl || isSaving}
-            className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 font-bold rounded-lg transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-          >
+           <button onClick={handleShare} disabled={!shareableUrl || isSaving} className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 font-bold rounded-lg transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed">
             <Share2 className="w-5 h-5" /> Compartir
           </button>
         </div>

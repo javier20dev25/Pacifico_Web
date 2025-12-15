@@ -12,6 +12,7 @@ const RielActivation: React.FC = () => {
 
   const [status, setStatus] = useState<Status>('verifying');
   const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState(''); // <-- AÑADIDO
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const token = searchParams.get('token');
 
@@ -26,6 +27,7 @@ const RielActivation: React.FC = () => {
       try {
         const response = await apiClient.get(`/riel/verify-token?token=${token}`);
         if (response.status === 200) {
+          setName(response.data.name); // <-- AÑADIDO
           setWhatsappNumber(response.data.whatsapp_number);
           setStatus('ready');
         } else {
@@ -79,9 +81,9 @@ const RielActivation: React.FC = () => {
       case 'ready':
         return (
           <>
-            <h1 className="text-2xl font-bold text-slate-800 text-center">Confirma tu Número</h1>
+            <h1 className="text-2xl font-bold text-slate-800 text-center">¡Bienvenido, {name}!</h1>
             <p className="text-slate-500 text-center mt-2 mb-6">
-              Este será el número de WhatsApp principal de tu nueva tienda.
+              Confirma tu número de WhatsApp para activar tu tienda.
             </p>
             <form onSubmit={handleActivation} className="space-y-4">
               <div>
@@ -95,6 +97,7 @@ const RielActivation: React.FC = () => {
                   onChange={(e) => setWhatsappNumber(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                   required
+                  placeholder="Introduce tu número aquí"
                 />
               </div>
               <button

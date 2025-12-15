@@ -150,6 +150,10 @@ const useRielStore = create<RielStoreState>((set, get) => ({
         set({ shareableUrl: response.data.shareableUrl });
     }
   },
+
+  // Acciones para el modal de éxito
+  openSuccessModal: (message) => set({ isSuccessModalOpen: true, successModalMessage: message }),
+  closeSuccessModal: () => set({ isSuccessModalOpen: false, successModalMessage: '' }),
 }));
 
 export default useRielStore;
