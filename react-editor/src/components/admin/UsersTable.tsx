@@ -20,7 +20,7 @@ export type User = {
   fecha_expiracion: string | null;
 };
 
-export type Action = 'show-credentials' | 'renew' | 'reset-password' | 'reactivate' | 'suspend' | 'revoke';
+export type Action = 'show-credentials' | 'renew' | 'reset-password' | 'reactivate' | 'suspend' | 'revoke' | 'riel-reset-password';
 
 type CredentialsModalProps = {
   credentials: Credentials | null;
@@ -101,6 +101,7 @@ const UsersTable: React.FC<UsersTableProps> = ({ users, onUserAction }) => {
       reactivate: { confirm: '¿Estás seguro de que quieres reactivar a este usuario?', endpoint: '/reactivate-user' },
       renew: { confirm: '¿Estás seguro de que quieres renovar el contrato de este usuario por 3 meses más?', endpoint: '/renew-contract' },
       'reset-password': { confirm: '¿Estás seguro de que quieres resetear la contraseña de este usuario?', endpoint: '/reset-password' },
+      'riel-reset-password': { confirm: '¿Generar un nuevo enlace de reseteo para este usuario Riel?', endpoint: '/generate-riel-reset-link' },
       'show-credentials': undefined,
     };
 
@@ -109,14 +110,17 @@ const UsersTable: React.FC<UsersTableProps> = ({ users, onUserAction }) => {
 
     if (window.confirm(actionConfig.confirm)) {
       try {
-        const payload = action === 'reset-password' 
+        const payload = (action === 'reset-password') 
           ? { email: user.correo } 
           : { userUuid: user.usuario_uuid };
 
-        const response = await apiClient.post<{ message?: string; copyPasteMessage?: string }>('/admin' + actionConfig.endpoint, payload);
+        const response = await apiClient.post<{ message?: string; copyPasteMessage?: string; activationLink?: string }>('/admin' + actionConfig.endpoint, payload);
 
         if (action === 'reset-password' && response.data.copyPasteMessage) {
           window.prompt('Copia el mensaje para tu cliente:', response.data.copyPasteMessage);
+        } else if (action === 'riel-reset-password' && response.data.activationLink) {
+          const fullUrl = `${window.location.origin}${response.data.activationLink}`;
+          window.prompt('Copia el enlace de reseteo para el usuario Riel:', fullUrl);
         } else {
           alert(response.data.message || 'Acción completada con éxito');
         }

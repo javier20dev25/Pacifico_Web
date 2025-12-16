@@ -282,4 +282,44 @@ router.post('/create-riel-account', async (req, res, next) => {
   }
 });
 
+// ==========================================================
+// 11. GENERAR ENLACE DE RESETEO PARA RIEL (NUEVO)
+// ==========================================================
+router.post('/generate-riel-reset-link', async (req, res, next) => {
+  const { userUuid } = req.body;
+  if (!userUuid) {
+    return res.status(400).json({ error: 'Se requiere el UUID del usuario.' });
+  }
+
+  try {
+    const newActivationToken = crypto.randomUUID();
+    const expiration = new Date();
+    expiration.setDate(expiration.getDate() + 1); // El enlace dura 24 horas
+
+    const { data, error } = await supabaseAdmin
+      .from('usuarios')
+      .update({
+        activation_token: newActivationToken,
+        activation_token_expires_at: expiration.toISOString(),
+      })
+      .eq('uuid', userUuid)
+      .select('uuid')
+      .single();
+
+    if (error || !data) {
+      throw new Error('No se pudo actualizar el usuario o el usuario no existe.');
+    }
+
+    const activationLink = `/riel-activation?token=${newActivationToken}`;
+    res.status(200).json({
+      message: 'Enlace de reseteo generado con éxito.',
+      activationLink: activationLink,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+
 module.exports = router;

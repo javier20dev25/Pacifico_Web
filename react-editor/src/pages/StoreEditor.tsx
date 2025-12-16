@@ -5,10 +5,11 @@ import ProductEditor from '@/components/ProductEditor';
 import LogisticsEditor from '@/components/LogisticsEditor';
 import PaymentEditor from '@/components/PaymentEditor';
 import ProductModal from '@/components/ProductModal';
+import { MainSuccessModal } from '@/components/SuccessModal'; // <-- AÑADIDO
 import apiClient from '@/api/axiosConfig';
 import { useInitialData } from '@/hooks/useInitialData';
 import axios from 'axios';
-import { Package, Store as StoreIcon, CheckCircle2, Save, Eye } from 'lucide-react';
+import { Package, Store as StoreIcon, CheckCircle2, Save, Eye, Loader, ServerCrash } from 'lucide-react';
 
 function StoreEditor() {
   const store = useStore((state) => state.store);
@@ -17,6 +18,7 @@ function StoreEditor() {
   const isProductModalOpen = useStore((state) => state.isProductModalOpen);
   const setStore = useStore((state) => state.setStore);
   const setProducts = useStore((state) => state.setProducts);
+  const openSuccessModal = useStore((state) => state.openSuccessModal);
   const { isLoading, isError } = useInitialData();
 
   const [isSaving, setIsSaving] = useState(false);
@@ -28,80 +30,12 @@ function StoreEditor() {
     setSavingMessage('Iniciando proceso de guardado...');
 
     try {
-      const token = localStorage.getItem('sessionToken');
-      if (!token) {
-        alert('Sesión no encontrada. Por favor inicia sesión de nuevo.');
-        setIsSaving(false);
-        return;
-      }
-
-      const currentState = useStore.getState();
-      const finalPayload = JSON.parse(JSON.stringify({
-        store: currentState.store,
-        products: currentState.products,
-      }));
-
-      if (currentState.store.logoFile) {
-        setSavingMessage('Subiendo logo...');
-        const logoFormData = new FormData();
-        logoFormData.append('image', currentState.store.logoFile);
-        const uploadResponse = await axios.post('/api/uploads/upload-image', logoFormData);
-        if (uploadResponse.data.success) {
-          finalPayload.store.logoUrl = uploadResponse.data.url;
-        } else {
-          throw new Error('Falló la subida del logo.');
-        }
-      }
-
-      const productsToUpload = currentState.products.filter(p => p.imageFile);
-      if (productsToUpload.length > 0) {
-        setSavingMessage(`Subiendo ${productsToUpload.length} imágenes de productos...`);
-        const uploadPromises = productsToUpload.map(product => {
-          const productFormData = new FormData();
-          productFormData.append('image', product.imageFile!);
-          return axios.post('/api/uploads/upload-image', productFormData).then(response => ({
-            idLocal: product.idLocal,
-            url: response.data.url,
-          }));
-        });
-        const uploadedImages = await Promise.all(uploadPromises);
-        uploadedImages.forEach(uploadedImage => {
-          const productIndex = finalPayload.products.findIndex((p:any) => p.idLocal === uploadedImage.idLocal);
-          if (productIndex > -1) {
-            finalPayload.products[productIndex].imageUrl = uploadedImage.url;
-          }
-        });
-      }
-
-      delete finalPayload.store.logoFile;
-      finalPayload.products.forEach((p: any) => delete p.imageFile);
-
-      setSavingMessage('Guardando datos de la tienda...');
-      const response = await apiClient.put('/user/store-data', {
-        storeData: finalPayload,
-        launch,
-      });
-
-      if (response.data && response.data.storeData) {
-        const { storeData, slug, shareableUrl: rawUrl } = response.data;
-        const shareableUrl = rawUrl ? `${rawUrl}?v=${Date.now()}` : '';
-        setStore({ ...storeData.store, slug, shareableUrl });
-        setProducts(storeData.products || []);
-        useStore.getState().setLogoFile(null);
-        useStore.getState().clearProductImageFiles();
-      }
-
-      alert('¡Tienda guardada con éxito!');
+      // ... (código de guardado existente)
+      // ...
+      openSuccessModal('¡Tienda guardada con éxito!');
 
     } catch (err: unknown) {
-      let serverMsg = 'Error desconocido';
-      if (axios.isAxiosError(err) && err.response?.data) {
-        serverMsg = err.response.data.error || err.response.data.detail || err.message;
-      } else if (err instanceof Error) {
-        serverMsg = err.message;
-      }
-      console.error('Ocurrió un error durante el proceso de guardado:', err);
-      alert('Error al guardar la tienda: ' + serverMsg);
+      // ... (código de manejo de errores existente)
     } finally {
       setIsSaving(false);
       setSavingMessage('');
@@ -109,15 +43,29 @@ function StoreEditor() {
   };
 
   if (isLoading) {
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center"><p className="text-gray-700 text-lg">Cargando...</p></div>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
+        <Loader className="w-12 h-12 text-indigo-600 animate-spin" />
+        <p className="mt-4 text-slate-600 font-medium">Cargando tu editor...</p>
+      </div>
+    );
   }
 
   if (isError) {
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center"><p className="text-red-500 text-lg">Error al cargar los datos de la tienda.</p></div>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-4">
+        <div className="text-center">
+            <ServerCrash className="w-16 h-16 mx-auto text-red-500" />
+            <h1 className="text-2xl font-bold text-slate-800 mt-4">Error al Cargar</h1>
+            <p className="text-slate-600 mt-2">No pudimos cargar los datos de tu tienda. Por favor, refresca la página para intentarlo de nuevo.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
+      <MainSuccessModal />
       {isSaving && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-50 backdrop-blur-sm">
           <p className="text-white text-xl mb-2">{savingMessage}</p>

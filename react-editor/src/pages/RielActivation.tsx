@@ -12,8 +12,10 @@ const RielActivation: React.FC = () => {
 
   const [status, setStatus] = useState<Status>('verifying');
   const [error, setError] = useState<string | null>(null);
-  const [name, setName] = useState(''); // <-- AÑADIDO
+  const [name, setName] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const token = searchParams.get('token');
 
   useEffect(() => {
@@ -27,7 +29,7 @@ const RielActivation: React.FC = () => {
       try {
         const response = await apiClient.get(`/riel/verify-token?token=${token}`);
         if (response.status === 200) {
-          setName(response.data.name); // <-- AÑADIDO
+          setName(response.data.name);
           setWhatsappNumber(response.data.whatsapp_number);
           setStatus('ready');
         } else {
@@ -44,6 +46,14 @@ const RielActivation: React.FC = () => {
 
   const handleActivation = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
     setStatus('activating');
     setError(null);
 
@@ -51,20 +61,19 @@ const RielActivation: React.FC = () => {
         const response = await apiClient.post('/riel/complete-activation', {
             token,
             whatsapp_number: whatsappNumber,
+            password: password,
         });
 
         if (response.status === 200 && response.data.sessionToken) {
             localStorage.setItem('sessionToken', response.data.sessionToken);
             setStatus('success');
-            // Redirigir al editor simple después de un momento
             setTimeout(() => {
                 navigate('/riel/editor');
             }, 2000);
         } else {
             throw new Error(response.data.error || 'No se pudo completar la activación.');
         }
-    } catch (err: any) {
-        setError(err.message || 'Ocurrió un error inesperado.');
+    } catch (err: any)        setError(err.response?.data?.error || err.message || 'Ocurrió un error inesperado.');
         setStatus('error');
     }
   };
@@ -83,23 +92,46 @@ const RielActivation: React.FC = () => {
           <>
             <h1 className="text-2xl font-bold text-slate-800 text-center">¡Bienvenido, {name}!</h1>
             <p className="text-slate-500 text-center mt-2 mb-6">
-              Confirma tu número de WhatsApp para activar tu tienda.
+              Solo un último paso. Confirma tu número y crea una contraseña para tu cuenta.
             </p>
             <form onSubmit={handleActivation} className="space-y-4">
               <div>
-                <label htmlFor="whatsapp" className="block text-sm font-medium text-slate-700 mb-1 flex items-center">
-                  <Phone className="w-4 h-4 mr-2" /> Número de WhatsApp
-                </label>
+                <label htmlFor="whatsapp" className="block text-sm font-medium text-slate-700 mb-1">Número de WhatsApp</label>
                 <input
                   id="whatsapp"
                   type="tel"
                   value={whatsappNumber}
                   onChange={(e) => setWhatsappNumber(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300"
                   required
-                  placeholder="Introduce tu número aquí"
+                  placeholder="Ej: 88887777"
                 />
               </div>
+              <div>
+                <label htmlFor="password" c
+lassName="block text-sm font-medium text-slate-700 mb-1">Crea una Contraseña</label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="confirmPassword" c
+lassName="block text-sm font-medium text-slate-700 mb-1">Confirma tu Contraseña</label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300"
+                  required
+                />
+              </div>
+              {error && <p className="text-sm text-center text-red-600 bg-red-50 p-2 rounded-lg">{error}</p>}
               <button
                 type="submit"
                 className="w-full px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition-all"

@@ -1,7 +1,8 @@
 // src/components/SuccessModal.tsx
 import React, { useEffect } from 'react';
 import { CheckCircle } from 'lucide-react';
-import useRielStore from '@/stores/rielStore'; // Asumimos que lo manejaremos desde el Riel store por ahora
+import useRielStore from '@/stores/rielStore';
+import useAppStore from '@/stores/store'; // <-- AÑADIDO
 
 interface SuccessModalProps {
   message: string;
@@ -28,13 +29,16 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ message, onClose }) => {
   );
 };
 
-// Componente Wrapper que se conecta al store
+// --- Wrappers Conectados a los Stores ---
+
 export const RielSuccessModal: React.FC = () => {
     const { isSuccessModalOpen, successModalMessage, closeSuccessModal } = useRielStore();
+    if (!isSuccessModalOpen) return null;
+    return <SuccessModal message={successModalMessage} onClose={closeSuccessModal} />;
+}
 
-    if (!isSuccessModalOpen) {
-        return null;
-    }
-
+export const MainSuccessModal: React.FC = () => {
+    const { isSuccessModalOpen, successModalMessage, closeSuccessModal } = useAppStore();
+    if (!isSuccessModalOpen) return null;
     return <SuccessModal message={successModalMessage} onClose={closeSuccessModal} />;
 }

@@ -42,6 +42,14 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ user, onAction, isLoading
       >
         Resetear Pass
       </button>
+      {user.plan === 'riel' && (
+        <button 
+          onClick={() => handleButtonClick('riel-reset-password')}
+          className={primaryBtn}
+        >
+          Reset Riel Pass
+        </button>
+      )}
       {user.status === 'suspended' ? (
         <button 
           onClick={() => handleButtonClick('reactivate')}

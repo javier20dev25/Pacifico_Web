@@ -18,31 +18,40 @@ function isPasswordStrong(password) {
 // ==========================================================
 router.post('/login', async (req, res) => {
   console.log('[DEBUG req.body]', req.body);
-  const correo = (req.body.correo || req.body.email || '').trim();
+  let loginIdentifier = (req.body.correo || req.body.email || '').trim();
   const password = (req.body.contrasena || req.body.password || '')
     .trim()
     .normalize('NFKC');
+  
+  // --- LÓGICA DE DETECCIÓN DE TELÉFONO ---
+  const isPhoneNumber = /^\+?\d[\d\s-()]+$/.test(loginIdentifier);
+  if (isPhoneNumber) {
+    const normalizedNumber = loginIdentifier.replace(/\D/g, '');
+    loginIdentifier = `${normalizedNumber}@riel.pacificoweb.com`;
+    console.log(`[DEBUG LOGIN] Identificador detectado como teléfono. Transformado a: ${loginIdentifier}`);
+  }
+  // --- FIN LÓGICA DE DETECCIÓN ---
 
   console.log(
     '[DEBUG LOGIN] Intento de login para:',
-    correo,
+    loginIdentifier,
     'password_len:',
     password.length
   );
 
-  if (!correo || !password) {
+  if (!loginIdentifier || !password) {
     return res
       .status(400)
-      .json({ error: 'Correo y contraseña son obligatorios.' });
+      .json({ error: 'Correo/Teléfono y contraseña son obligatorios.' });
   }
 
-  console.log('[DEBUG LOGIN] Intento de login con Supabase Auth:', correo);
+  console.log('[DEBUG LOGIN] Intento de login con Supabase Auth:', loginIdentifier);
 
   try {
     // Paso 1: Autenticar al usuario con Supabase Auth
     const { data: authData, error: authError } =
       await supabaseAdmin.auth.signInWithPassword({
-        email: correo,
+        email: loginIdentifier, // Usar el identificador procesado
         password: password,
       });
 

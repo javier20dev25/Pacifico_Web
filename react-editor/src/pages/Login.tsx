@@ -189,8 +189,8 @@ const Login: React.FC = () => {
               {notification && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">{notification}</div>}
               <form onSubmit={handleLoginSubmit}>
                 <div className="mb-4">
-                  <label htmlFor="login-email" className="block font-semibold text-gray-700 mb-2">Correo Electrónico</label>
-                  <input type="email" id="login-email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} required />
+                  <label htmlFor="login-email" className="block font-semibold text-gray-700 mb-2">Correo o Teléfono</label>
+                  <input type="text" id="login-email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} required />
                 </div>
                 <div className="mb-4">
                   <label htmlFor="login-password" className="block font-semibold text-gray-700 mb-2">Contraseña</label>

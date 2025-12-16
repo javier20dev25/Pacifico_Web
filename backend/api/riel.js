@@ -103,13 +103,15 @@ router.get('/verify-token', async (req, res) => {
 });
 
 
-// ==========================================================
-// ENDPOINT 3: COMPLETAR ACTIVACIÓN DE RIEL (CORREGIDO)
-// ==========================================================
+// ENDPOINT 3: COMPLETAR ACTIVACIÓN DE RIEL (CORREGIDO CON CONTRASEÑA)
 router.post('/complete-activation', async (req, res) => {
-    const { token, whatsapp_number } = req.body;
-    if (!token) {
-        return res.status(400).json({ error: 'Falta el token de activación.' });
+    const { token, whatsapp_number, password } = req.body;
+    if (!token || !password) {
+        return res.status(400).json({ error: 'Faltan el token o la contraseña.' });
+    }
+    // Opcional: añadir validación de fortaleza de la contraseña
+    if (password.length < 8) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres.' });
     }
 
     try {
@@ -117,13 +119,21 @@ router.post('/complete-activation', async (req, res) => {
             .from('usuarios')
             .select('uuid, nombre, correo, role')
             .eq('activation_token', token)
-            .eq('status', 'temporary')
+            //.eq('status', 'temporary') // ELIMINADO: para que funcione también para reseteo
             .single();
 
         if (userError || !user) {
             return res.status(404).json({ error: 'Token inválido o ya utilizado.' });
         }
         
+        // Paso 1: Actualizar la contraseña en Supabase Auth
+        const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
+            user.uuid,
+            { password: password }
+        );
+        if (authUpdateError) throw new Error(`Error al actualizar contraseña en Auth: ${authUpdateError.message}`);
+
+        // Paso 2: Actualizar el perfil local del usuario
         const { data: updatedUser, error: updateError } = await supabaseAdmin
             .from('usuarios')
             .update({
@@ -140,7 +150,6 @@ router.post('/complete-activation', async (req, res) => {
         if (updateError) throw new Error('Error al activar el perfil de usuario.');
 
         // La tienda ya fue creada en el paso del admin, aquí solo activamos al usuario.
-        // No es necesario crear la tienda de nuevo.
 
         const JWT_SECRET = process.env.JWT_SECRET;
         if (!JWT_SECRET) throw new Error("JWT_SECRET no está configurado en el servidor.");
@@ -148,7 +157,7 @@ router.post('/complete-activation', async (req, res) => {
         const sessionToken = jwt.sign(
             { uuid: user.uuid, rol: user.role, email: user.correo },
             JWT_SECRET,
-            { expiresIn: '30d' }
+            { expiresIn: '1d' } // Token de sesión más corto para el primer login
         );
 
         res.status(200).json({

@@ -94,6 +94,8 @@ export interface AppState {
   isProductModalOpen: boolean;
   editingProductId: string | null;
   isRielModalOpen: boolean;
+  isSuccessModalOpen: boolean;
+  successModalMessage: string;
   setStore: (store: StoreDetails) => void;
   setLogoFile: (file: File | null) => void;
   clearProductImageFiles: () => void;
@@ -108,6 +110,8 @@ export interface AppState {
   closeProductModal: () => void;
   openRielModal: () => void;
   closeRielModal: () => void;
+  openSuccessModal: (message: string) => void;
+  closeSuccessModal: () => void;
   setStoreType: (type: 'by_order' | 'in_stock') => void;
   loadInitialData: (data: InitialDataPayload) => void;
 }
@@ -166,6 +170,8 @@ const useAppStore = create<AppState>()(
       isProductModalOpen: false,
       editingProductId: null,
       isRielModalOpen: false,
+      isSuccessModalOpen: false,
+      successModalMessage: '',
       setStore: (_store) => set({ store: _store }),
       setLogoFile: (_file) => set((state) => ({ store: { ...state.store, logoFile: _file } })),
       clearProductImageFiles: () => set((state) => ({
@@ -198,6 +204,8 @@ const useAppStore = create<AppState>()(
       closeProductModal: () => set({ isProductModalOpen: false, editingProductId: null }),
       openRielModal: () => set({ isRielModalOpen: true }),
       closeRielModal: () => set({ isRielModalOpen: false }),
+      openSuccessModal: (message) => set({ isSuccessModalOpen: true, successModalMessage: message }),
+      closeSuccessModal: () => set({ isSuccessModalOpen: false, successModalMessage: '' }),
       setStoreType: (_type) => set((state) => ({ store: { ...state.store, storeType: _type } })),
       loadInitialData: (_data) => set((state) => {
         const storeData = _data.storeData?.store || {};
