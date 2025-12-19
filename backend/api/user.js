@@ -121,7 +121,7 @@ router.get('/stores', async (req, res) => {
     const { data: stores, error } = await supabaseAdmin
       .from('stores')
       .select(
-        'id, nombre, descripcion, usuario_id, logo_url, activa, created_at, slug'
+        'id, nombre, descripcion, usuario_id, logo_url, activa, created_at, slug, store_type'
       )
       .eq('usuario_id', usuarioId);
 

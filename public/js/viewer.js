@@ -230,6 +230,27 @@ function renderVendorProfile() {
     const storeName = store.nombre || 'Tienda Ejemplo';
     const description = store.descripcion || 'La mejor selección de productos de calidad garantizada.';
     
+    // --- INICIO: Tarea 5 - Lógica del Logo con Anillo Riel ---
+    const rielSlug = window.STORE_DATA.riel_slug;
+    let logoHtml;
+
+    if (rielSlug) {
+        logoHtml = `
+            <a href="/store/${rielSlug}" title="Ir a la tienda Riel de ${escapeHTML(storeName)}">
+                <div class="riel-active-ring">
+                    <img src="${logoUrl}" alt="Logo de ${escapeHTML(storeName)}" class="logo-image w-20 h-20 rounded-full object-cover">
+                </div>
+            </a>
+        `;
+    } else {
+        logoHtml = `
+            <div class="w-20 h-20 rounded-full header-gradient flex items-center justify-center overflow-hidden">
+                <img src="${logoUrl}" alt="Logo de ${escapeHTML(storeName)}" class="w-full h-full object-cover cursor-pointer" data-action="view-media" data-type="image" data-url="${logoUrl}">
+            </div>
+        `;
+    }
+    // --- FIN: Tarea 5 ---
+
     const contactButton = store.whatsapp ? `
         <a href="https://wa.me/${store.whatsapp.replace(/\s+|-/g, '')}" target="_blank" class="text-indigo-600 font-semibold hover:text-indigo-700 transition flex items-center">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-2 4v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7"></path></svg>
@@ -244,8 +265,8 @@ function renderVendorProfile() {
 
     profileContainer.innerHTML = `
       <div class="flex flex-col items-center">
-          <div class="w-20 h-20 rounded-full header-gradient flex items-center justify-center mb-3 overflow-hidden">
-              <img src="${logoUrl}" alt="Logo de ${escapeHTML(storeName)}" class="w-full h-full object-cover cursor-pointer" data-action="view-media" data-type="image" data-url="${logoUrl}">
+          <div class="mb-3">
+            ${logoHtml}
           </div>
           <h2 class="text-3xl font-extrabold text-gray-800">${escapeHTML(storeName)}</h2>
           <p class="text-gray-500 text-lg mt-1">${escapeHTML(description)}</p>

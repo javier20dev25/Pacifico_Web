@@ -1,11 +1,12 @@
 // src/pages/RielEditor.tsx
-import React, { ChangeEvent, useState } from 'react';
-import useRielStore, { RielProduct } from '@/stores/rielStore';
+import React, { useState, type ChangeEvent } from 'react';
+import useRielStore, { type RielProduct } from '@/stores/rielStore';
 import { useInitialRielData } from '@/hooks/useInitialRielData';
-import { RielSuccessModal } from '@/components/SuccessModal'; // <-- AÑADIDO
-import { Plus, Trash2, UploadCloud, Save, Eye, Share2, Loader, ServerCrash } from 'lucide-react';
+import { RielSuccessModal } from '@/components/SuccessModal';
+import RielAnalytics from '@/components/RielAnalytics';
+import { Plus, Trash2, UploadCloud, Save, Eye, Share2, Loader, ServerCrash, Edit, BarChart3 } from 'lucide-react';
 
-// --- Sub-componente para la Tarjeta de Producto (sin cambios) ---
+// --- Sub-componente Tarjeta de Producto (sin cambios) ---
 const RielProductCard: React.FC<{ product: RielProduct }> = ({ product }) => {
   const { updateProduct, removeProduct, setProductImage } = useRielStore();
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -52,17 +53,18 @@ const RielProductCard: React.FC<{ product: RielProduct }> = ({ product }) => {
 };
 
 
-// --- Componente Principal del Editor Riel (ACTUALIZADO) ---
+// --- Componente Principal del Editor Riel (SIMPLIFICADO) ---
 const RielEditor: React.FC = () => {
   const { isLoading, isError } = useInitialRielData();
-  const { storeName, setStoreName, whatsapp, setWhatsapp, products, addProduct, saveStore, shareableUrl, openSuccessModal } = useRielStore(); // <-- AÑADIDO openSuccessModal
+  const { storeName, setStoreName, whatsapp, setWhatsapp, products, addProduct, saveStore, shareableUrl, openSuccessModal } = useRielStore();
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'editor' | 'analytics'>('editor');
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       await saveStore();
-      openSuccessModal('¡Tienda lanzada con éxito!'); // <-- CORRECCIÓN: Usar el modal
+      openSuccessModal('¡Tienda lanzada con éxito!');
     } catch (error) {
       alert('Error al lanzar la tienda. Por favor, revisa la consola.');
       console.error(error);
@@ -72,7 +74,24 @@ const RielEditor: React.FC = () => {
   };
 
   const handleShare = async () => {
-    // ... (código existente sin cambios)
+    if (!shareableUrl) return;
+    const shareData = {
+      title: `Visita mi tienda: ${storeName}`,
+      text: `Echa un vistazo a los productos en mi nueva tienda online: ${storeName}`,
+      url: shareableUrl,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        navigator.clipboard.writeText(shareableUrl);
+        alert('Enlace de la tienda copiado al portapapeles.');
+      }
+    } catch (error) {
+      console.error('Error al compartir:', error);
+      navigator.clipboard.writeText(shareableUrl);
+      alert('No se pudo compartir, pero el enlace se copió al portapapeles.');
+    }
   };
 
   if (isLoading) {
@@ -98,66 +117,78 @@ const RielEditor: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-28">
-      {/* El modal de éxito ahora se renderiza aquí */}
       <RielSuccessModal />
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-10">
         
-        {/* Cabecera */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-slate-900">Editor Simplificado "Riel"</h1>
-          <p className="text-slate-500 mt-2">
-            Asigna un nombre a tu tienda, añade tus productos y ¡lánzala al mundo!
-          </p>
+          <h1 className="text-3xl font-bold text-slate-900">Editor de Tienda Riel</h1>
+          <p className="text-slate-500 mt-2">Gestiona tus productos y revisa el rendimiento de tu tienda.</p>
         </div>
 
-        {/* Información de la Tienda */}
-        <section className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
-          <div>
-            <label htmlFor="storeName" className="block text-sm font-semibold text-slate-700 mb-1">Nombre de tu Tienda</label>
-            <input id="storeName" type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Ej: Novedades Astaroth" className="w-full p-3 border border-slate-300 rounded-lg text-base" />
-          </div>
-          <div>
-            <label htmlFor="whatsapp" className="block text-sm font-semibold text-slate-700 mb-1">Tu Número de WhatsApp</label>
-            <input id="whatsapp" type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="Ej: 50588887777" className="w-full p-3 border border-slate-300 rounded-lg text-base" />
-             <p className="text-xs text-slate-400 mt-1">Tu número para que los clientes te contacten. No incluyas el (+).</p>
-          </div>
-        </section>
-
-        {/* Gestión de Productos */}
-        <section>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-slate-800">Tus Productos ({products.length}/15)</h2>
-            <button onClick={addProduct} disabled={products.length >= 15} className="flex items-center gap-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors disabled:bg-indigo-300 disabled:cursor-not-allowed">
-              <Plus className="w-5 h-5" /> Añadir Producto
+        <div className="flex justify-center border-b border-slate-200">
+            <button onClick={() => setActiveTab('editor')} className={`px-6 py-3 font-semibold transition-colors ${activeTab === 'editor' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}>
+                <Edit className="w-5 h-5 inline-block mr-2" /> Editor
             </button>
-          </div>
-          <div className="space-y-4">
-            {products.length > 0 ? (
-              products.map(p => <RielProductCard key={p.id} product={p} />)
-            ) : (
-              <div className="text-center p-10 border-2 border-dashed border-slate-300 rounded-xl">
-                  <p className="text-slate-500">Aún no has añadido productos. ¡Haz clic en "Añadir Producto" para empezar!</p>
-              </div>
+            <button onClick={() => setActiveTab('analytics')} className={`px-6 py-3 font-semibold transition-colors ${activeTab === 'analytics' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}>
+                <BarChart3 className="w-5 h-5 inline-block mr-2" /> Estadísticas
+            </button>
+        </div>
+
+        <div>
+            {activeTab === 'editor' && (
+                <div className="space-y-8">
+                    {/* SECCIÓN SIMPLIFICADA: EL EDITOR SIEMPRE ES VISIBLE */}
+                    <section className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+                        <div>
+                            <label htmlFor="storeName" className="block text-sm font-semibold text-slate-700 mb-1">Nombre de tu Tienda</label>
+                            <input id="storeName" type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Ej: Novedades Astaroth" className="w-full p-3 border border-slate-300 rounded-lg text-base" />
+                        </div>
+                        <div>
+                            <label htmlFor="whatsapp" className="block text-sm font-semibold text-slate-700 mb-1">Tu Número de WhatsApp</label>
+                            <input id="whatsapp" type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="Ej: 50588887777" className="w-full p-3 border border-slate-300 rounded-lg text-base" />
+                        </div>
+                    </section>
+
+                    <section>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-lg font-semibold text-slate-800">Tus Productos ({products.length}/15)</h2>
+                            <button onClick={addProduct} disabled={products.length >= 15} className="flex items-center gap-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors disabled:bg-indigo-300 disabled:cursor-not-allowed">
+                                <Plus className="w-5 h-5" /> Añadir Producto
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            {products.length > 0 ? (
+                                products.map(p => <RielProductCard key={p.id} product={p} />)
+                            ) : (
+                                <div className="text-center p-10 border-2 border-dashed border-slate-300 rounded-xl">
+                                    <p className="text-slate-500">Aún no has añadido productos. ¡Haz clic en "Añadir Producto" para empezar!</p>
+                                </div>
+                            )}
+                        </div>
+                    </section>
+                </div>
             )}
-          </div>
-        </section>
+
+            {activeTab === 'analytics' && (
+                <RielAnalytics />
+            )}
+        </div>
       </main>
 
-      {/* Pie de Página con Acciones */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-3">
-          <button onClick={handleSave} disabled={isSaving} className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-lg shadow-indigo-200 transition-all active:scale-95 disabled:bg-indigo-400">
-            {isSaving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            {isSaving ? 'Lanzando...' : 'Guardar y Lanzar'}
-          </button>
-          <button onClick={() => shareableUrl && window.open(shareableUrl, '_blank')} disabled={!shareableUrl || isSaving} className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold rounded-lg transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed">
-            <Eye className="w-5 h-5" /> Ver Tienda
-          </button>
+         <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-3">
+            <button onClick={handleSave} disabled={isSaving} className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-lg shadow-indigo-200 transition-all active:scale-95 disabled:bg-indigo-400">
+                {isSaving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                {isSaving ? 'Lanzando...' : 'Guardar y Lanzar'}
+            </button>
+            <button onClick={() => shareableUrl && window.open(shareableUrl, '_blank')} disabled={!shareableUrl || isSaving} className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold rounded-lg transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed">
+                <Eye className="w-5 h-5" /> Ver Tienda
+            </button>
            <button onClick={handleShare} disabled={!shareableUrl || isSaving} className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 font-bold rounded-lg transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed">
-            <Share2 className="w-5 h-5" /> Compartir
-          </button>
-        </div>
+                <Share2 className="w-5 h-5" /> Compartir
+            </button>
+         </div>
       </footer>
     </div>
   );

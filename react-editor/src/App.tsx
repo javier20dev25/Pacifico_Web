@@ -10,6 +10,7 @@ import Welcome from './pages/Welcome';
 import RielModal from './components/RielModal';
 import AdminRiel from './pages/AdminRiel';
 import RielActivation from './pages/RielActivation'; // <-- AÑADIDO
+import AccountActivation from './pages/AccountActivation'; // <-- MI NUEVA TAREA
 import RielEditor from './pages/RielEditor';       // <-- AÑADIDO
 
 function App() {
@@ -23,7 +24,8 @@ function App() {
         <Route path="/" element={<Welcome />} />
         <Route path="/login" element={<Login />} />
         <Route path="/image-test" element={<ImageUploadTest />} />
-        <Route path="/riel-activation" element={<RielActivation />} /> {/* <-- CORREGIDO */}
+        <Route path="/riel-activation" element={<RielActivation />} />
+        <Route path="/activate" element={<AccountActivation />} /> {/* <-- MI NUEVA TAREA */}
 
         {/* Rutas protegidas que usan el MainLayout */}
         <Route element={<MainLayout />}>

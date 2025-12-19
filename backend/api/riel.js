@@ -186,4 +186,101 @@ router.get('/analytics', protect, async (req, res) => {
     }
 });
 
+// --- INICIO: Tarea 7 - Endpoints para gestionar Riel ---
+
+// Endpoint para activar/desactivar una tienda Riel
+router.put('/:storeId/toggle', protect, async (req, res) => {
+    const { storeId } = req.params;
+    const userUuid = req.user.uuid;
+
+    try {
+        // 1. Obtener la tienda y verificar la propiedad en una sola consulta
+        const { data: store, error: storeError } = await supabaseAdmin
+            .from('stores')
+            .select('activa, usuario_id')
+            .eq('id', storeId)
+            .single();
+
+        if (storeError || !store) {
+            return res.status(404).json({ error: 'Tienda no encontrada.' });
+        }
+
+        const { data: owner, error: ownerError } = await supabaseAdmin
+            .from('usuarios')
+            .select('uuid')
+            .eq('id', store.usuario_id)
+            .single();
+
+        if (ownerError || owner.uuid !== userUuid) {
+            return res.status(403).json({ error: 'No tienes permiso para modificar esta tienda.' });
+        }
+
+        // 2. Actualizar el estado 'activa'
+        const newStatus = !store.activa;
+        const { data: updatedStore, error: updateError } = await supabaseAdmin
+            .from('stores')
+            .update({ activa: newStatus })
+            .eq('id', storeId)
+            .select('id, activa')
+            .single();
+
+        if (updateError) {
+            throw updateError;
+        }
+
+        res.json({ message: `Tienda Riel ${newStatus ? 'activada' : 'desactivada'}.`, store: updatedStore });
+
+    } catch (error) {
+        console.error(`[FATAL] /api/riel/${storeId}/toggle:`, error.message);
+        res.status(500).json({ error: 'Error interno del servidor al cambiar el estado de la tienda.' });
+    }
+});
+
+// Endpoint para borrar una tienda Riel
+router.delete('/:storeId', protect, async (req, res) => {
+    const { storeId } = req.params;
+    const userUuid = req.user.uuid;
+
+    try {
+        // 1. Verificar la propiedad antes de borrar (similar a toggle)
+        const { data: store, error: storeError } = await supabaseAdmin
+            .from('stores')
+            .select('usuario_id')
+            .eq('id', storeId)
+            .single();
+            
+        if (storeError || !store) {
+            return res.status(404).json({ error: 'Tienda no encontrada.' });
+        }
+
+        const { data: owner, error: ownerError } = await supabaseAdmin
+            .from('usuarios')
+            .select('uuid')
+            .eq('id', store.usuario_id)
+            .single();
+
+        if (ownerError || owner.uuid !== userUuid) {
+            return res.status(403).json({ error: 'No tienes permiso para borrar esta tienda.' });
+        }
+
+        // 2. Borrar la tienda
+        const { error: deleteError } = await supabaseAdmin
+            .from('stores')
+            .delete()
+            .eq('id', storeId);
+
+        if (deleteError) {
+            throw deleteError;
+        }
+
+        res.status(200).json({ message: 'Tienda Riel eliminada con éxito.' });
+
+    } catch (error) {
+        console.error(`[FATAL] /api/riel/${storeId}:`, error.message);
+        res.status(500).json({ error: 'Error interno del servidor al eliminar la tienda.' });
+    }
+});
+
+// --- FIN: Tarea 7 ---
+
 module.exports = router;

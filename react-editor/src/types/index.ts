@@ -69,3 +69,13 @@ export interface Abono {
   notes: string;
   created_at: string;
 }
+
+// --- Nueva Interfaz para Tiendas ---
+export interface Store {
+  id: number;
+  nombre: string;
+  slug: string;
+  activa: boolean;
+  store_type: 'normal' | 'riel' | null;
+  // Añade otras propiedades de la tienda que puedas necesitar en el futuro
+}

@@ -2,63 +2,52 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Tienda Riel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        body {
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        body, html {
+            overscroll-behavior: none;
             font-family: 'Inter', sans-serif;
-            background-color: #f8fafc; /* gris más claro */
         }
-        .line-clamp-2 {
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-            -webkit-line-clamp: 2;
-        }
+        /* Clases de animación para la salida de la tarjeta */
+        .card-container.animating.out-right { transform: translate(1000px, 50px) rotate(30deg); opacity: 0; transition: transform 0.4s ease-in, opacity 0.4s ease-in; }
+        .card-container.animating.out-left { transform: translate(-1000px, 50px) rotate(-30deg); opacity: 0; transition: transform 0.4s ease-in, opacity 0.4s ease-in; }
+        .card-container.animating.out-up { transform: translate(0, -1000px) rotate(0deg); opacity: 0; transition: transform 0.4s ease-in, opacity 0.4s ease-in; }
+        .card-container.animating.out-down { transform: translate(0, 1000px) rotate(0deg); opacity: 0; transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+        .card-container.resetting { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .card-container.dragging { transition: none; }
+        /* Animación de pulso para la tarjeta de fondo */
+        .prompt-pulse { animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.7; transform: scale(0.95); } 50% { opacity: 1; transform: scale(0.97); } }
     </style>
-    <!-- Inyección de datos del servidor -->
     __DATA_INJECTION_POINT__
 </head>
-<body class="pb-32">
+<body class="h-screen w-full bg-gray-100 flex items-center justify-center overflow-hidden select-none touch-none">
 
-    <!-- Header / Tarjeta de Bienvenida -->
-    <header id="store-header" class="max-w-md mx-auto pt-6 px-4">
-        <!-- El contenido del header se generará dinámicamente -->
-    </header>
-
-    <!-- Catálogo de Productos -->
-    <main class="max-w-md mx-auto px-4 mt-8">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-bold text-slate-900">Catálogo</h3>
-          <span id="product-count" class="text-xs font-medium text-indigo-600"></span>
-        </div>
-        <div id="products-grid" class="grid grid-cols-2 gap-4">
-            <!-- Las tarjetas de producto se generarán aquí -->
-        </div>
-    </main>
-
-    <!-- Barra de Navegación/Carrito Flotante Inferior -->
-    <div id="bottom-nav-container" class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-40">
-        <!-- La barra de navegación del carrito se generará aquí -->
-    </div>
-
-    <!-- Modal de Carrito de Compras (sin cambios en su estructura interna) -->
-    <div id="cart-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden p-4">
-      <div id="cart-modal-content" class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        <header class="p-5 border-b border-slate-200 flex justify-between items-center">
-          <h2 class="text-lg font-bold text-slate-800">Resumen de tu Pedido</h2>
-          <button id="cart-modal-close" class="p-2 rounded-full hover:bg-slate-100 text-slate-500">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-          </button>
+    <div id="main-container" class="relative w-full max-w-md h-full md:h-[90vh] md:max-h-[800px] md:rounded-3xl bg-white shadow-2xl flex flex-col overflow-hidden">
+        
+        <!-- Header -->
+        <header class="absolute top-0 left-0 w-full p-6 z-30 flex justify-center pointer-events-none">
+            <div id="store-header" class="flex items-center gap-2 text-white font-bold text-xl drop-shadow-lg">
+                <!-- El nombre de la tienda se inyectará aquí -->
+            </div>
         </header>
-        <main id="cart-modal-body" class="p-6 space-y-6 overflow-y-auto">
-          <!-- El contenido del resumen del carrito se generará aquí -->
+
+        <!-- Área Principal de Swipe -->
+        <main id="swipe-area" class="flex-1 relative w-full h-full">
+            <!-- La pila de tarjetas se renderizará aquí -->
         </main>
-      </div>
+        
+        <!-- Controles Inferiores -->
+        <footer id="controls-footer" class="absolute bottom-0 w-full z-40">
+            <!-- Los botones de acción se renderizarán aquí -->
+        </footer>
+
+        <!-- El modal del carrito ahora se inyecta dinámicamente con JavaScript -->
     </div>
 
-    <script src="/js/riel_viewer.js?v=__CACHE_BUST_VERSION__"></script>
+    <script type="module" src="/js/riel_viewer.js?v=__CACHE_BUST_VERSION__"></script>
 </body>
 </html>

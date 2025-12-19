@@ -114,11 +114,13 @@ export interface AppState {
   closeSuccessModal: () => void;
   setStoreType: (type: 'by_order' | 'in_stock') => void;
   loadInitialData: (data: InitialDataPayload) => void;
+  setShareableUrl: (url: string | null) => void;
+  getStoreDataForAPI: () => { store: Partial<StoreDetails>; products: Product[] };
 }
 
 const useAppStore = create<AppState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       store: {
         uuid: '',
         storeType: 'by_order',
@@ -215,7 +217,18 @@ const useAppStore = create<AppState>()(
             store: { ...state.store, ...storeData, shareableUrl: shareableUrl },
             products: productsData
         }
-      })
+      }),
+      setShareableUrl: (url) => set(state => ({ store: { ...state.store, shareableUrl: url }})),
+      getStoreDataForAPI: () => {
+        const { store, products } = get();
+        // Limpiamos los datos de solo-frontend antes de enviarlos a la API
+        const { logoFile, ...restOfStore } = store;
+        const cleanedProducts = products.map(p => {
+            const { imageFile, ...restOfProduct } = p;
+            return restOfProduct;
+        });
+        return { store: restOfStore, products: cleanedProducts };
+      },
     }),
     {
       name: 'pacificoweb-draft',

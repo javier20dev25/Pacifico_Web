@@ -21,13 +21,21 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ user, onAction, isLoading
   return (
     <div className="flex flex-col sm:flex-row gap-1">
       {user.status === 'temporary' && (
-        <button 
-          onClick={() => handleButtonClick('show-credentials')}
-          className={successBtn}
-          disabled={isLoadingCredentials}
-        >
-          Credenciales
-        </button>
+        <>
+          <button 
+            onClick={() => handleButtonClick('show-credentials')}
+            className={baseBtn}
+            disabled={isLoadingCredentials}
+          >
+            Credenciales
+          </button>
+          <button 
+            onClick={() => handleButtonClick('generate-activation')}
+            className={successBtn}
+          >
+            Verificación Directa
+          </button>
+        </>
       )}
       <button 
         onClick={() => handleButtonClick('renew')}

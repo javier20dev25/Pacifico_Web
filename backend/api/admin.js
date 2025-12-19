@@ -31,6 +31,16 @@ router.post('/create-temporary-user', async (req, res) => {
       return res.status(400).json({ error: 'Datos de entrada inválidos.', details: error.errors });
     }
     const { nombre, correo, plan_nombre } = validatedData;
+
+    // --- INICIO: Bloqueo de seguridad para plan 'riel' ---
+    if (plan_nombre === 'riel') {
+      return res.status(400).json({ 
+        error: 'Este formulario no permite crear usuarios de tipo Riel.',
+        message: 'Por favor, usa el panel de "Gestionar Cuentas Riel" para aprobar y crear estas cuentas.'
+      });
+    }
+    // --- FIN: Bloqueo de seguridad ---
+
     let finalEmail = correo;
     if (!finalEmail) {
       let baseEmail = nombreAToken(nombre) + '@pacificoweb.com';
@@ -183,7 +193,7 @@ router.get('/registration-stats', async (req, res) => {
 
 router.get('/plans', async (req, res) => {
   try {
-    const { data, error } = await supabaseAdmin.from('planes').select('*');
+    const { data, error } = await supabaseAdmin.from('planes').select('*').eq('is_active', true).neq('nombre', 'riel');
     if (error) throw error;
     res.json(data);
   } catch (error) {
@@ -317,9 +327,50 @@ router.post('/generate-riel-reset-link', async (req, res, next) => {
     });
 
   } catch (error) {
-    next(error);
-  }
-});
-
-
-module.exports = router;
+        next(error);
+      }
+    });
+    
+    // --- INICIO: Tarea de nuevo flujo de activación ---
+    router.post('/generate-activation-link', async (req, res, next) => {
+        const { userUuid } = req.body;
+        if (!userUuid) {
+            return res.status(400).json({ error: 'Se requiere el UUID del usuario.' });
+        }
+    
+        try {
+            const newActivationToken = crypto.randomUUID();
+            const expiration = new Date();
+            expiration.setDate(expiration.getDate() + 7); // El enlace dura 7 días
+    
+            const { data, error } = await supabaseAdmin
+                .from('usuarios')
+                .update({
+                    activation_token: newActivationToken,
+                    activation_token_expires_at: expiration.toISOString(),
+                })
+                .eq('uuid', userUuid)
+                .select('uuid')
+                .single();
+    
+            if (error || !data) {
+                throw new Error('No se pudo actualizar el usuario o el usuario no existe.');
+            }
+    
+            // Devolvemos la ruta relativa que el frontend puede usar.
+            const activationLink = `/activate?token=${newActivationToken}`;
+            res.status(200).json({
+                message: 'Enlace de activación generado con éxito.',
+                activationLink: activationLink,
+            });
+    
+        } catch (error) {
+            console.error('[FATAL] /generate-activation-link:', error.message);
+            next(error);
+        }
+    });
+    // --- FIN: Tarea de nuevo flujo de activación ---
+    
+    
+    module.exports = router;
+    

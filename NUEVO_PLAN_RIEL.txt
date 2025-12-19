@@ -1,0 +1,50 @@
+# Plan de Implementación: Revolución de Riel - "Swipe-to-Shop"
+
+Este documento detalla las fases y tareas necesarias para transformar la experiencia de las tiendas Riel a un modelo de "Swipe-to-Shop" con analíticas para el vendedor.
+
+---
+
+### Fase 1: Construir la Nueva Experiencia "Swipe" y el Backend de Analíticas
+
+**Objetivo:** Reemplazar la vista de catálogo actual por una interfaz de "swipe" y crear la infraestructura de backend para capturar todas las interacciones del usuario.
+
+**Tareas:**
+
+1.  **Base de Datos:**
+    *   Crear una nueva tabla `product_interactions` para guardar cada interacción del usuario con un producto.
+        *   **Columnas:** `id`, `store_id`, `product_id`, `interaction_type` (ej: 'like', 'nope', 'add_to_cart'), `session_id` (para identificar usuarios anónimos), `created_at`.
+    *   Crear una nueva tabla `store_visits` para contabilizar las visitas únicas a cada tienda.
+        *   **Columnas:** `id`, `store_id`, `session_id`, `created_at`.
+
+2.  **Backend (Nuevos Endpoints):**
+    *   `POST /api/interactions`: Un endpoint público que la tienda usará para registrar cada swipe del usuario en la tabla `product_interactions`.
+    *   `POST /api/visits`: Un endpoint público para registrar una visita a la tienda en la tabla `store_visits`.
+    *   `GET /api/riel/analytics`: Un endpoint protegido (solo para el dueño de la tienda) que leerá las tablas `product_interactions` y `store_visits` para calcular y devolver las estadísticas.
+
+3.  **Frontend (Reescritura de la Tienda Pública):**
+    *   Reescribir por completo `public/riel_viewer_template.html` y `public/js/riel_viewer.js`.
+    *   Implementar la nueva interfaz de tarjetas apiladas y swipeables (estilo Tinder) usando JavaScript y Pointer Events.
+    *   Al ocurrir un swipe (`like`, `nope`, `add_to_cart`), se hará una llamada asíncrona al nuevo endpoint `/api/interactions`.
+    *   Implementar la lógica del carrito de compras adaptada a esta nueva interfaz.
+
+---
+
+### Fase 2: Rediseñar el Editor de Riel y Mostrar las Métricas
+
+**Objetivo:** Darle al dueño de la tienda Riel una interfaz para ver las estadísticas de interacción de sus productos.
+
+**Tareas:**
+
+1.  **Frontend (Rediseño del Editor):**
+    *   Modificar `RielEditor.tsx` para ajustarse al nuevo flujo de "Comenzar a crear".
+    *   Añadir una nueva pestaña o sección llamada "Estadísticas".
+
+2.  **Frontend (Visualización de Métricas):**
+    *   Dentro de la sección "Estadísticas", se llamará al endpoint `GET /api/riel/analytics`.
+    *   Se mostrarán los datos de forma clara y visual:
+        *   Top 3 productos con más "Likes".
+        *   Top 3 productos con más "Nopes".
+        *   Productos más añadidos al carrito.
+        *   Contador total de visitas a la tienda.
+
+---

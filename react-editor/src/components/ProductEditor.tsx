@@ -79,7 +79,8 @@ const ProductEditor = () => {
   const planName = useAppStore((state) => state.store.planName);
 
   // Consider a limit of 0 or undefined as unlimited.
-  const hasLimit = productLimit && productLimit > 0;
+  // CORRECCIÓN: Usar '!!' para asegurar que el resultado sea un booleano estricto.
+  const hasLimit = !!(productLimit && productLimit > 0);
   const limitReached = hasLimit && products.length >= productLimit;
 
   return (

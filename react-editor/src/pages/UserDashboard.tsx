@@ -4,6 +4,8 @@ import UserInfo from '@/components/dashboard/UserInfo';
 import StoreManager from '@/components/dashboard/StoreManager';
 import OrderProcessor from '@/components/dashboard/OrderProcessor';
 import AiChat from '@/components/dashboard/AiChat';
+import RielManager from '@/components/dashboard/RielManager';
+import type { Store } from '@/types'; // Importar el tipo compartido
 
 interface User {
   nombre: string;
@@ -13,7 +15,7 @@ interface User {
 
 const UserDashboard = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [stores, setStores] = useState([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -28,6 +30,7 @@ const UserDashboard = () => {
           apiClient.get('/user/stores'),
         ]);
 
+        // La respuesta de /user/profile anida el usuario en { user: ... }
         setUser(profileResponse.data.user || profileResponse.data);
         setStores(storesResponse.data);
       } catch (err) {
@@ -64,6 +67,9 @@ const UserDashboard = () => {
     <div className="container mx-auto p-4 md:p-8">
       <UserInfo user={user} className="mb-8" />
       <StoreManager stores={stores} className="mb-8" />
+
+      {/* Tarea 4: Lógica para mostrar el gestor de Riel a planes 'ejecutivo' */}
+      {user?.plan === 'ejecutivo' && <RielManager stores={stores} className="mb-8" />}
 
       <div className="flex justify-center gap-4 mb-8">
         <button

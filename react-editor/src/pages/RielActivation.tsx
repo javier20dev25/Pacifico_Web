@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import apiClient from '@/api/axiosConfig';
-import { Loader, AlertTriangle, CheckCircle, Phone } from 'lucide-react';
+import { Loader, AlertTriangle, CheckCircle } from 'lucide-react';
 
 type Status = 'verifying' | 'ready' | 'activating' | 'error' | 'success';
 
@@ -73,7 +73,8 @@ const RielActivation: React.FC = () => {
         } else {
             throw new Error(response.data.error || 'No se pudo completar la activación.');
         }
-    } catch (err: any)        setError(err.response?.data?.error || err.message || 'Ocurrió un error inesperado.');
+    } catch (err: any) {
+        setError(err.response?.data?.error || err.message || 'Ocurrió un error inesperado.');
         setStatus('error');
     }
   };
@@ -108,8 +109,7 @@ const RielActivation: React.FC = () => {
                 />
               </div>
               <div>
-                <label htmlFor="password" c
-lassName="block text-sm font-medium text-slate-700 mb-1">Crea una Contraseña</label>
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">Crea una Contraseña</label>
                 <input
                   id="password"
                   type="password"
@@ -120,8 +120,7 @@ lassName="block text-sm font-medium text-slate-700 mb-1">Crea una Contraseña</l
                 />
               </div>
               <div>
-                <label htmlFor="confirmPassword" c
-lassName="block text-sm font-medium text-slate-700 mb-1">Confirma tu Contraseña</label>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-1">Confirma tu Contraseña</label>
                 <input
                   id="confirmPassword"
                   type="password"

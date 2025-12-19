@@ -31,6 +31,44 @@
         .header-gradient {
             background: linear-gradient(180deg, #6366f1 0%, #a855f7 100%); /* Índigo a Púrpura */
         }
+
+        /* --- INICIO: Estilos para el Anillo de Riel Activo --- */
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .riel-active-ring {
+            position: relative;
+            padding: 4px; /* Espacio para el borde */
+            border-radius: 50%;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .riel-active-ring::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200%; /* Hacer el gradiente más grande que el contenedor */
+            height: 200%;
+            background: conic-gradient(
+                from 0deg,
+                #f43f5e, /* rose-500 */
+                #eab308, /* yellow-500 */
+                #22c55e, /* green-500 */
+                #3b82f6, /* blue-500 */
+                #8b5cf6, /* violet-500 */
+                #f43f5e  /* de vuelta a rose-500 para un bucle suave */
+            );
+            transform: translate(-50%, -50%);
+            animation: rotate 4s linear infinite;
+        }
+        .riel-active-ring .logo-image {
+            position: relative;
+            z-index: 1;
+            border: 4px solid white; /* Borde interior para separar del anillo */
+        }
+        /* --- FIN: Estilos para el Anillo de Riel Activo --- */
     </style>
 </head>
 <body class="pb-24">

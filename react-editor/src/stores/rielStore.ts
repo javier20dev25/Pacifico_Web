@@ -19,6 +19,8 @@ export interface RielStoreState {
   whatsapp: string;
   products: RielProduct[];
   shareableUrl: string | null;
+  isSuccessModalOpen: boolean;
+  successModalMessage: string;
   setStoreName: (name: string) => void;
   setWhatsapp: (phone: string) => void;
   addProduct: () => void;
@@ -26,7 +28,9 @@ export interface RielStoreState {
   removeProduct: (productId: string) => void;
   setProductImage: (productId: string, file: File) => void;
   saveStore: () => Promise<void>;
-  loadRielData: () => Promise<void>; // <-- AÑADIDO: Para cargar datos
+  loadRielData: () => Promise<void>;
+  openSuccessModal: (message: string) => void;
+  closeSuccessModal: () => void;
 }
 
 const useRielStore = create<RielStoreState>((set, get) => ({
@@ -34,9 +38,12 @@ const useRielStore = create<RielStoreState>((set, get) => ({
   whatsapp: '',
   products: [],
   shareableUrl: null,
+  isSuccessModalOpen: false,
+  successModalMessage: '',
   setStoreName: (name) => set({ storeName: name }),
   setWhatsapp: (phone) => set({ whatsapp: phone }),
   addProduct: () => {
+    console.log('Acción addProduct llamada'); // <-- PUNTO DE DEPURACIÓN
     const products = get().products;
     if (products.length >= 15) {
       alert('Has alcanzado el límite de 15 productos para el plan Riel.');
@@ -152,7 +159,7 @@ const useRielStore = create<RielStoreState>((set, get) => ({
   },
 
   // Acciones para el modal de éxito
-  openSuccessModal: (message) => set({ isSuccessModalOpen: true, successModalMessage: message }),
+  openSuccessModal: (message: string) => set({ isSuccessModalOpen: true, successModalMessage: message }),
   closeSuccessModal: () => set({ isSuccessModalOpen: false, successModalMessage: '' }),
 }));
 

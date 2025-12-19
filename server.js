@@ -227,20 +227,41 @@ app.get('/store/:slug', async (req, res, next) => {
       return res.status(404).send(`Tienda con slug "${storeSlug}" no encontrada.`);
     }
 
+    // --- INICIO: Tarea 5 - Lógica para encontrar Riel asociado ---
+    let associatedRielSlug = null;
+    if (storeRecord.usuario_id && storeRecord.store_type !== 'riel') {
+      const { data: rielStore } = await supabaseAdmin
+        .from('stores')
+        .select('slug')
+        .eq('usuario_id', storeRecord.usuario_id)
+        .eq('store_type', 'riel')
+        .eq('activa', true)
+        .limit(1)
+        .single();
+      
+      if (rielStore) {
+        associatedRielSlug = rielStore.slug;
+        console.log(`[GET /store/:slug] Riel asociado encontrado con slug: ${associatedRielSlug}`);
+      }
+    }
+    // --- FIN: Tarea 5 ---
+
     // 2. Construir el objeto 'previewData' que el frontend espera
-    const products = storeRecord.products || []; // CORREGIDO: Usar la columna 'products'
+    const products = storeRecord.products || [];
     const sanitizedProducts = sanitizeStoreData(products);
     
-    // Separamos el resto de las propiedades para el objeto 'store'
     const { products: productsColumn, ...storeDataForClient } = storeRecord;
 
     const previewData = {
       store: storeDataForClient,
       products: sanitizedProducts,
+      riel_slug: associatedRielSlug, // Inyectar el slug del Riel asociado
     };
     
     console.log(`[GET /store/:slug] 4. Datos de la tienda validados y reestructurados. Procediendo a leer la plantilla HTML.`);
     
+    console.log(`[DEBUG TEMPLATE] Verificando tipo de tienda. Valor: '${storeRecord.store_type}', Tipo: ${typeof storeRecord.store_type}`);
+
     // 3. Determinar qué plantilla usar y leer el archivo HTML
     let templatePath;
     if (storeRecord.store_type === 'riel') {
@@ -256,7 +277,7 @@ app.get('/store/:slug', async (req, res, next) => {
       bucket: process.env.STORAGE_BUCKET || 'imagenes',
     };
 
-    const injectedScript = `<script>
+    const injectedScript = `<script type="module">
       window.STORE_DATA = ${JSON.stringify(previewData).replace(/<\/script/gi, '<\\/script')};
       window.SUPABASE_CONFIG = ${JSON.stringify(supabaseConfig).replace(/<\/script/gi, '<\\/script')};
     </script>`;
@@ -276,8 +297,9 @@ app.get('/store/:slug', async (req, res, next) => {
 // =========================================================
 // SERVE STATIC FILES
 // =========================================================
+// CORREGIDO: Apuntar al directorio 'dist' de la build de React
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'react-editor')));
+app.use(express.static(path.join(__dirname, 'react-editor', 'dist')));
 
 
 // =========================================================
@@ -286,7 +308,7 @@ app.use(express.static(path.join(__dirname, 'react-editor')));
 // El catch-all handler: para cualquier request que no sea de API o de tienda,
 // manda el index.html de React para que el routing del cliente funcione.
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'react-editor', 'index.html'));
+  res.sendFile(path.join(__dirname, 'react-editor', 'dist', 'index.html'));
 });
 
 // =========================================================

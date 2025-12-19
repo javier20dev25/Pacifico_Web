@@ -11,9 +11,9 @@ type EyeIconProps = {
 type LoginResponseData = {
   success?: boolean;
   sessionToken?: string;
-  user?: { rol: string };
+  user?: { rol: string; plan?: string }; // <-- MODIFICADO
   tempToken?: string;
-  mustChangePassword?: boolean; // <-- AÑADIDO
+  mustChangePassword?: boolean;
   error?: string;
 };
 
@@ -106,6 +106,8 @@ const Login: React.FC = () => {
         localStorage.setItem('sessionToken', data.sessionToken);
         if (data.user && data.user.rol === 'admin') {
           navigate('/admin');
+        } else if (data.user && data.user.plan === 'riel') {
+          navigate('/riel/editor');
         } else {
           navigate('/dashboard');
         }

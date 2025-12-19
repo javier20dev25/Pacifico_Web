@@ -6,39 +6,41 @@ import LogisticsEditor from '@/components/LogisticsEditor';
 import PaymentEditor from '@/components/PaymentEditor';
 import ProductModal from '@/components/ProductModal';
 import { MainSuccessModal } from '@/components/SuccessModal'; // <-- AÑADIDO
-import apiClient from '@/api/axiosConfig';
 import { useInitialData } from '@/hooks/useInitialData';
-import axios from 'axios';
 import { Package, Store as StoreIcon, CheckCircle2, Save, Eye, Loader, ServerCrash } from 'lucide-react';
+import apiClient from '@/api/axiosConfig';
+import { AxiosError } from 'axios';
 
 function StoreEditor() {
   const store = useStore((state) => state.store);
   const shareableUrl = useStore((state) => state.store.shareableUrl);
   const setStoreType = useStore((state) => state.setStoreType);
   const isProductModalOpen = useStore((state) => state.isProductModalOpen);
-  const setStore = useStore((state) => state.setStore);
-  const setProducts = useStore((state) => state.setProducts);
   const openSuccessModal = useStore((state) => state.openSuccessModal);
   const { isLoading, isError } = useInitialData();
 
   const [isSaving, setIsSaving] = useState(false);
-  const [uploadProgress, ] = useState(0);
-  const [savingMessage, setSavingMessage] = useState('Guardando...');
 
   const handleSave = async (launch = false) => {
     setIsSaving(true);
-    setSavingMessage('Iniciando proceso de guardado...');
 
     try {
-      // ... (código de guardado existente)
-      // ...
-      openSuccessModal('¡Tienda guardada con éxito!');
+      const storeData = useStore.getState().getStoreDataForAPI();
+      const payload = { storeData, launch };
+      
+      const response = await apiClient.put('/user/store-data', payload);
+
+      if (response.data && response.data.shareableUrl) {
+        useStore.getState().setShareableUrl(response.data.shareableUrl);
+      }
+      
+      openSuccessModal(response.data.message || '¡Tienda guardada con éxito!');
 
     } catch (err: unknown) {
-      // ... (código de manejo de errores existente)
+      const error = err as AxiosError<{ message?: string }>;
+      alert('Error al guardar: ' + (error.response?.data?.message || error.message));
     } finally {
       setIsSaving(false);
-      setSavingMessage('');
     }
   };
 
@@ -68,14 +70,14 @@ function StoreEditor() {
       <MainSuccessModal />
       {isSaving && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-50 backdrop-blur-sm">
-          <p className="text-white text-xl mb-2">{savingMessage}</p>
+          <p className="text-white text-xl mb-2">Guardando...</p>
           <div className="w-3/4 max-w-lg bg-gray-200 rounded-full h-4 overflow-hidden">
             <div
               className="bg-blue-600 h-4 rounded-full transition-all duration-300 ease-in-out"
-              style={{ width: uploadProgress + '%' }}
+              style={{ width: '50%' }} // Placeholder for progress
             ></div>
           </div>
-           <p className="text-white text-2xl mt-2 font-bold">{uploadProgress}%</p>
+           <p className="text-white text-2xl mt-2 font-bold">50%</p>
         </div>
       )}
 
