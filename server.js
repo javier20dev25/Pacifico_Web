@@ -13,9 +13,20 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const bodyParser = require('body-parser');
+
 // Middlewares
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Configuración de body-parser para capturar el raw body, necesario para la verificación del webhook de PayPal
+app.use(bodyParser.json({
+  limit: '50mb',
+  verify: (req, res, buf, encoding) => {
+    // Guardar el buffer raw en el objeto de la petición
+    if (buf && buf.length) {
+      req.rawBody = buf.toString(encoding || 'utf8');
+    }
+  },
+}));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // Security Middlewares
 // Desactivar Helmet en entorno de test para evitar posibles conflictos con supertest
@@ -72,12 +83,16 @@ const uploadRoutes = require('./backend/api/uploads');
 const statisticsRoutes = require('./backend/api/statistics');
 const orderRoutes = require('./backend/api/orders');
 const rielRoutes = require('./backend/api/riel'); // <-- AÑADIDO
+const paypalRoutes = require('./backend/api/paypal');
 const { protect, isAdmin } = require('./backend/middleware/auth');
 
 // --- Rutas Públicas de la API (sin autenticación) ---
+const plansRoutes = require('./backend/api/plans');
 app.use('/api/auth', authRoutes);
 app.use('/api/uploads', uploadRoutes); // La ruta de prueba de subida es pública
 app.use('/api/riel', rielRoutes); // <-- AÑADIDO
+app.use('/api/plans', plansRoutes); // <-- NUEVA RUTA DE PLANES
+app.use('/api/paypal', paypalRoutes); // <-- RUTA DE PAYPAL AHORA ES MIXTA (PÚBLICA/PRIVADA)
 
 // --- NUEVO ENDPOINT PÚBLICO PARA EXPLICACIÓN DE PEDIDOS CON IA ---
 const { GoogleGenerativeAI } = require('@google/generative-ai');

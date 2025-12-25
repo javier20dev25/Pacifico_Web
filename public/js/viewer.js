@@ -201,7 +201,11 @@ _${escapeHTML(store.extra_cost.description)}_
     message += `
 ¡Gracias! Espero su respuesta.`;
 
-    const phoneNumber = store.whatsapp.replace(/\s+|-/g, '');
+    const phoneNumber = (store.whatsapp && typeof store.whatsapp === 'string') ? store.whatsapp.replace(/\s+|-/g, '') : null;
+    if (!phoneNumber) {
+        alert('El número de WhatsApp de la tienda no está configurado.');
+        return;
+    }
     const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     
     window.open(url, '_blank');
@@ -251,7 +255,7 @@ function renderVendorProfile() {
     }
     // --- FIN: Tarea 5 ---
 
-    const contactButton = store.whatsapp ? `
+    const contactButton = (store.whatsapp && typeof store.whatsapp === 'string') ? `
         <a href="https://wa.me/${store.whatsapp.replace(/\s+|-/g, '')}" target="_blank" class="text-indigo-600 font-semibold hover:text-indigo-700 transition flex items-center">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-2 4v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7"></path></svg>
             Contactar

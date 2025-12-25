@@ -6,7 +6,7 @@ import AdminStats from '@/components/admin/AdminStats';
 import CreateUserForm from '@/components/admin/CreateUserForm';
 import UsersTable from '@/components/admin/UsersTable';
 import RegistrationChart from '@/components/admin/RegistrationChart';
-import type { User } from '@/components/admin/UsersTable'; // Importamos el tipo User
+import type { User } from '@/components/admin/UsersTable';
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -14,9 +14,11 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      if (isInitialLoad) {
+        setLoading(true);
+      }
       const response = await apiClient.get<User[]>('/admin/users');
       const fetchedUsers = response.data || [];
       setUsers(fetchedUsers);
@@ -32,12 +34,14 @@ const AdminDashboard = () => {
       setError('No se pudo cargar la lista de usuarios.');
       console.error('[AdminDashboard] Error cargando usuarios:', err);
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(true);
   }, []);
 
   if (loading) {

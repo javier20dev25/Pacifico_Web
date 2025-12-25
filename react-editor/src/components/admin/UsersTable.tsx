@@ -22,7 +22,8 @@ export type User = {
 
 export type Action = 'show-credentials' | 'renew' | 'reset-password' | 'reactivate' | 'suspend' | 'revoke' | 'riel-reset-password' | 'generate-activation';
 
-// --- Componente Modal para Credenciales ---
+// --- MODALES ---
+
 const CredentialsModal: React.FC<{ credentials: Credentials | null; isOpen: boolean; onClose: () => void; onCopy: () => void; }> = ({ credentials, isOpen, onClose, onCopy }) => {
   if (!isOpen || !credentials) return null;
 
@@ -57,13 +58,13 @@ const CredentialsModal: React.FC<{ credentials: Credentials | null; isOpen: bool
   );
 };
 
-// --- NUEVO Modal para Enlace de Activación ---
-const ActivationLinkModal: React.FC<{ link: string | null; isOpen: boolean; onClose: () => void; }> = ({ link, isOpen, onClose }) => {
+const ActivationLinkModal: React.FC<{ link: string | null; isOpen: boolean; onClose: () => void; isLoading: boolean; }> = ({ link, isOpen, onClose, isLoading }) => {
   const [copyButtonText, setCopyButtonText] = useState('Copiar Enlace');
 
-  if (!isOpen || !link) return null;
+  if (!isOpen) return null;
 
   const handleCopyLink = () => {
+    if (!link) return;
     navigator.clipboard.writeText(link)
       .then(() => {
         setCopyButtonText('¡Copiado!');
@@ -79,25 +80,57 @@ const ActivationLinkModal: React.FC<{ link: string | null; isOpen: boolean; onCl
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
         <h3 className="text-lg font-bold text-gray-800 mb-4">Enlace de Activación Directa</h3>
-        <p className="text-sm text-gray-600 mb-3">Envía este enlace al usuario para que pueda activar su cuenta y establecer su propia contraseña.</p>
-        <input 
-          type="text" 
-          readOnly 
-          value={link}
-          className="w-full p-2 border border-gray-300 rounded bg-gray-50 mb-4"
-        />
-        <div className="flex justify-between items-center">
-          <button onClick={handleCopyLink} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 w-32">
-            {copyButtonText}
-          </button>
-          <button onClick={onClose} className="text-gray-600 hover:text-gray-800 font-semibold">
-            Cerrar
-          </button>
-        </div>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center p-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="mt-4 text-slate-600">Generando enlace...</p>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-gray-600 mb-3">Envía este enlace al usuario para que pueda activar su cuenta y establecer su propia contraseña.</p>
+            <input 
+              type="text" 
+              readOnly 
+              value={link || ''}
+              className="w-full p-2 border border-gray-300 rounded bg-gray-50 mb-4"
+            />
+            <div className="flex justify-between items-center">
+              <button onClick={handleCopyLink} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 w-32" disabled={!link}>
+                {copyButtonText}
+              </button>
+              <button onClick={onClose} className="text-gray-600 hover:text-gray-800 font-semibold">
+                Cerrar
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 };
+
+const ConfirmationModal: React.FC<{ isOpen: boolean; message: string; onConfirm: () => void; onCancel: () => void; confirmButtonText?: string; cancelButtonText?: string;}> = 
+({ isOpen, message, onConfirm, onCancel, confirmButtonText = "Aceptar", cancelButtonText = "Cancelar" }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+                <p className="text-slate-700 text-center mb-6">{message}</p>
+                <div className="flex justify-center gap-4">
+                    <button onClick={onCancel} className="px-6 py-2 rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold">
+                        {cancelButtonText}
+                    </button>
+                    <button onClick={onConfirm} className="px-6 py-2 rounded-lg text-white bg-blue-600 hover:bg-blue-700 font-semibold">
+                        {confirmButtonText}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- COMPONENTE PRINCIPAL DE LA TABLA ---
 
 type UsersTableProps = {
   users: User[];
@@ -106,10 +139,17 @@ type UsersTableProps = {
 
 const UsersTable: React.FC<UsersTableProps> = ({ users, onUserAction }) => {
   const [isCredentialsModalOpen, setCredentialsModalOpen] = useState(false);
-  const [isLinkModalOpen, setLinkModalOpen] = useState(false); // Estado para el nuevo modal
+  const [isLinkModalOpen, setLinkModalOpen] = useState(false);
   const [currentCredentials, setCurrentCredentials] = useState<Credentials | null>(null);
-  const [currentActivationLink, setCurrentActivationLink] = useState<string | null>(null); // Estado para el nuevo enlace
   const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
+  
+  // Estado unificado para el modal de enlace
+  const [linkModalState, setLinkModalState] = useState<{ link: string | null; isLoading: boolean }>({ link: null, isLoading: false });
+
+  // State for confirmation modal
+  const [isConfirmationModalOpen, setConfirmationModalOpen] = useState(false);
+  const [confirmationState, setConfirmationState] = useState<{ action: Action; user: User; message: string; } | null>(null);
+
 
   const handleShowCredentials = async (userUuid: string) => {
     setIsLoadingCredentials(true);
@@ -125,50 +165,90 @@ const UsersTable: React.FC<UsersTableProps> = ({ users, onUserAction }) => {
     }
   };
 
-  const handleAction = async (action: Action, user: User) => {
+  const executeConfirmedAction = async () => {
+    if (!confirmationState) return;
+
+    const { action, user } = confirmationState;
+    
+    const actions: Record<Action, { endpoint: string } | undefined> = {
+        revoke: { endpoint: '/revoke-user' },
+        suspend: { endpoint: '/suspend-user' },
+        reactivate: { endpoint: '/reactivate-user' },
+        renew: { endpoint: '/renew-contract' },
+        'reset-password': { endpoint: '/reset-password' },
+        'riel-reset-password': { endpoint: '/generate-riel-reset-link' },
+        'generate-activation': { endpoint: '/generate-activation-link' },
+        'show-credentials': undefined,
+    };
+    
+    const actionConfig = actions[action];
+    if (!actionConfig) return;
+
+    setConfirmationModalOpen(false);
+    setConfirmationState(null);
+
+    if (action === 'generate-activation' || action === 'riel-reset-password') {
+      setLinkModalOpen(true);
+      setLinkModalState({ link: null, isLoading: true });
+
+      try {
+        const payload = { userUuid: user.usuario_uuid };
+        const response = await apiClient.post<{ activationLink?: string }>('/admin' + actionConfig.endpoint, payload);
+
+        if (response.data.activationLink) {
+          const fullUrl = `${window.location.origin}${response.data.activationLink}`;
+          setLinkModalState({ link: fullUrl, isLoading: false });
+        } else {
+          throw new Error('El servidor no devolvió un enlace de activación.');
+        }
+        onUserAction();
+      } catch (err: unknown) {
+        const error = err as AxiosError<{ error: string }>;
+        alert(error.response?.data?.error || (err as Error).message || 'Error al generar el enlace.');
+        setLinkModalOpen(false);
+        setLinkModalState({ link: null, isLoading: false });
+      }
+    } else {
+        // Lógica para otras acciones
+        try {
+            const payload = (action === 'reset-password') ? { email: user.correo } : { userUuid: user.usuario_uuid };
+            const response = await apiClient.post<{ message?: string; copyPasteMessage?: string }>('/admin' + actionConfig.endpoint, payload);
+
+            if (action === 'reset-password' && response.data.copyPasteMessage) {
+                window.prompt('Copia el mensaje para tu cliente:', response.data.copyPasteMessage);
+            } else {
+                alert(response.data.message || 'Acción completada con éxito');
+            }
+            onUserAction();
+        } catch (err) {
+            const error = err as AxiosError<{ error: string }>;
+            alert(error.response?.data?.error || 'Error al ejecutar la acción.');
+        }
+    }
+  };
+
+
+  const handleAction = (action: Action, user: User) => {
     if (action === 'show-credentials') {
       handleShowCredentials(user.usuario_uuid);
       return;
     }
 
-    const actions: Record<Action, { confirm: string; endpoint: string } | undefined> = {
-      revoke: { confirm: '¿Estás seguro de que quieres eliminar a este usuario de forma permanente?', endpoint: '/revoke-user' },
-      suspend: { confirm: '¿Estás seguro de que quieres suspender a este usuario?', endpoint: '/suspend-user' },
-      reactivate: { confirm: '¿Estás seguro de que quieres reactivar a este usuario?', endpoint: '/reactivate-user' },
-      renew: { confirm: '¿Estás seguro de que quieres renovar el contrato de este usuario por 3 meses más?', endpoint: '/renew-contract' },
-      'reset-password': { confirm: '¿Estás seguro de que quieres resetear la contraseña de este usuario?', endpoint: '/reset-password' },
-      'riel-reset-password': { confirm: '¿Generar un nuevo enlace de reseteo para este usuario Riel?', endpoint: '/generate-riel-reset-link' },
-      'generate-activation': { confirm: '¿Generar un enlace de activación directa para este nuevo usuario?', endpoint: '/generate-activation-link' },
+    const actionPrompts: Record<Action, string | undefined> = {
+      revoke: '¿Estás seguro de que quieres eliminar a este usuario de forma permanente?',
+      suspend: '¿Estás seguro de que quieres suspender a este usuario?',
+      reactivate: '¿Estás seguro de que quieres reactivar a este usuario?',
+      renew: '¿Estás seguro de que quieres renovar el contrato de este usuario por 3 meses más?',
+      'reset-password': '¿Estás seguro de que quieres resetear la contraseña de este usuario?',
+      'riel-reset-password': '¿Generar un nuevo enlace de reseteo para este usuario Riel?',
+      'generate-activation': '¿Generar un enlace de activación directa para este nuevo usuario?',
       'show-credentials': undefined,
     };
 
-    const actionConfig = actions[action];
-    if (!actionConfig) return;
-
-    if (window.confirm(actionConfig.confirm)) {
-      try {
-        const payload = (action === 'reset-password') 
-          ? { email: user.correo } 
-          : { userUuid: user.usuario_uuid };
-
-        const response = await apiClient.post<{ message?: string; copyPasteMessage?: string; activationLink?: string }>('/admin' + actionConfig.endpoint, payload);
-
-        if (action === 'reset-password' && response.data.copyPasteMessage) {
-          window.prompt('Copia el mensaje para tu cliente:', response.data.copyPasteMessage);
-        } else if ((action === 'riel-reset-password' || action === 'generate-activation') && response.data.activationLink) {
-          // Lógica modificada para usar el modal
-          const fullUrl = `${window.location.origin}${response.data.activationLink}`;
-          setCurrentActivationLink(fullUrl);
-          setLinkModalOpen(true);
-        } else {
-          alert(response.data.message || 'Acción completada con éxito');
-        }
-        
-        onUserAction();
-      } catch (err: unknown) {
-        const error = err as AxiosError<{ error: string }>;
-        alert(error.response?.data?.error || 'Error al ejecutar la acción.');
-      }
+    const message = actionPrompts[action];
+    if (message) {
+        setConfirmationState({ action, user, message });
+        setConfirmationModalOpen(true);
     }
   };
 
@@ -183,7 +263,15 @@ const UsersTable: React.FC<UsersTableProps> = ({ users, onUserAction }) => {
       <ActivationLinkModal
         isOpen={isLinkModalOpen}
         onClose={() => setLinkModalOpen(false)}
-        link={currentActivationLink}
+        link={linkModalState.link}
+        isLoading={linkModalState.isLoading}
+      />
+      <ConfirmationModal
+        isOpen={isConfirmationModalOpen}
+        message={confirmationState?.message || ''}
+        onConfirm={executeConfirmedAction}
+        onCancel={() => setConfirmationModalOpen(false)}
+        confirmButtonText={confirmationState?.action === 'generate-activation' || confirmationState?.action === 'riel-reset-password' ? 'Sí, generar' : 'Aceptar'}
       />
       <div className="bg-white shadow-md rounded-lg p-6 mb-8">
         <div className="flex justify-between items-center mb-4">

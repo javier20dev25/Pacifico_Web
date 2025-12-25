@@ -176,7 +176,13 @@ window.renderCartSummary = function() {
 
     const summaryHtml = `<div class="mt-6 p-4 bg-slate-50 rounded-lg space-y-2">
             <div class="flex justify-between"><span class="text-slate-600">Subtotal de productos${shippingMethodLabel}:</span><span class="font-semibold text-slate-800">${c} ${productSubtotal.toFixed(2)}</span></div>
-            ${extraCost > 0 ? `<div class="flex justify-between items-start"><div><span class="text-slate-600">Costo extra:</span>${extraCostText}</div><span class="font-semibold text-slate-800">${c} ${extraCost.toFixed(2)}</span></div>` : ''}
+            ${extraCost > 0 ? `<div class="flex justify-between items-start">
+                <div>
+                    <span class="text-slate-600">Costo extra:</span>
+                    <p class="text-xs text-slate-500 pl-2 italic">${escapeHTML(store.extra_cost?.description || 'Cargo adicional aplicado.')}</p>
+                </div>
+                <span class="font-semibold text-slate-800">${c} ${extraCost.toFixed(2)}</span>
+            </div>` : ''}
             ${deliveryTotalCost > 0 ? `<div class="flex justify-between"><span class="text-slate-600">Costo de delivery (pago inicial):</span><span class="font-semibold text-slate-800">${c} ${deliveryTotalCost.toFixed(2)}</span></div>` : ''}
             
             <div class="flex justify-between font-bold text-slate-800 border-t pt-2 mt-2"><span>Total del Pedido:</span><span>${c} ${grandTotal.toFixed(2)}</span></div>

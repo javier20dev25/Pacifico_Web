@@ -14,6 +14,102 @@ function isPasswordStrong(password) {
 }
 
 // ==========================================================
+// 0. REGISTRO PÚBLICO DE USUARIO (NUEVO FLUJO CON PLANES)
+// ==========================================================
+router.post('/register', async (req, res, next) => {
+  const { nombre, correo, password, planId } = req.body;
+
+  // 1. Validación de entradas
+  if (!nombre || !correo || !password || !planId) {
+    return res.status(400).json({ error: 'Nombre, correo, contraseña y plan son obligatorios.' });
+  }
+  if (!isPasswordStrong(password)) {
+    return res.status(400).json({ error: 'La contraseña no es suficientemente fuerte.' });
+  }
+
+  try {
+    // 2. Verificar que el plan exista y obtener su precio
+    const { data: plan, error: planError } = await supabaseAdmin
+      .from('planes')
+      .select('id, precio')
+      .eq('id', planId)
+      .single();
+
+    if (planError || !plan) {
+      return res.status(404).json({ error: 'El plan seleccionado no es válido.' });
+    }
+
+    // 3. Crear el usuario en Supabase Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: correo,
+      password: password,
+      email_confirm: true, // Auto-confirmar email por ahora
+    });
+
+    if (authError) {
+      if (authError.message.includes('already registered')) {
+        return res.status(409).json({ error: 'Un usuario con este correo ya existe.' });
+      }
+      return next(new Error(`Error creando usuario en Supabase Auth: ${authError.message}`));
+    }
+    const authUser = authData.user;
+
+    // 4. Crear el perfil en la tabla 'usuarios'
+    const { error: profileError } = await supabaseAdmin.from('usuarios').insert({
+      uuid: authUser.id,
+      supabase_auth_id: authUser.id,
+      nombre: nombre,
+      correo: correo,
+      role: 'user',
+      status: 'active', // El usuario se crea activo, el acceso lo define la suscripción
+    });
+
+    if (profileError) {
+      return next(new Error(`Error creando perfil de usuario: ${profileError.message}`));
+    }
+
+    // 5. Crear la suscripción
+    const isFreePlan = parseFloat(plan.precio) === 0;
+    const subscriptionStatus = isFreePlan ? 'active' : 'pending_payment';
+
+    const { data: subscription, error: subscriptionError } = await supabaseAdmin
+      .from('suscripciones')
+      .insert({
+        usuario_uuid: authUser.id,
+        plan_id: plan.id,
+        status: subscriptionStatus,
+      })
+      .select('id')
+      .single();
+
+    if (subscriptionError) {
+      return next(new Error(`Error creando la suscripción: ${subscriptionError.message}`));
+    }
+
+    // 6. Generar token de sesión y responder
+    const sessionToken = jwt.sign({ uuid: authUser.id, rol: 'user', email: correo }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+    res.status(201).json({
+      message: '¡Usuario registrado con éxito!',
+      sessionToken,
+      subscription: {
+        id: subscription.id,
+        status: subscriptionStatus,
+      },
+      user: {
+        nombre,
+        correo,
+        rol: 'user',
+      },
+    });
+
+  } catch (err) {
+    next(err); // Pasar errores al manejador central
+  }
+});
+
+
+// ==========================================================
 // 1. LOGIN DE USUARIO (MÉTODO MODERNO CON SUPABASE AUTH)
 // ==========================================================
 router.post('/login', async (req, res) => {

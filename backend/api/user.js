@@ -399,6 +399,7 @@ router.get('/store-data', async (req, res) => {
 
 // PUT /api/user/store-data (Refactorizado para no usar Multer)
 router.put('/store-data', async (req, res) => {
+    console.log('[DEBUG /store-data PUT] Received req.body:', JSON.stringify(req.body, null, 2));
     try {
       const userUuid = req.user?.uuid;
       if (!userUuid) return res.status(401).json({ error: 'No autenticado.' });
@@ -462,17 +463,56 @@ router.put('/store-data', async (req, res) => {
       let message;
 
       const payload = {
+        // Campos de servidor y mapeo
         usuario_id: usuarioId,
         nombre: storeData.store?.nombre || userRec.nombre,
-        descripcion: storeData.store?.descripcion,
-        store_type: storeData.store?.store_type, // <-- CORRECCIÓN AÑADIDA
-        logo_url: storeData.store?.logoUrl,
-        video_url: storeData.store?.video_url,
-        installment_options: storeData.store?.installment_options || [],
         products: storeData.products || [],
         activa: launch,
-        slug: null, 
         data: storeData,
+        slug: null, // Dejar que la DB lo genere
+
+        // --- CAMPOS DE CONFIGURACIÓN COMPLETOS (mapeados desde camelCase) ---
+        descripcion: storeData.store?.descripcion,
+        logo_url: storeData.store?.logoUrl,
+        video_url: storeData.store?.video_url,
+        store_type: storeData.store?.storeType,
+        currency: storeData.store?.currency,
+        is_logistics_dual: storeData.store?.isLogisticsDual,
+        air_rate: storeData.store?.airRate,
+        air_min_days: storeData.store?.airMinDays,
+        air_max_days: storeData.store?.airMaxDays,
+        sea_rate: storeData.store?.seaRate,
+        sea_min_days: storeData.store?.seaMinDays,
+        sea_max_days: storeData.store?.seaMaxDays,
+        delivery_type: storeData.store?.deliveryType,
+        delivery_fixed_cost: storeData.store?.deliveryFixedCost,
+        delivery_range_start: storeData.store?.deliveryRangeStart,
+        delivery_range_end: storeData.store?.deliveryRangeEnd,
+        delivery_note: storeData.store?.deliveryNote,
+        accepts_cash: storeData.store?.acceptsCash,
+        accepts_transfer: storeData.store?.acceptsTransfer,
+        transfer_details: storeData.store?.transferDetails,
+        paypal_link: storeData.store?.paypalLink,
+        stripe_link: storeData.store?.stripeLink,
+        accepts_full_payment: storeData.store?.acceptsFullPayment,
+        accepts_advance_payment: storeData.store?.acceptsAdvancePayment,
+        advance_options: storeData.store?.advanceOptions,
+        accepts_installments: storeData.store?.acceptsInstallments,
+        installment_options: storeData.store?.installmentOptions,
+        extra_cost: storeData.store?.extraCost,
+        whatsapp: storeData.store?.whatsapp,
+        emails: storeData.store?.emails,
+        addresses: storeData.store?.addresses,
+        colors: storeData.store?.colors,
+        animation: storeData.store?.animation,
+        sections: storeData.store?.sections,
+        cards: storeData.store?.cards,
+        faqs: storeData.store?.faqs,
+        main_url: storeData.store?.mainUrl,
+        gallery_urls: storeData.store?.galleryUrls,
+        variants: storeData.store?.variants,
+        buy_text: storeData.store?.buyText,
+        chatbot_enabled: storeData.store?.chatbotEnabled,
       };
 
       if (existingStore) {
