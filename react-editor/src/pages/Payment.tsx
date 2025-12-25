@@ -66,12 +66,18 @@ const PaymentPage: React.FC = () => {
 
         <PayPalButtons
           style={{ layout: 'vertical', label: 'subscribe' }}
-          subscriptionID={paypalSubscriptionId}
+          createSubscription={(_data, _actions) => {
+            // Esta función es llamada por el SDK de PayPal cuando se hace clic en el botón.
+            // Debe devolver una promesa que resuelva con el ID de la suscripción.
+            // Como ya lo creamos en nuestro backend, simplemente lo devolvemos.
+            if (!paypalSubscriptionId) {
+              return Promise.reject(new Error("ID de suscripción de PayPal no disponible."));
+            }
+            return Promise.resolve(paypalSubscriptionId);
+          }}
           onApprove={async (_data, actions) => {
-            // Esta función se llama cuando el usuario aprueba la suscripción en el popup de PayPal.
             console.log('Suscripción aprobada en el cliente!', await actions.subscription?.get());
-            // El webhook en nuestro backend se encargará de activar la suscripción en la BD.
-            // Aquí solo redirigimos al usuario a una página de éxito.
+            // El webhook se encargará de la activación en la BD. Redirigimos a la página de éxito.
             navigate('/payment-success');
           }}
           onError={(err) => {
