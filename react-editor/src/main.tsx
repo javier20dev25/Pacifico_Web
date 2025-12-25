@@ -5,7 +5,7 @@ import './index.css';
 import App from './App';
 
 const initialOptions = {
-  'client-id': import.meta.env.VITE_PAYPAL_CLIENT_ID || 'sb', // 'sb' es un fallback para que no crashee si la variable no está
+  clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || 'sb', // 'sb' es un fallback para que no crashee si la variable no está
   currency: 'USD',
   intent: 'subscription',
 };
