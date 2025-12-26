@@ -5,9 +5,6 @@ import {
   PayPalButtons,
   usePayPalScriptReducer,
 } from '@paypal/react-paypal-js';
-// Los tipos para las props se importan por separado, como lo requiere la configuración de TypeScript.
-import type { OnApproveData, OnApproveActions } from '@paypal/react-paypal-js';
-
 
 /**
  * Esta es la página final del flujo de pago.
@@ -68,7 +65,7 @@ const PaymentPage: React.FC = () => {
 
   // Esta función se ejecuta cuando el usuario aprueba la transacción en la ventana de PayPal.
   // Dejamos que TypeScript infiera los tipos de 'data' y 'actions' para máxima compatibilidad.
-  const handleApprove = async (data: OnApproveData, actions: OnApproveActions | undefined) => {
+  const handleApprove = async (data: any, actions: any) => {
     console.log('Suscripción aprobada en el cliente!', data);
     if(actions && actions.subscription) {
         const details = await actions.subscription.get();
@@ -104,5 +101,6 @@ const PaymentPage: React.FC = () => {
     </div>
   );
 };
+
 
 export default PaymentPage;
