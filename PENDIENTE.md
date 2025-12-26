@@ -1,15 +1,26 @@
-# PENDIENTES IMPORTANTES
+# Tareas Pendientes del Proyecto PacificoWeb
 
-Este documento lista los problemas y tareas que requieren atención inmediata o futura en el proyecto.
+Esta es una lista de tareas de mantenimiento y optimización que han surgido durante el desarrollo y que deben ser abordadas cuando haya oportunidad.
 
-## 1. Regresión en el Frontend (Error en el Modal del Carrito)
-- **Descripción:** Actualmente, hay una regresión crítica en el frontend que causa un error en la base de datos y/o impide que Eruda funcione correctamente cuando se intenta renderizar el modal del carrito. Esto se ha intentado mitigar con un renderizado forzado para depuración.
-- **Acción Pendiente:** Revertir la modificación temporal de `renderCartSummary` en `react-editor/src/cart.summary.js` y encontrar la causa raíz del problema para una solución permanente que no introduzca nuevos errores.
+### 1. Actualizar Dependencias con Advertencias
 
-## 2. Problema de 'storeType' en el Editor de React
-- **Descripción:** El editor de React está enviando incorrectamente el valor `storeType: "by_order"`, lo que provoca que no se muestren las opciones de envío en el modal del carrito.
-- **Acción Pendiente:** Investigar la lógica en el editor de React que define y envía `storeType` para corregir el valor a uno adecuado que permita la visualización de las opciones de envío.
+Durante el build en Vercel, `npm` ha mostrado advertencias sobre paquetes obsoletos (`deprecated`).
+- `inflight@1.0.6`
+- `node-domexception@1.0.0`
+- `glob@7.2.3`
 
-## 3. Visibilidad del Contenido del Modal
-- **Descripción:** Se han reportado problemas de visibilidad donde los elementos internos del modal no se muestran correctamente o están ocultos.
-- **Acción Pendiente:** Investigar el CSS, la lógica de renderizado o las propiedades de los elementos dentro del modal para asegurar que todo el contenido sea visible y funcione como se espera.
+**Acción:** Investigar y actualizar estos paquetes a sus versiones más recientes y soportadas para mejorar la seguridad y el rendimiento. Se puede usar `npm outdated` para ver qué paquetes necesitan actualización.
+
+### 2. Optimizar el Tamaño de los Chunks de Vite
+
+El build de Vite muestra una advertencia sobre chunks de JavaScript que superan los 500 kB.
+- `(!) Some chunks are larger than 500 kB after minification.`
+
+**Acción:** Investigar las estrategias de "code splitting" que Vite ofrece. Esto se puede hacer con `import()` dinámicos en el código de React o configurando `build.rollupOptions.output.manualChunks` en el archivo `vite.config.ts` para dividir el código en trozos más pequeños, mejorando los tiempos de carga inicial de la página.
+
+### 3. Actualizar `baseline-browser-mapping`
+
+Vite también sugiere actualizar este paquete para asegurar datos precisos sobre la compatibilidad de navegadores.
+- `[baseline-browser-mapping] The data in this module is over two months old. To ensure accurate Baseline data, please update: npm i baseline-browser-mapping@latest -D`
+
+**Acción:** Ejecutar el comando `npm i baseline-browser-mapping@latest -D` en el workspace `react-editor`.
