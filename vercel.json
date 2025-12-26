@@ -2,27 +2,33 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/node",
+      "src": "react-editor/package.json",
+      "use": "@vercel/static-build",
       "config": {
-        "includeFiles": [
-          "dist/**",
-          "public/**",
-          "react-editor/dist/**",
-          "backend/**"
-        ]
+        "distDir": "dist"
       }
+    },
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/assets/(.*)",
-      "dest": "/react-editor/dist/assets/$1"
+      "src": "/api/(.*)",
+      "dest": "server.js"
     },
-    { "handle": "filesystem" },
+    {
+      "src": "/store/(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
     {
       "src": "/(.*)",
-      "dest": "server.js"
+      "dest": "/index.html"
     }
   ]
 }
