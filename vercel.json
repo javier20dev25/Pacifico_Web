@@ -1,6 +1,28 @@
 {
   "version": 2,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/server.js" }
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "dist/**",
+          "public/**",
+          "react-editor/dist/**",
+          "backend/**"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/assets/(.*)",
+      "dest": "/react-editor/dist/assets/$1"
+    },
+    { "handle": "filesystem" },
+    {
+      "src": "/(.*)",
+      "dest": "server.js"
+    }
   ]
 }
