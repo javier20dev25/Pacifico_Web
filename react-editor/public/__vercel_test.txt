@@ -1,0 +1,1 @@
+OK - static test from react-editor/public
