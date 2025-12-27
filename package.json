@@ -2,6 +2,7 @@
   "name": "pacificoweb",
   "version": "1.0.0",
   "description": "Sistema de gestión de usuarios y planes para Pacífico Web.",
+  "type": "module",
   "main": "server.js",
   "workspaces": [
     "react-editor"
@@ -11,8 +12,7 @@
     "dev": "node -r dotenv/config server.js",
     "lint": "eslint . --ext .js",
     "format": "prettier --write \"./**/*.js\"",
-    "test": "jest --forceExit",
-    "vercel-build": "npm run build --prefix react-editor"
+    "test": "jest --forceExit"
   },
   "author": "Astaroth & Gemini",
   "license": "ISC",
