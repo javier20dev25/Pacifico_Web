@@ -4,29 +4,26 @@
     {
       "src": "react-editor/package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
+      "config": {
+        "distDir": "dist"
+      }
     },
     {
       "src": "api/**/*.js",
-      "use": "@vercel/node",
-      "config": {
-        "runtime": "nodejs18.x"
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
-      "headers": [
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "no-referrer-when-downgrade" }
-      ],
-      "continue": true
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
     },
-    { "handle": "filesystem" },
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
   ]
 }
