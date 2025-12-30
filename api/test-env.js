@@ -14,7 +14,7 @@ export default function handler(request, response) {
   // Only allow GET requests
   if (request.method !== 'GET') {
     response.setHeader('Allow', ['GET']);
-    return response.status(45).end('Method Not Allowed');
+    return response.status(405).end('Method Not Allowed');
   }
 
   const supabaseUrlFound = !!process.env.SUPABASE_URL;
