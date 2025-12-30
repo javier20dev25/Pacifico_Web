@@ -12,7 +12,7 @@
     "dev": "node -r dotenv/config server.js",
     "lint": "eslint . --ext .js",
     "format": "prettier --write \"./**/*.js\"",
-    "test": "jest --forceExit"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit"
   },
   "author": "Astaroth & Gemini",
   "license": "ISC",
