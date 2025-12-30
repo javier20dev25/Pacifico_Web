@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 
 describe('Vercel Production API', () => {
   it('should not return a 404 for the registration endpoint', async () => {
-    const vercelUrl = 'https://pacifico-editor.vercel.app/api/auth/register';
+    const vercelUrl = 'https://pacifico-editor-302xzffg7-javier20dev25s-projects.vercel.app/api/auth/register';
     
     console.log(`Testing URL: ${vercelUrl}`);
 
