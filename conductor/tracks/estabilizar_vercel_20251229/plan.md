@@ -4,7 +4,7 @@ Este plan detalla los pasos para diagnosticar y solucionar los problemas de desp
 
 ---
 
-## Fase 1: Diagnóstico y Configuración Inicial
+## Fase 1: Diagnóstico y Configuración Inicial [checkpoint: 28d1e77]
 
 El objetivo de esta fase es identificar la causa raíz de los errores 404 en Vercel y establecer un endpoint de prueba funcional.
 
