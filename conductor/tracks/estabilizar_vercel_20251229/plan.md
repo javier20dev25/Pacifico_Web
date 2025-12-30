@@ -10,9 +10,9 @@ El objetivo de esta fase es identificar la causa raíz de los errores 404 en Ver
 
 - [x] Tarea: Analizar en profundidad los logs de ejecución y de solicitud de Vercel para encontrar pistas sobre los errores 404 en las rutas /api/*. (537b385)
 - [x] Tarea: Revisar exhaustivamente el archivo `vercel.json` para identificar y corregir posibles errores de configuración en las reescrituras (`rewrites`) o enrutamientos. (c871f37)
-- [~] Tarea: Verificar que todas las variables de entorno necesarias (como `SUPABASE_URL`, `SUPABASE_ANON_KEY`, etc.) estén correctamente definidas y accesibles en el entorno de producción de Vercel. (Esperando acción del usuario: Configurar variables en Vercel Dashboard)
-- [ ] Tarea: Crear un nuevo endpoint de API de prueba mínimo (ej. `api/hello.js`) que simplemente devuelva un estado 200 con un mensaje JSON. Desplegar y usarlo como base para validar la configuración de enrutamiento.
-- [ ] Tarea: Conductor - Verificación Manual del Usuario 'Fase 1: Diagnóstico y Configuración Inicial' (Protocolo en workflow.md)
+- [x] Tarea: Verificar que todas las variables de entorno necesarias (como `SUPABASE_URL`, `SUPABASE_ANON_KEY`, etc.) estén correctamente definidas y accesibles en el entorno de producción de Vercel.
+- [x] Tarea: Crear un nuevo endpoint de API de prueba mínimo (ej. `api/hello.js`) que simplemente devuelva un estado 200 con un mensaje JSON. Desplegar y usarlo como base para validar la configuración de enrutamiento.
+- [x] Tarea: Conductor - Verificación Manual del Usuario 'Fase 1: Diagnóstico y Configuración Inicial' (Protocolo en workflow.md)
 
 ---
 
