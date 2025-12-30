@@ -1,11 +1,10 @@
-
 {
   "version": 2,
   "buildCommand": "npm install --prefix react-editor && npm run build --prefix react-editor && rm -rf public && mkdir -p public && cp -r react-editor/dist/* public",
   "outputDirectory": "public",
   "functions": {
     "api/**/*.js": {
-      "runtime": "@vercel/node"
+      "runtime": "@vercel/node@2.0.0"
     }
   },
   "routes": [
