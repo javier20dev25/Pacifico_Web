@@ -14,7 +14,7 @@
   "routes": [
     { "handle": "filesystem" },
     { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/assets/(.*)", "dest": "/react-editor/assets/$1" },
+    { "src": "/(.*)", "dest": "/react-editor/index.html" }
   ]
 }
