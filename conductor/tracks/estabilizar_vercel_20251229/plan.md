@@ -21,7 +21,7 @@ El objetivo de esta fase es identificar la causa raíz de los errores 404 en Ver
 Con un diagnóstico claro, esta fase se centra en aplicar las correcciones necesarias al código y la configuración.
 
 - [ ] Tarea: Escribir una prueba de integración que falle (TDD) para el endpoint de registro (`/api/auth/register`), simulando una solicitud de creación de usuario y esperando una respuesta 201.
-- [ ] Tarea: Modificar la configuración del servidor Express y/o la estructura de archivos para que sea totalmente compatible con la arquitectura serverless de Vercel.
+- [x] Tarea: Modificar la configuración del servidor Express y/o la estructura de archivos para que sea totalmente compatible con la arquitectura serverless de Vercel.
 - [ ] Tarea: Ajustar el endpoint de registro existente (`api/auth/register.js`) para asegurar que maneja correctamente las solicitudes y respuestas en el entorno de Vercel y que la prueba de integración pase.
 - [ ] Tarea: Conductor - Verificación Manual del Usuario 'Fase 2: Implementación de Arreglos' (Protocolo en workflow.md)
 
