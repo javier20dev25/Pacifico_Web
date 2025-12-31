@@ -1,20 +1,13 @@
 {
   "version": 2,
-  "buildCommand": "npm install --prefix react-editor && npm run build --prefix react-editor && rm -rf public && mkdir -p public && cp -r react-editor/dist/* public",
-  "outputDirectory": "public",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "@vercel/node@2.0.0"
-    }
-  },
+  "builds": [
+    { "src": "react-editor/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
+    { "src": "api/**/*.js", "use": "@vercel/node" },
+    { "src": "lib/**/*.js", "use": "@vercel/node" }
+  ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+    { "handle": "filesystem" },
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
