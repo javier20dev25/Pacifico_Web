@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken';
 // --- Helper: Validador de Contraseña ---
 // Lo incluimos aquí directamente para que la función sea autocontenida.
 function isPasswordStrong(password) {
-  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).{6,}$/;
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{6,}$/;
   return regex.test(password);
 }
 
