@@ -88,7 +88,7 @@ Esta guía se ha desarrollado a partir de la experiencia de depuración de probl
     curl -i "https://$DEPLOYMENT_URL/api/test-env"
 
     # Para verificar la API de registro (ej. esperando un 400 o 500 si falta el cuerpo o las credenciales)
-    curl -i -X POST -H "Content-Type: application/json" -d '{}' "https://$DEPLOYMENT_URL/api/auth/register"
+    curl -i -X POST -H "Content-Type: application/json" -d '{}' "https://://$DEPLOYMENT_URL/api/auth/register"
     ```
 *   **Análisis:**
     *   Un `HTTP/2 200` o `201`: el enrutamiento y la invocación de la función funcionan.
@@ -107,3 +107,59 @@ Esta guía se ha desarrollado a partir de la experiencia de depuración de probl
 *   **Análisis:** Busca solicitudes que terminaron en `404` o `500` y cualquier mensaje de error asociado.
 
 ---
+
+---
+
+## Caso de Estudio: Error 404 en Aplicación Frontend (Monorepo)
+
+Esta sección documenta la solución a un problema común en proyectos monorepo donde la aplicación de frontend (React, en este caso) está en un subdirectorio.
+
+### El Problema
+
+*   **Síntoma:** El despliegue en Vercel se completaba exitosamente (`Build Completed`), y las rutas de la API (`/api/*`) funcionaban, pero todas las páginas del frontend devolvían un error `404 NOT_FOUND`.
+*   **Contexto:** La estructura del proyecto es un monorepo con la aplicación de React ubicada en el subdirectorio `react-editor/`.
+
+### El Diagnóstico
+
+1.  **Verificación de la Construcción Local:** Se confirmó que al ejecutar `npm run build` dentro de `react-editor/`, se generaba correctamente un directorio `dist/` con un `index.html` y los assets. Esto descartó un problema en la configuración de Vite/React.
+
+2.  **Inspección del "Output" de Vercel:** Se le pidió al usuario que revisara la pestaña **"Output"** (o "Source") del despliegue en el panel de Vercel.
+
+3.  **Causa Raíz Identificada:** La inspección reveló que Vercel, a pesar de construir el proyecto correctamente, colocaba los archivos de salida (`dist/`) dentro de un directorio con el mismo nombre que el subdirectorio del proyecto. La estructura de salida final en Vercel era:
+    ```
+    /
+    ├── api/
+    └── react-editor/
+        ├── assets/
+        └── index.html
+    ```
+    El archivo `vercel.json` existente intentaba servir el `index.html` desde la raíz (`/`), pero el archivo no se encontraba ahí, causando el 404.
+
+### La Solución
+
+Se modificó la sección de `routes` en el archivo `vercel.json` para que las rutas apuntaran a la ubicación correcta de los archivos de salida dentro del directorio `react-editor/`.
+
+#### `vercel.json` (Incorrecto)
+```json
+"routes": [
+  { "handle": "filesystem" },
+  { "src": "/api/(.*)", "dest": "/api/$1" },
+  { "src": "/assets/(.*)", "dest": "/assets/$1" },
+  { "src": "/(.*)", "dest": "/index.html" }
+]
+```
+
+#### `vercel.json` (Corregido)
+```json
+"routes": [
+  { "handle": "filesystem" },
+  { "src": "/api/(.*)", "dest": "/api/$1" },
+  { "src": "/assets/(.*)", "dest": "/react-editor/assets/$1" },
+  { "src": "/(.*)", "dest": "/react-editor/index.html" }
+]
+```
+*   **Explicación de la corrección:**
+    *   La ruta de los assets (`/assets/(.*)`) ahora se redirige a `/react-editor/assets/$1`.
+    *   La ruta "catch-all" (`/(.*)`) que sirve la aplicación de una sola página (SPA) ahora apunta a `/react-editor/index.html`.
+
+Esta solución resolvió el problema del 404 y permitió que Vercel sirviera la aplicación de React correctamente.
