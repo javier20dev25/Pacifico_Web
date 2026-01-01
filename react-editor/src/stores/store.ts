@@ -1,5 +1,16 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
+
+// Almacenamiento seguro que no hace nada si localStorage no está disponible (ej. en SSR)
+const noopStorage: StateStorage = {
+  getItem: (_name) => null,
+  setItem: (_name, _value) => {},
+  removeItem: (_name) => {},
+};
+
+// Se asegura de que localStorage solo se use en el cliente (navegador)
+const safeLocalStorage: StateStorage =
+  typeof window !== 'undefined' ? localStorage : noopStorage;
 
 export interface ExtraCost {
   enabled: boolean;
@@ -233,7 +244,7 @@ const useAppStore = create<AppState>()(
     {
       name: 'pacificoweb-draft',
       version: 1,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => safeLocalStorage), // <-- AQUÍ ESTÁ EL CAMBIO
       partialize: (state) => ({
         ...state,
         store: {
