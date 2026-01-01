@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
+import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 
 // Almacenamiento seguro que no hace nada si localStorage no está disponible (ej. en SSR)
 const noopStorage: StateStorage = {
