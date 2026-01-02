@@ -163,3 +163,24 @@ Se modificó la sección de `routes` en el archivo `vercel.json` para que las ru
     *   La ruta "catch-all" (`/(.*)`) que sirve la aplicación de una sola página (SPA) ahora apunta a `/react-editor/index.html`.
 
 Esta solución resolvió el problema del 404 y permitió que Vercel sirviera la aplicación de React correctamente.
+
+---
+
+## Caso de Estudio 2: Errores Comunes Post-Despliegue (500 y Variables de Entorno)
+
+Una vez que el enrutamiento principal (404) está resuelto, pueden aparecer nuevos errores. Estos son los más comunes en un monorepo con funciones serverless.
+
+### 1. Error 500 con `ERR_MODULE_NOT_FOUND`
+
+*   **Síntoma:** Una ruta de la API devuelve un error `500 Internal Server Error`. El log de la función muestra `Error [ERR_MODULE_NOT_FOUND]: Cannot find module...`
+*   **Causa:** La función serverless (ej. `/api/mi-funcion.js`) está intentando importar un módulo o archivo (`import modulo from '../lib/util.js'`) que se encuentra **fuera** del directorio `/api`. El sistema de construcción de Vercel empaqueta cada función de forma aislada y no incluye archivos de niveles superiores.
+*   **Solución:** Mover cualquier código compartido (helpers, utilidades, clientes de base de datos) a un subdirectorio **dentro** de `/api`. La convención es usar `api/_lib/` o `api/_utils/`. Luego, actualizar las rutas de importación en las funciones para que sean relativas a su nueva ubicación.
+    *   **Ejemplo:**
+        *   Mover `lib/supabaseAdmin.js` a `api/_lib/supabaseAdmin.js`.
+        *   En `api/riel/preregister.js`, cambiar `import supabase from '../../lib/supabaseAdmin.js'` por `import supabase from '../_lib/supabaseAdmin.js'`.
+
+### 2. La API Funciona Pero Faltan Datos (Variables de Entorno)
+
+*   **Síntoma:** La API responde con un `200 OK` pero la lógica falla, o un endpoint de prueba (`/api/test-env`) muestra `false` para las variables de entorno.
+*   **Causa:** Las variables de entorno en Vercel tienen un "alcance" (scope). Por defecto, a menudo se crean solo para el entorno de **Producción**. Los despliegues generados desde ramas (como `feat/mi-rama`) crean un entorno de **Preview**, el cual no hereda automáticamente las variables.
+*   **Solución:** En el panel de Vercel, ir a `Settings > Environment Variables`. Para cada variable necesaria, hacer clic en el menú de opciones y asegurarse de que los checkboxes para **todos los entornos** (o al menos `Production` y `Preview`) estén seleccionados. Guardar los cambios. No se necesita un nuevo despliegue para que las variables actualizadas estén disponibles en despliegues futuros.

@@ -1,6 +1,6 @@
 // api/riel/preregister.js
 
-import { supabaseAdmin } from '../../lib/supabaseAdmin';
+import { supabaseAdmin } from '../_lib/supabaseAdmin.js';
 
 export default async function handler(request, response) {
   if (request.method !== 'POST') {
